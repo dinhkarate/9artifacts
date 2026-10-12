@@ -1,0 +1,32 @@
+name: install-test
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+  schedule:
+    - cron: "17 4 * * 1"
+permissions:
+  contents: read
+jobs:
+  systemd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: install with the one-liner (proxy mode)
+        run: sudo sh install.sh --url http://localhost:8080 --content-url http://127.0.0.1:8080
+      - name: service is healthy and hardened
+        run: |
+          systemctl is-active vitrine
+          curl -fsS http://127.0.0.1:8080/health
+          systemctl show vitrine -p DynamicUser -p NoNewPrivileges -p ProtectSystem
+      - name: admin socket, token, publish, share
+        run: |
+          sudo vitrine status --data /var/lib/vitrine
+          export VITRINE_URL=http://127.0.0.1:8080
+          export VITRINE_TOKEN=$(sudo vitrine token --data /var/lib/vitrine --name ci)
+          printf '<!doctype html><title>CI report</title><h1>ok</h1>' > report.html
+          vitrine publish report.html --tags ci --share 1h
+          vitrine list
+      - name: logs
+        if: always()
+        run: sudo journalctl -u vitrine -n 50 --no-pager | sed -E 's/code=[a-z0-9]+/code=<redacted>/'
