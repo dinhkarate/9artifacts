@@ -53,7 +53,7 @@ func inline(s string) string {
 		stash = append(stash, html)
 		return "\x00" + strconv.Itoa(len(stash)-1) + "\x00"
 	}
-	s = html.EscapeString(s)
+	s = html.EscapeString(strings.ReplaceAll(s, "\x00", ""))
 	s = reCode.ReplaceAllStringFunc(s, func(m string) string {
 		return hide("<code>" + m[1:len(m)-1] + "</code>")
 	})
