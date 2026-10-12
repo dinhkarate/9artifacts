@@ -1,0 +1,15 @@
+/* terminal — phosphor green on black, monospace everything. */
+:root{
+  --font-ui: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  --font-display: var(--font-ui);
+  --font-mono: var(--font-ui);
+  --font-size: 14px;
+  --radius-sm: 2px; --radius: 4px; --radius-lg: 6px;
+  --bg: #0a0d0a; --surface: #0f140f; --surface-2: #162016; --border: #1f3320; --border-strong: #2f5a31;
+  --text: #c8f7c5; --text-2: #9fd89b; --muted: #5f8f5c;
+  --accent: #39ff7a; --accent-strong: #7dffa6; --accent-soft: #10301a; --on-accent: #041207; --danger: #ff6b5b;
+  --thumb-bg: #0c120c; --stage-bg: #050705; --toast-bg: #39ff7a; --toast-text: #041207;
+  --kind-html: #39ff7a; --kind-html-bg: #10301a; --kind-md: #7ad7ff; --kind-md-bg: #0f2833;
+  --kind-pdf: #ffb36b; --kind-pdf-bg: #33220f; --kind-img: #f2e86d; --kind-img-bg: #2e2c0f;
+  --shadow-sm: none; --shadow: 0 0 0 1px #2f5a31; --shadow-lg: 0 0 24px rgba(57,255,122,.15);
+}

@@ -1,0 +1,10 @@
+# Caddy terminates TLS for both hosts and proxies to vitrine.
+# Run vitrine with:
+#   vitrine serve --addr 127.0.0.1:8080 --url https://art.example.com \
+#     --content-url https://art-content.example.com --trust-proxy
+art.example.com, art-content.example.com {
+	reverse_proxy 127.0.0.1:8080
+	request_body {
+		max_size 100MB
+	}
+}

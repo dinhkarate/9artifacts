@@ -1,0 +1,26 @@
+/* Styles for Markdown artifacts rendered by vitrine (a standalone page). */
+:root{--bg:#fffefb;--text:#22211f;--muted:#6d6a63;--border:#e6e3dc;--code-bg:#f3f1ec;--accent:#1f6f5c;color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root{--bg:#1a1a18;--text:#e9e7e2;--muted:#9a978f;--border:#34332f;--code-bg:#24231f;--accent:#5cc2a3}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16.5px/1.7 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.markdown{max-width:780px;margin:0 auto;padding:56px 24px 96px}
+h1,h2,h3,h4,h5,h6{line-height:1.25;letter-spacing:-.015em;margin:1.8em 0 .6em}
+h1{font-size:2.1em;margin-top:0}
+h2{font-size:1.5em;padding-bottom:.3em;border-bottom:1px solid var(--border)}
+h3{font-size:1.2em}
+p,ul,ol,blockquote,pre,.table-wrap{margin:0 0 1.1em}
+a{color:var(--accent)}
+img{max-width:100%;border-radius:8px}
+code{font:.88em ui-monospace,"SF Mono",Menlo,Consolas,monospace;background:var(--code-bg);padding:.15em .4em;border-radius:5px}
+pre{background:var(--code-bg);padding:16px 18px;border-radius:10px;overflow:auto;line-height:1.55}
+pre code{background:none;padding:0;font-size:.85em}
+blockquote{border-left:3px solid var(--accent);padding:.2em 1em;color:var(--muted)}
+blockquote p:last-child{margin:0}
+hr{border:0;border-top:1px solid var(--border);margin:2.2em 0}
+li{margin:.25em 0}
+li.task{list-style:none;margin-left:-1.3em}
+.table-wrap{overflow:auto}
+table{border-collapse:collapse;width:100%;font-size:.94em}
+th,td{border:1px solid var(--border);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--code-bg)}
+@media print{body{background:#fff;color:#000}.markdown{padding:0}}

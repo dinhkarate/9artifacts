@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artifact title</title>
+<style>
+  :root{--bg:#f6f5f1;--surface:#fff;--text:#1d1c1a;--muted:#85827a;--border:#e4e2dc;--accent:#1f6f5c;--danger:#c2410c;color-scheme:light dark}
+  @media (prefers-color-scheme:dark){:root{--bg:#161614;--surface:#1f1e1c;--text:#edebe6;--muted:#8e8b83;--border:#33322e;--accent:#5cc2a3;--danger:#f08a5d}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  main{max-width:1040px;margin:0 auto;padding:48px 24px 80px}
+  header p{color:var(--muted);margin:.4em 0 0}
+  h1{font-size:2rem;letter-spacing:-.02em;margin:0}
+  h2{font-size:1.25rem;margin:2.2em 0 .8em}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:28px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+  .kpi .label{color:var(--muted);font-size:.85rem}
+  .kpi .value{font-size:1.8rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .kpi .delta{font-size:.85rem;color:var(--accent)}
+  .kpi .delta.down{color:var(--danger)}
+  table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  th,td{padding:10px 14px;border-bottom:1px solid var(--border);text-align:left}
+  td.num{text-align:right;font-family:ui-monospace,Menlo,monospace}
+  a{color:var(--accent)}
+  @media print{body{background:#fff}main{padding:0}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Artifact title</h1>
+    <p>One-line summary · 2026-01-01</p>
+  </header>
+
+  <section class="kpis">
+    <div class="card kpi"><div class="label">Metric</div><div class="value">1,234</div><div class="delta">+12% vs last week</div></div>
+    <div class="card kpi"><div class="label">Metric</div><div class="value">98.7%</div><div class="delta down">−0.4 pts</div></div>
+  </section>
+
+  <h2>Details</h2>
+  <table>
+    <thead><tr><th>Item</th><th>Value</th></tr></thead>
+    <tbody><tr><td>Example</td><td class="num">42</td></tr></tbody>
+  </table>
+</main>
+</body>
+</html>

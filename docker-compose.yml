@@ -1,0 +1,15 @@
+# docker compose up -d   then open the first-run link from: docker compose logs vitrine
+services:
+  vitrine:
+    image: ghcr.io/dinhkarate/vitrine:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"   # put Caddy/nginx/Cloudflare Tunnel in front
+    environment:
+      VITRINE_URL: https://art.example.com
+      # VITRINE_CONTENT_URL: https://art-content.example.com   # recommended
+      VITRINE_TRUST_PROXY: "1"
+    volumes:
+      - vitrine-data:/data
+volumes:
+  vitrine-data:

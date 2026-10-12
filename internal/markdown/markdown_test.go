@@ -1,0 +1,34 @@
+package markdown
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestRender(t *testing.T) {
+	src := "# Title\n\nSome **bold**, *em* and `code <b>`.\n\n- [x] done\n- todo\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n```go\nfmt.Println(\"<hi>\")\n```\n\n> quote\n\n![chart](assets/chart.png) [site](https://example.com)"
+	out := Render(src)
+	for _, want := range []string{
+		"<h1>Title</h1>", "<strong>bold</strong>", "<em>em</em>", "<code>code &lt;b&gt;</code>",
+		`<li class="task"><input type="checkbox" disabled checked> done</li>`, "<th>a</th>", "<td>2</td>",
+		`<pre><code class="language-go">fmt.Println(&#34;&lt;hi&gt;&#34;)</code></pre>`, "<blockquote><p>quote</p>",
+		`<img src="assets/chart.png" alt="chart" loading="lazy">`, `<a href="https://example.com"`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+}
+
+func TestRenderEscapesHTMLAndSchemes(t *testing.T) {
+	out := Render("<script>alert(1)</script>\n\n[x](javascript:alert(1)) ![y](data:text/html,hi)")
+	if strings.Contains(out, "<script>") || strings.Contains(out, "javascript:") || strings.Contains(out, "data:text") {
+		t.Fatalf("unsafe output: %s", out)
+	}
+}
+
+func TestTitle(t *testing.T) {
+	if got := Title("intro\n# Weekly report\n## x"); got != "Weekly report" {
+		t.Fatalf("got %q", got)
+	}
+}

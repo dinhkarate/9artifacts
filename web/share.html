@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<title>{{if eq .Status 200}}{{.Title}}{{else}}Link unavailable{{end}}</title>
+<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/theme.css">
+</head>
+<body class="share-page">
+{{if eq .Status 200}}
+<div class="viewer-screen">
+  <header class="bar">
+    <img src="/assets/logo.svg" alt="" width="26" height="26">
+    <div class="bar-title">
+      <h1 title="{{.Title}}">{{.Title}}</h1>
+      <p class="muted">Shared link · expires {{.Expires}}</p>
+    </div>
+    <div class="bar-actions">
+      <a class="btn ghost sm" href="{{.Src}}" target="_blank" rel="noopener">Open</a>
+      <details class="share-files">
+        <summary class="btn ghost sm">Files ({{len .Files}})</summary>
+        <ul>{{range .Files}}<li><a href="{{.Href}}" download><span>{{.Name}}</span><span class="muted">{{bytes .Size}}</span></a></li>{{end}}</ul>
+      </details>
+      <a class="made-with" href="https://github.com/dinhkarate/vitrine" target="_blank" rel="noopener">Made with vitrine</a>
+    </div>
+  </header>
+  {{if .Note}}<div class="share-note">{{.Note}}</div>{{end}}
+  <div class="viewer-body">
+    <main class="stage">
+      {{if eq .Kind "image"}}<div class="stage-image"><img src="{{.Src}}" alt="{{.Title}}"></div>
+      {{else if eq .Kind "pdf"}}<iframe src="{{.Src}}" title="{{.Title}}" referrerpolicy="no-referrer"></iframe>
+      {{else if eq .Kind "text"}}<iframe src="{{.Src}}" title="{{.Title}}" referrerpolicy="no-referrer"></iframe>
+      {{else if eq .Kind "file"}}<div class="stage-empty"><h2>{{.Title}}</h2><p class="muted">No preview for this file — use Files to download.</p></div>
+      {{else}}<iframe src="{{.Src}}" title="{{.Title}}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads" referrerpolicy="no-referrer"></iframe>{{end}}
+    </main>
+  </div>
+</div>
+{{else}}
+<main class="gone">
+  <div>
+    <img src="/assets/logo.svg" alt="" width="48" height="48">
+    <h1>{{if eq .Status 410}}This link has expired{{else}}Link not found{{end}}</h1>
+    <p class="muted">{{if eq .Status 410}}The owner set this link to expire, or revoked it.{{else}}Check the address, or ask the owner for a new link.{{end}}</p>
+  </div>
+</main>
+{{end}}
+</body>
+</html>

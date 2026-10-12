@@ -1,0 +1,72 @@
+/*
+ * vitrine default theme. Every colour, font and radius the app uses is a
+ * token below. Change them (or ask your AI to) and restart with
+ * --theme-dir to restyle the whole UI. Keep both light and dark blocks.
+ */
+:root{
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-ui);
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --font-size: 15px;
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
+
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #efeee9;
+  --border: #e4e2dc;
+  --border-strong: #cfccc4;
+  --text: #1d1c1a;
+  --text-2: #4a4843;
+  --muted: #85827a;
+  --accent: #1f6f5c;
+  --accent-strong: #185a4a;
+  --accent-soft: #e2efe9;
+  --on-accent: #ffffff;
+  --danger: #c2410c;
+
+  --thumb-bg: #ebe9e3;
+  --stage-bg: #e9e7e1;
+  --toast-bg: #1d1c1a;
+  --toast-text: #f6f5f1;
+
+  --kind-html: #1f6f5c; --kind-html-bg: #e2efe9;
+  --kind-md: #4b5bb5;   --kind-md-bg: #e7e9f7;
+  --kind-pdf: #b4441f;  --kind-pdf-bg: #f7e6df;
+  --kind-img: #8a5a00;  --kind-img-bg: #f5ecd8;
+
+  --shadow-sm: 0 1px 2px rgba(29,28,26,.08);
+  --shadow: 0 6px 20px -8px rgba(29,28,26,.18);
+  --shadow-lg: 0 18px 50px -12px rgba(29,28,26,.28);
+}
+
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg: #161614;
+    --surface: #1f1e1c;
+    --surface-2: #2a2926;
+    --border: #33322e;
+    --border-strong: #4a4843;
+    --text: #edebe6;
+    --text-2: #c4c1b9;
+    --muted: #8e8b83;
+    --accent: #5cc2a3;
+    --accent-strong: #79d3b8;
+    --accent-soft: #1c3a32;
+    --on-accent: #0c1f1a;
+    --danger: #f08a5d;
+    --thumb-bg: #262522;
+    --stage-bg: #121210;
+    --toast-bg: #edebe6;
+    --toast-text: #161614;
+    --kind-html: #5cc2a3; --kind-html-bg: #1c3a32;
+    --kind-md: #9aa6ef;   --kind-md-bg: #262b4a;
+    --kind-pdf: #f08a5d;  --kind-pdf-bg: #44261a;
+    --kind-img: #e3b55a;  --kind-img-bg: #3d3018;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+    --shadow: 0 6px 20px -8px rgba(0,0,0,.6);
+    --shadow-lg: 0 18px 50px -12px rgba(0,0,0,.7);
+  }
+}

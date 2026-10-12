@@ -1,0 +1,14 @@
+:root{--bg:#fbf8f1;--text:#2b2418;--muted:#8a7d66;--border:#ddd3bf;--code:#efe8da;--accent:#9b2c1f;color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root{--bg:#1d1913;--text:#efe6d4;--muted:#9b8e77;--border:#3d3528;--code:#2a241b;--accent:#e0846f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:18px/1.75 "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif}
+.markdown{max-width:700px;margin:0 auto;padding:64px 24px 110px}
+h1,h2,h3,h4{line-height:1.2;margin:1.8em 0 .5em;font-weight:600}
+h1{font-size:2.3em;margin-top:0}h2{font-size:1.45em;border-bottom:1px solid var(--border);padding-bottom:.25em}
+a{color:var(--accent)}img{max-width:100%}
+code{font:.82em ui-monospace,Menlo,monospace;background:var(--code);padding:.12em .35em;border-radius:3px}
+pre{background:var(--code);padding:14px 18px;border-radius:6px;overflow:auto}pre code{background:none;padding:0}
+blockquote{font-style:italic;border-left:3px solid var(--accent);margin-left:0;padding-left:1em;color:var(--muted)}
+hr{border:0;text-align:center}hr::after{content:"❦";color:var(--muted)}
+.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:.9em}th,td{border-bottom:1px solid var(--border);padding:8px 10px;text-align:left}
+li.task{list-style:none;margin-left:-1.3em}

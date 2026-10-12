@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<title>{{.Name}}</title>
+<link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/app.css">
+<link rel="stylesheet" href="/assets/theme.css">
+<script type="module" src="/assets/app.js"></script>
+</head>
+<body>
+
+<section id="view-setup" class="auth-screen" hidden>
+  <form class="auth-card" id="setup-form">
+    <img class="auth-logo" src="/assets/logo.svg" alt="">
+    <h1>Welcome to {{.Name}}</h1>
+    <p class="muted">Set the owner password. You can add a passkey right after.</p>
+    <label for="setup-code">Setup code <span class="muted">(printed in the server log)</span></label>
+    <input id="setup-code" autocomplete="off" spellcheck="false" required>
+    <label for="setup-pw">Owner password <span class="muted">(10+ characters)</span></label>
+    <input id="setup-pw" type="password" autocomplete="new-password" minlength="10" required>
+    <button class="btn primary block" type="submit">Create vault</button>
+    <p class="auth-error" id="setup-error" role="alert" hidden></p>
+  </form>
+</section>
+
+<section id="view-login" class="auth-screen" hidden>
+  <form class="auth-card" id="login-form">
+    <img class="auth-logo" src="/assets/logo.svg" alt="">
+    <h1>{{.Name}}</h1>
+    <p class="muted">Private artifacts. Sign in to continue.</p>
+    <button class="btn primary block" id="pk-login" type="button" data-icon="key">Sign in with passkey</button>
+    <div class="divider"><span>or password</span></div>
+    <label class="sr-only" for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password" placeholder="Password">
+    <button class="btn block" type="submit">Sign in</button>
+    <p class="auth-error" id="login-error" role="alert" hidden></p>
+  </form>
+</section>
+
+<div id="view-gallery" class="gallery-screen" hidden>
+  <header class="topbar">
+    <a class="brand" href="/" data-link>
+      <img src="/assets/logo.svg" alt="">
+      <span>{{.Name}}</span>
+    </a>
+    <div class="search">
+      <span class="search-icon" data-icon="search"></span>
+      <input id="search" type="search" placeholder="Search artifacts" aria-label="Search artifacts" autocomplete="off">
+      <kbd>/</kbd>
+    </div>
+    <button class="btn primary" id="upload-btn" type="button" data-icon="plus"><span class="hide-sm">New</span></button>
+    <a class="icon-btn" href="/settings" data-link title="Settings" aria-label="Settings" data-icon="settings"></a>
+  </header>
+
+  <main class="gallery">
+    <div class="gallery-head">
+      <h1 id="gallery-title">Artifacts</h1>
+      <span class="count" id="gallery-count"></span>
+      <span class="spacer"></span>
+      <div class="segmented" role="group" aria-label="Layout">
+        <button id="view-grid" type="button" aria-label="Grid" data-icon="grid"></button>
+        <button id="view-rows" type="button" aria-label="List" data-icon="list"></button>
+      </div>
+    </div>
+    <div class="chips" id="tag-chips" role="group" aria-label="Filter by tag"></div>
+    <div id="gallery-items"></div>
+  </main>
+  <div class="dropzone" id="dropzone" hidden><div><span data-icon="upload"></span><p>Drop files to publish a new artifact</p></div></div>
+</div>
+
+<div id="view-detail" class="viewer-screen" hidden></div>
+
+<div id="view-settings" class="settings-screen" hidden></div>
+
+<input type="file" id="file-input" multiple hidden>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+</body>
+</html>
