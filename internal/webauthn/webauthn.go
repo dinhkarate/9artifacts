@@ -134,7 +134,9 @@ func (rp RP) Assert(cred Credential, challenge string, authData, clientData, sig
 	if !verifySig(pub, digest[:], sig) {
 		return 0, errors.New("signature invalid")
 	}
-	if count > 0 && cred.SignCount > 0 && count <= cred.SignCount {
+	// Authenticators that do not count always report 0; once a credential
+	// has counted, the value must strictly increase.
+	if cred.SignCount > 0 && count <= cred.SignCount {
 		return 0, errors.New("signature counter did not increase (cloned authenticator?)")
 	}
 	return count, nil
@@ -256,10 +258,9 @@ func decodeCBOR(b []byte, pos, depth int) (any, int, error) {
 			if err != nil {
 				return nil, 0, err
 			}
-			if _, ok := k.([]any); ok {
-				return nil, 0, errors.New("unsupported cbor map key")
-			}
-			if _, ok := k.([]byte); ok {
+			switch k.(type) {
+			case int64, string:
+			default:
 				return nil, 0, errors.New("unsupported cbor map key")
 			}
 			m[k], pos = v, next2

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -21,7 +22,11 @@ import (
 	"github.com/dinhkarate/vitrine/internal/markdown"
 )
 
-const maxFilesPerVersion = 500
+const (
+	maxFilesPerVersion = 500
+	// JSON and MCP bodies are decoded in memory; large uploads use multipart.
+	maxJSONBody = 32 << 20
+)
 
 // ShareTTLs are the allowed lifetimes of a public link.
 var ShareTTLs = map[string]time.Duration{
@@ -76,7 +81,11 @@ func cleanName(name string) (string, error) {
 // entry, message, files[]) or JSON ({title, tags, files:[{name, content,
 // encoding}]}).
 func (s *Server) parseUpload(w http.ResponseWriter, r *http.Request) (meta, []upload, error) {
-	r.Body = http.MaxBytesReader(w, r.Body, s.cfg.MaxUpload)
+	limit := s.cfg.MaxUpload
+	if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+		limit = min(limit, maxJSONBody)
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
 	var m meta
 	var files []upload
 	ct := r.Header.Get("Content-Type")
@@ -121,7 +130,7 @@ func (s *Server) parseUpload(w http.ResponseWriter, r *http.Request) (meta, []up
 		}
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&body); err != nil {
-			return m, nil, errors.New("invalid JSON body (or upload too large)")
+			return m, nil, errors.New("invalid JSON body, or larger than 32 MB (use multipart/form-data for big files)")
 		}
 		m = body.meta
 		for _, jf := range body.Files {
@@ -137,7 +146,7 @@ func (s *Server) parseUpload(w http.ResponseWriter, r *http.Request) (meta, []up
 				data = []byte(jf.Content)
 			}
 			files = append(files, upload{name: jf.Name, open: func() (io.ReadCloser, error) {
-				return io.NopCloser(strings.NewReader(string(data))), nil
+				return io.NopCloser(bytes.NewReader(data)), nil
 			}})
 		}
 	default:
@@ -617,6 +626,11 @@ func (s *Server) CreateShare(id, ttl, note string, version int) (shareView, int,
 		if version != 0 && a.Version(version) == nil {
 			return errors.New("no such version")
 		}
+		// Pin the link to what the owner is sharing now; later versions
+		// stay private until they share again.
+		if version == 0 {
+			sh.Version = a.Latest().N
+		}
 		// Keep the list bounded: drop links that died more than 30 days ago.
 		a.Shares = slices.DeleteFunc(a.Shares, func(x Share) bool {
 			return !x.Active(now) && now.Sub(x.ExpiresAt) > 30*24*time.Hour
@@ -627,7 +641,7 @@ func (s *Server) CreateShare(id, ttl, note string, version int) (shareView, int,
 	if err != nil {
 		return shareView{}, 404, err
 	}
-	return shareView{Token: sh.Token, URL: s.cfg.PublicURL + "/s/" + sh.Token, Version: version, Note: sh.Note,
+	return shareView{Token: sh.Token, URL: s.cfg.PublicURL + "/s/" + sh.Token, Version: sh.Version, Note: sh.Note,
 		CreatedAt: now, ExpiresAt: sh.ExpiresAt, Active: true}, 201, nil
 }
 

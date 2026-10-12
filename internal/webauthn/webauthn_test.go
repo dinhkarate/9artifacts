@@ -142,3 +142,22 @@ func TestDecodeCBORLimits(t *testing.T) {
 		}
 	}
 }
+
+func TestCounterRollbackAndUnhashableKey(t *testing.T) {
+	rp := RP{ID: "localhost", Origin: "http://localhost:8080"}
+	a := newAuthenticator(t)
+	cred, err := rp.Register("c", b64.EncodeToString(a.id), a.authData(rp.ID, 0x45, true), clientData("webauthn.create", "c", rp.Origin))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cred.SignCount = 7
+	a.count = 0
+	ad := a.authData(rp.ID, 0x05, false)
+	cd := clientData("webauthn.get", "c", rp.Origin)
+	if _, err := rp.Assert(*cred, "c", ad, cd, a.sign(ad, cd)); err == nil {
+		t.Fatal("counter reset to 0 accepted")
+	}
+	if _, _, err := decodeCBOR([]byte{0xa1, 0xa0, 0x01}, 0, 0); err == nil {
+		t.Fatal("map as map key accepted")
+	}
+}

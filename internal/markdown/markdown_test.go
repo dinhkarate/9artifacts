@@ -32,3 +32,13 @@ func TestTitle(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestNoAttributeInjection(t *testing.T) {
+	out := Render("![ http://x/onerror=alert(1)//](http://y/a.png) [**b** `c`](https://e.com) http://a.b/?q=\"x\"")
+	if strings.Contains(out, `onerror="`) || strings.Count(out, "<a ") != 2 {
+		t.Fatalf("unsafe or wrong output: %s", out)
+	}
+	if !strings.Contains(out, "<strong>b</strong> <code>c</code></a>") {
+		t.Fatalf("link label formatting lost: %s", out)
+	}
+}

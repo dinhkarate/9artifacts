@@ -1,22 +1,43 @@
 package app
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 )
 
 // AdminSocketPath is the Unix socket the running server exposes for local
 // administration. Access is controlled by filesystem permissions (0600),
 // so anyone who can read the data directory is already the owner.
-func AdminSocketPath(dataDir string) string { return filepath.Join(dataDir, "admin.sock") }
+// Socket paths are limited to ~104 bytes; for deep data directories the
+// socket moves to a private per-user directory under the temp dir.
+func AdminSocketPath(dataDir string) string {
+	p := filepath.Join(dataDir, "admin.sock")
+	if len(p) < 100 {
+		return p
+	}
+	abs, _ := filepath.Abs(dataDir)
+	sum := sha256.Sum256([]byte(abs))
+	return filepath.Join(os.TempDir(), "vitrine-"+strconv.Itoa(os.Getuid()), hex.EncodeToString(sum[:6])+".sock")
+}
 
 // ServeAdmin listens on the admin socket until the listener fails.
 func (s *Server) ServeAdmin() error {
 	sock := AdminSocketPath(s.store.dir)
+	if dir := filepath.Dir(sock); dir != s.store.dir {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			return err
+		}
+		if st, err := os.Lstat(dir); err != nil || !st.IsDir() || st.Mode().Perm() != 0o700 {
+			return errors.New("refusing insecure admin socket directory " + dir)
+		}
+	}
 	_ = os.Remove(sock)
 	ln, err := net.Listen("unix", sock)
 	if err != nil {

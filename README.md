@@ -148,14 +148,14 @@ vitrine is meant for documents you would not paste into a public pastebin. The d
 
 | Concern | How vitrine handles it |
 |---|---|
-| Malicious or buggy artifact JS | Artifacts are served with `Content-Security-Policy: sandbox`, so they run on an opaque origin with no cookies and no API access, even when opened in a new tab. With `--content-url`, they also live on a **separate origin**, which is how Claude.ai isolates artifacts. |
+| Malicious or buggy artifact JS | Every artifact response except PDFs carries `Content-Security-Policy: sandbox`, so it runs on an opaque origin with no cookies and no API access, even when opened in a new tab. Content types come from a fixed table, and unknown extensions download as `application/octet-stream`. With `--content-url`, artifacts also live on a **separate origin**, which is how Claude.ai isolates them. |
 | Sub-resources in a sandbox | Short-lived HMAC **view tokens** are scoped to one artifact version, so sibling CSS and images load without exposing your session. |
-| Login | **Passkeys** (WebAuthn, user verification required) or a PBKDF2 password, with lockout after 5 failed attempts. Sessions use `HttpOnly`, `Secure`, `SameSite=Strict` cookies, plus a CSRF header check. |
+| Login | **Passkeys** (WebAuthn, user verification required, signature-counter checks) or a PBKDF2 password. Lockout applies after 5 failures per address plus a global cap. Sessions use a `__Host-` cookie that is `HttpOnly`, `Secure` and `SameSite=Strict`, plus a CSRF header check. |
 | Agent access | API tokens are stored only as SHA-256 hashes and can be revoked. Agents cannot mint tokens or change login settings. |
-| Public links | Unguessable 144-bit tokens. Every link must expire, and revoked or expired links return `410 Gone`. |
+| Public links | Unguessable 144-bit tokens, **pinned to the version you shared**. Every link must expire, and revoked or expired links return `410 Gone`. |
 | Logs | Share and view tokens are **redacted** from vitrine's request log. |
-| Files | Upload paths are validated and written through `os.Root`, so traversal is impossible. Content-Type is set by extension and served with `nosniff`. |
-| App UI | Strict CSP, `X-Frame-Options: DENY` and HSTS on HTTPS. |
+| Files | Upload paths are validated and written through `os.Root`, so traversal is impossible. Responses are served with `nosniff`. |
+| App UI | Nonce-based CSP (an uploaded `.js` can never run as app code), `X-Frame-Options: DENY`, and HSTS on HTTPS. |
 
 Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 

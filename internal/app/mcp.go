@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,12 +49,12 @@ func (s *Server) handleMCP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 401, "send Authorization: Bearer <vitrine API token>")
 		return
 	}
-	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, s.cfg.MaxUpload))
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, min(s.cfg.MaxUpload, maxJSONBody)))
 	if err != nil {
-		writeError(w, 413, "request too large")
+		writeError(w, 413, "request larger than 32 MB; use the REST API with multipart/form-data for big files")
 		return
 	}
-	body = []byte(strings.TrimSpace(string(body)))
+	body = bytes.TrimSpace(body)
 	if len(body) > 0 && body[0] == '[' {
 		var batch []rpcRequest
 		if err := json.Unmarshal(body, &batch); err != nil {
@@ -209,7 +210,7 @@ func (s *Server) mcpCall(name string, raw json.RawMessage) (string, error) {
 				}
 			}
 			files = append(files, upload{name: f.Name, open: func() (io.ReadCloser, error) {
-				return io.NopCloser(strings.NewReader(string(data))), nil
+				return io.NopCloser(bytes.NewReader(data)), nil
 			}})
 		}
 		m := meta{Title: a.Title, Tags: a.Tags, Note: a.Note, Message: a.Message, Keep: !a.Replace}

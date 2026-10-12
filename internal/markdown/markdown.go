@@ -6,6 +6,7 @@ package markdown
 import (
 	"html"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -43,36 +44,48 @@ func safeURL(escaped string) string {
 	return html.EscapeString(u)
 }
 
+// inline formats one line. Every generated tag is stashed behind a
+// placeholder before the next pass runs, so later passes (autolinks,
+// emphasis) only ever see escaped text, never markup.
 func inline(s string) string {
-	// Protect code spans from further formatting.
-	var codes []string
+	var stash []string
+	hide := func(html string) string {
+		stash = append(stash, html)
+		return "\x00" + strconv.Itoa(len(stash)-1) + "\x00"
+	}
 	s = html.EscapeString(s)
 	s = reCode.ReplaceAllStringFunc(s, func(m string) string {
-		codes = append(codes, "<code>"+m[1:len(m)-1]+"</code>")
-		return "\x00" + string(rune('0'+len(codes)-1)) + "\x00"
+		return hide("<code>" + m[1:len(m)-1] + "</code>")
 	})
 	s = reImage.ReplaceAllStringFunc(s, func(m string) string {
 		p := reImage.FindStringSubmatch(m)
 		if u := safeURL(p[2]); u != "" {
-			return `<img src="` + u + `" alt="` + p[1] + `" loading="lazy">`
+			return hide(`<img src="` + u + `" alt="` + p[1] + `" loading="lazy">`)
 		}
 		return p[1]
 	})
 	s = reLink.ReplaceAllStringFunc(s, func(m string) string {
 		p := reLink.FindStringSubmatch(m)
 		if u := safeURL(p[2]); u != "" {
-			return `<a href="` + u + `" target="_blank" rel="noopener noreferrer">` + p[1] + `</a>`
+			return hide(`<a href="` + u + `" target="_blank" rel="noopener noreferrer">` + emphasis(p[1]) + `</a>`)
 		}
 		return p[1]
 	})
-	s = reAuto.ReplaceAllString(s, `$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>`)
-	s = reStrong.ReplaceAllString(s, "<strong>$1$2</strong>")
-	s = reEm.ReplaceAllString(s, "$1$3<em>$2$4</em>")
-	s = reStrike.ReplaceAllString(s, "<del>$1</del>")
-	for i, c := range codes {
-		s = strings.Replace(s, "\x00"+string(rune('0'+i))+"\x00", c, 1)
+	s = reAuto.ReplaceAllStringFunc(s, func(m string) string {
+		p := reAuto.FindStringSubmatch(m)
+		return p[1] + hide(`<a href="`+p[2]+`" target="_blank" rel="noopener noreferrer">`+p[2]+`</a>`)
+	})
+	s = emphasis(s)
+	for i := len(stash) - 1; i >= 0; i-- {
+		s = strings.Replace(s, "\x00"+strconv.Itoa(i)+"\x00", stash[i], 1)
 	}
 	return s
+}
+
+func emphasis(s string) string {
+	s = reStrong.ReplaceAllString(s, "<strong>$1$2</strong>")
+	s = reEm.ReplaceAllString(s, "$1$3<em>$2$4</em>")
+	return reStrike.ReplaceAllString(s, "<del>$1</del>")
 }
 
 func cells(line string) []string {

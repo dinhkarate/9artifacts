@@ -15,7 +15,7 @@ Errors are JSON: `{"error": "..."}`.
 | `DELETE` | `/api/artifacts/{id}` | — | `{ok: true}` |
 | `POST` | `/api/artifacts/{id}/versions` | multipart or JSON, plus `keep` | `201` artifact (new version) |
 | `GET` | `/api/artifacts/{id}/download/{file}?v=N` | — | file as attachment |
-| `POST` | `/api/artifacts/{id}/shares` | `{ttl: "1h"\|"24h"\|"7d"\|"30d", note?, version?}` | `201` share |
+| `POST` | `/api/artifacts/{id}/shares` | `{ttl: "1h"\|"24h"\|"7d"\|"30d", note?, version?}` | `201` share, pinned to `version` (default: the current latest) |
 | `DELETE` | `/api/artifacts/{id}/shares/{token}` | — | revoke |
 
 ### Uploading
@@ -28,7 +28,7 @@ Sub-folders are kept from the part's filename (`-F "files=@logo.png;filename=ass
 curl -H "Authorization: Bearer $T" -F files=@index.html -F files=@style.css -F tags=demo $URL/api/artifacts
 ```
 
-JSON, which is easier from code:
+JSON, which is easier from code (up to 32 MB; use multipart for anything bigger):
 
 ```json
 {

@@ -17,9 +17,13 @@ import (
 	"github.com/dinhkarate/vitrine/internal/webauthn"
 )
 
+// pbkdf2Iter is a variable only so tests can lower it; the count is stored
+// in each hash, so changing it never invalidates existing passwords.
+var pbkdf2Iter = 600_000
+
 const (
-	pbkdf2Iter      = 600_000
 	failLimit       = 5
+	globalFailLimit = 50
 	failWindow      = 15 * time.Minute
 	lockDuration    = 15 * time.Minute
 	challengeTTL    = 5 * time.Minute
@@ -84,15 +88,24 @@ func (s *Server) startSession(w http.ResponseWriter) error {
 		return err
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name: sessionCookie, Value: sid, Path: "/", HttpOnly: true,
+		Name: s.cookieName(), Value: sid, Path: "/", HttpOnly: true,
 		Secure: strings.HasPrefix(s.cfg.PublicURL, "https://"), SameSite: http.SameSiteStrictMode,
 		MaxAge: int(sessionTTL.Seconds()),
 	})
 	return nil
 }
 
+// cookieName uses the __Host- prefix on HTTPS so a sibling subdomain (for
+// example the content origin) can never plant or overwrite the session.
+func (s *Server) cookieName() string {
+	if strings.HasPrefix(s.cfg.PublicURL, "https://") {
+		return "__Host-" + sessionCookie
+	}
+	return sessionCookie
+}
+
 func (s *Server) hasSession(r *http.Request) bool {
-	c, err := r.Cookie(sessionCookie)
+	c, err := r.Cookie(s.cookieName())
 	if err != nil || c.Value == "" {
 		return false
 	}
@@ -133,27 +146,27 @@ func (s *Server) tokenAuth(r *http.Request) bool {
 		return false
 	}
 	want := hashSecret(strings.TrimSpace(secret))
-	found := -1
-	s.store.Read(func(st *State) {
-		for i, t := range st.Tokens {
-			if subtle.ConstantTimeCompare([]byte(t.Hash), []byte(want)) == 1 {
-				found = i
-			}
-		}
-	})
-	if found < 0 {
-		return false
-	}
+	found, stale := false, false
 	now := time.Now().UTC()
-	_ = s.store.Update(func(st *State) error {
-		if found < len(st.Tokens) && st.Tokens[found].Hash == want {
-			if st.Tokens[found].LastUsedAt == nil || now.Sub(*st.Tokens[found].LastUsedAt) > time.Minute {
-				st.Tokens[found].LastUsedAt = &now
+	s.store.Read(func(st *State) {
+		for _, t := range st.Tokens {
+			if subtle.ConstantTimeCompare([]byte(t.Hash), []byte(want)) == 1 {
+				found = true
+				stale = t.LastUsedAt == nil || now.Sub(*t.LastUsedAt) > time.Minute
 			}
 		}
-		return nil
 	})
-	return true
+	if found && stale {
+		_ = s.store.Update(func(st *State) error {
+			for i := range st.Tokens {
+				if st.Tokens[i].Hash == want {
+					st.Tokens[i].LastUsedAt = &now
+				}
+			}
+			return nil
+		})
+	}
+	return found
 }
 
 // csrfOK: cookie-authenticated writes must come from our own JavaScript,
@@ -198,6 +211,37 @@ func (s *Server) locked(ip string) time.Duration {
 	return 0
 }
 
+// passwordLocked also applies the global cap, so rotating addresses does
+// not buy unlimited guesses. Passkey sign-in is never globally locked.
+func (s *Server) passwordLocked(ip string) time.Duration {
+	if d := s.locked(ip); d > 0 {
+		return d
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if time.Now().Before(s.global.lock) {
+		return time.Until(s.global.lock)
+	}
+	return 0
+}
+
+// allowBegin rate-limits unauthenticated passkey ceremonies per address.
+func (s *Server) allowBegin(ip string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now()
+	b := s.begins[ip]
+	if b == nil || now.Sub(b.first) > time.Minute {
+		if len(s.begins) > 10000 {
+			clear(s.begins)
+		}
+		b = &failure{first: now}
+		s.begins[ip] = b
+	}
+	b.count++
+	return b.count <= 20
+}
+
 func (s *Server) fail(ip string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -212,6 +256,15 @@ func (s *Server) fail(ip string) {
 		f.lock = now.Add(lockDuration)
 		f.count = 0
 		f.first = now
+	}
+	if now.Sub(s.global.first) > failWindow {
+		s.global = failure{first: now, lock: s.global.lock}
+	}
+	s.global.count++
+	if s.global.count >= globalFailLimit {
+		s.global.lock = now.Add(lockDuration)
+		s.global.count = 0
+		s.global.first = now
 	}
 	if len(s.failures) > 10000 {
 		for k, v := range s.failures {
@@ -244,7 +297,7 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
 	ip := s.clientIP(r)
-	if wait := s.locked(ip); wait > 0 {
+	if wait := s.passwordLocked(ip); wait > 0 {
 		tooMany(w, wait)
 		return
 	}
@@ -281,7 +334,7 @@ func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	ip := s.clientIP(r)
-	if wait := s.locked(ip); wait > 0 {
+	if wait := s.passwordLocked(ip); wait > 0 {
 		tooMany(w, wait)
 		return
 	}
@@ -298,7 +351,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	if !checkPassword(body.Password, hash) {
 		s.fail(ip)
-		if wait := s.locked(ip); wait > 0 {
+		if wait := s.passwordLocked(ip); wait > 0 {
 			tooMany(w, wait)
 			return
 		}
@@ -313,13 +366,13 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
-	if c, err := r.Cookie(sessionCookie); err == nil {
+	if c, err := r.Cookie(s.cookieName()); err == nil {
 		_ = s.store.Update(func(st *State) error {
 			delete(st.Sessions, hashSecret(c.Value))
 			return nil
 		})
 	}
-	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: "/", MaxAge: -1, HttpOnly: true,
+	http.SetCookie(w, &http.Cookie{Name: s.cookieName(), Value: "", Path: "/", MaxAge: -1, HttpOnly: true,
 		Secure: strings.HasPrefix(s.cfg.PublicURL, "https://"), SameSite: http.SameSiteStrictMode})
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
@@ -331,7 +384,7 @@ func (s *Server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ip := s.clientIP(r)
-	if wait := s.locked(ip); wait > 0 {
+	if wait := s.passwordLocked(ip); wait > 0 {
 		tooMany(w, wait)
 		return
 	}
@@ -365,9 +418,16 @@ func (s *Server) newChallenge(kind string) (id, value string) {
 		}
 	}
 	id, value = newID(10), b64.EncodeToString(randomBytes(32))
-	if len(s.challenges) < 1000 {
-		s.challenges[id] = challenge{kind: kind, value: value, expires: now.Add(challengeTTL)}
+	if len(s.challenges) >= 1000 {
+		var oldest string
+		for k, c := range s.challenges {
+			if oldest == "" || c.expires.Before(s.challenges[oldest].expires) {
+				oldest = k
+			}
+		}
+		delete(s.challenges, oldest)
 	}
+	s.challenges[id] = challenge{kind: kind, value: value, expires: now.Add(challengeTTL)}
 	return id, value
 }
 
@@ -460,8 +520,13 @@ func (s *Server) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Requ
 }
 
 func (s *Server) handlePasskeyLoginBegin(w http.ResponseWriter, r *http.Request) {
-	if wait := s.locked(s.clientIP(r)); wait > 0 {
+	ip := s.clientIP(r)
+	if wait := s.locked(ip); wait > 0 {
 		tooMany(w, wait)
+		return
+	}
+	if !s.allowBegin(ip) {
+		tooMany(w, time.Minute)
 		return
 	}
 	id, ch := s.newChallenge("login")
@@ -520,7 +585,7 @@ func (s *Server) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Request
 	}
 	_ = s.store.Update(func(st *State) error {
 		for i := range st.Passkeys {
-			if st.Passkeys[i].ID == cred.ID {
+			if st.Passkeys[i].ID == cred.ID && count > st.Passkeys[i].SignCount {
 				st.Passkeys[i].SignCount = count
 			}
 		}

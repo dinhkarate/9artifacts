@@ -181,6 +181,10 @@ func Publish(args []string) error {
 			if d.IsDir() {
 				return nil
 			}
+			if d.Type()&fs.ModeSymlink != 0 || !d.Type().IsRegular() {
+				fmt.Fprintf(os.Stderr, "skip %s (not a regular file)\n", fp)
+				return nil
+			}
 			rel, _ := filepath.Rel(p, fp)
 			items = append(items, item{filepath.ToSlash(rel), fp})
 			return nil

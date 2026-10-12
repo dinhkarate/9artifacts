@@ -9,6 +9,7 @@
 #   --content-domain C   second domain for artifact content (recommended isolation)
 #   --email E            contact email for Let's Encrypt
 #   --url U              public URL when running behind your own reverse proxy (listens on 127.0.0.1:8080)
+#   --content-url C      with --url: separate origin for artifact content (recommended)
 #   --version V          release tag to install (default: latest)
 #   --no-service         only install the binary
 set -eu
@@ -19,6 +20,7 @@ DOMAIN=""
 CONTENT_DOMAIN=""
 EMAIL=""
 URL=""
+CONTENT_URL=""
 SERVICE=1
 
 while [ $# -gt 0 ]; do
@@ -27,9 +29,10 @@ while [ $# -gt 0 ]; do
     --content-domain) CONTENT_DOMAIN="$2"; shift 2 ;;
     --email) EMAIL="$2"; shift 2 ;;
     --url) URL="$2"; shift 2 ;;
+    --content-url) CONTENT_URL="$2"; shift 2 ;;
     --version) VERSION="$2"; shift 2 ;;
     --no-service) SERVICE=0; shift ;;
-    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
+    -h|--help) echo "see https://github.com/$REPO#quick-start"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -82,6 +85,7 @@ if [ -n "$DOMAIN" ]; then
 else
   [ -n "$URL" ] || URL="http://localhost:8080"
   args="--addr 127.0.0.1:8080 --url $URL --trust-proxy"
+  [ -n "$CONTENT_URL" ] && args="$args --content-url $CONTENT_URL"
 fi
 
 cat > /etc/systemd/system/vitrine.service <<EOF

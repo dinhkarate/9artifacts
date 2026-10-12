@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/textproto"
+	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -365,4 +367,110 @@ func logTo(w io.Writer, fn func()) {
 	log.SetOutput(w)
 	defer log.SetOutput(old)
 	fn()
+}
+
+// Regression: extensions the host MIME database maps to active content
+// must never be served unsandboxed.
+func TestEverythingButPDFIsSandboxed(t *testing.T) {
+	e := newEnv(t, Config{})
+	rec := e.upload("/api/artifacts", nil, map[string]string{
+		"index.html": "x", "evil.shtml": "<script>1</script>", "a.xht": "x", "b.svgz": "x", "c.rss": "x",
+		"d.png": "x", "e.css": "x", "f.pdf": "%PDF",
+	})
+	a := decode[artifactView](t, rec)
+	base := pathOf(a.ViewBase)
+	for _, f := range []string{"index.html", "evil.shtml", "a.xht", "b.svgz", "c.rss", "d.png", "e.css"} {
+		r := e.do("GET", base+f, nil, nil)
+		if !strings.HasPrefix(r.Header().Get("Content-Security-Policy"), "sandbox") {
+			t.Errorf("%s served without sandbox (type %q)", f, r.Header().Get("Content-Type"))
+		}
+	}
+	for _, f := range []string{"evil.shtml", "a.xht", "c.rss"} {
+		if ct := e.do("GET", base+f, nil, nil).Header().Get("Content-Type"); ct != "application/octet-stream" {
+			t.Errorf("%s: content type %q", f, ct)
+		}
+	}
+	if r := e.do("GET", base+"f.pdf", nil, nil); r.Header().Get("Content-Type") != "application/pdf" {
+		t.Errorf("pdf type %q", r.Header().Get("Content-Type"))
+	}
+}
+
+func TestTrustProxyUsesRightmostAddress(t *testing.T) {
+	e := newEnv(t, Config{TrustProxy: true})
+	login := func(xff string) int {
+		return e.do("POST", "/api/auth/login", strings.NewReader(`{"password":"wrong password"}`),
+			map[string]string{"Content-Type": "application/json", "X-Forwarded-For": xff}).Code
+	}
+	var last int
+	for i := range 6 {
+		last = login("10.9.9." + string(rune('0'+i)) + ", 203.0.113.7")
+	}
+	if last != 429 {
+		t.Fatalf("spoofed left-most XFF bypassed lockout: %d", last)
+	}
+}
+
+func TestGlobalPasswordCap(t *testing.T) {
+	e := newEnv(t, Config{TrustProxy: true})
+	var last int
+	for i := range globalFailLimit + 1 {
+		last = e.do("POST", "/api/auth/login", strings.NewReader(`{"password":"nope"}`),
+			map[string]string{"Content-Type": "application/json", "X-Forwarded-For": "198.51.100." + strconv.Itoa(i)}).Code
+	}
+	if last != 429 {
+		t.Fatalf("distributed guessing not capped: %d", last)
+	}
+}
+
+func TestChallengeFloodDoesNotBlockLogin(t *testing.T) {
+	e := newEnv(t, Config{})
+	for range 1100 {
+		e.srv.newChallenge("login")
+	}
+	id, _ := e.srv.newChallenge("login")
+	if _, ok := e.srv.takeChallenge(id, "login"); !ok {
+		t.Fatal("fresh challenge dropped after flood")
+	}
+	limited := false
+	for range 25 {
+		if e.do("POST", "/api/auth/passkey/login/begin", strings.NewReader("{}"), nil).Code == 429 {
+			limited = true
+		}
+	}
+	if !limited {
+		t.Fatal("passkey begin not rate limited")
+	}
+}
+
+func TestSharesPinVersionAndHTTPSCookie(t *testing.T) {
+	e := newEnv(t, Config{PublicURL: "https://art.example.com"})
+	a := decode[artifactView](t, e.upload("/api/artifacts", nil, map[string]string{"index.html": "v1 secret-free"}))
+	sh := decode[shareView](t, e.api("POST", "/api/artifacts/"+a.ID+"/shares", map[string]string{"ttl": "1h"}))
+	if sh.Version != 1 {
+		t.Fatalf("share not pinned: %+v", sh)
+	}
+	e.upload("/api/artifacts/"+a.ID+"/versions", nil, map[string]string{"index.html": "v2 private draft"})
+	if body := e.do("GET", "/s/"+sh.Token+"/f/index.html", nil, nil).Body.String(); body != "v1 secret-free" {
+		t.Fatalf("share exposed a later version: %q", body)
+	}
+	rec := e.do("POST", "/api/auth/login", strings.NewReader(`{"password":"correct horse battery"}`), map[string]string{"Content-Type": "application/json"})
+	if c := rec.Result().Cookies()[0]; c.Name != "__Host-vitrine_session" || !c.Secure {
+		t.Fatalf("cookie: %+v", c)
+	}
+	idx := e.do("GET", "/", nil, nil)
+	csp := idx.Header().Get("Content-Security-Policy")
+	if !strings.Contains(csp, "script-src 'nonce-") || !strings.Contains(idx.Body.String(), `nonce="`) {
+		t.Fatalf("index CSP without nonce: %s", csp)
+	}
+	if !strings.Contains(e.do("GET", "/settings", nil, nil).Header().Get("Content-Security-Policy"), "'nonce-") {
+		t.Fatal("settings shell lacks nonce")
+	}
+	if !strings.Contains(e.do("GET", "/api/me", nil, nil).Header().Get("Content-Security-Policy"), "script-src 'none'") {
+		t.Fatal("non-shell pages allow scripts")
+	}
+}
+
+func TestMain(m *testing.M) {
+	pbkdf2Iter = 1000
+	os.Exit(m.Run())
 }

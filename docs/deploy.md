@@ -48,8 +48,7 @@ vitrine serve --addr 127.0.0.1:8080 \
   --trust-proxy
 ```
 
-With the installer: `sudo sh install.sh --url https://art.example.com` (then add
-`--content-url` to `ExecStart` in `/etc/systemd/system/vitrine.service`).
+With the installer: `sudo sh install.sh --url https://art.example.com --content-url https://art-content.example.com`.
 
 Proxy both host names to `127.0.0.1:8080` and keep the `Host` header. Examples:
 [`deploy/Caddyfile`](../deploy/Caddyfile) and [`deploy/nginx.conf`](../deploy/nginx.conf).

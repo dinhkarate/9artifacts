@@ -624,7 +624,7 @@ function shareRow(s) {
   const li = h('li', { class: `share-link ${st}` },
     h('div', { class: 'share-link-top' },
       h('span', { class: `pill ${st}`, text: label }),
-      h('span', { class: 'muted', text: s.active ? `expires ${ago(s.expiresAt)}` : fmtDate(s.revokedAt || s.expiresAt) })),
+      h('span', { class: 'muted', text: `${s.version ? `v${s.version}` : 'latest'} · ${s.active ? `expires ${ago(s.expiresAt)}` : fmtDate(s.revokedAt || s.expiresAt)}` })),
     h('code', { class: 'share-url', text: s.url }));
   if (s.active) {
     li.append(h('div', { class: 'form-row' },

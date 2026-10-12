@@ -82,7 +82,7 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleShareContent(w http.ResponseWriter, r *http.Request) {
-	id, v, _, status := s.resolveShare(r.PathValue("token"))
+	id, v, _, _, status := s.resolveShare(r.PathValue("token"))
 	if status != 200 {
 		http.Error(w, http.StatusText(status), status)
 		return
@@ -92,7 +92,7 @@ func (s *Server) handleShareContent(w http.ResponseWriter, r *http.Request) {
 
 // resolveShare returns the artifact id, version and title for an active
 // share token, or 404/410.
-func (s *Server) resolveShare(token string) (id string, v *Version, sh Share, status int) {
+func (s *Server) resolveShare(token string) (id string, v *Version, sh Share, title string, status int) {
 	status = 404
 	s.store.Read(func(st *State) {
 		a, share := st.FindShare(token)
@@ -106,18 +106,17 @@ func (s *Server) resolveShare(token string) (id string, v *Version, sh Share, st
 		}
 		if x := a.Version(share.Version); x != nil {
 			c := *x
-			id, v, status = a.ID, &c, 200
+			id, v, title, status = a.ID, &c, a.Title, 200
 		}
 	})
-	return id, v, sh, status
+	return id, v, sh, title, status
 }
 
+// needsSandbox: every artifact response is sandboxed except PDFs, which
+// browsers refuse to render in a sandboxed document. Sandboxing images, CSS
+// or text costs nothing, and it fails safe for any type we got wrong.
 func needsSandbox(name string) bool {
-	switch strings.ToLower(path.Ext(name)) {
-	case ".html", ".htm", ".svg", ".xml", ".xhtml", ".md":
-		return true
-	}
-	return false
+	return strings.ToLower(path.Ext(name)) != ".pdf"
 }
 
 func (s *Server) contentHeaders(w http.ResponseWriter, sandbox bool) {
@@ -228,11 +227,7 @@ func fileKind(name string) string {
 
 func (s *Server) handleSharePage(w http.ResponseWriter, r *http.Request) {
 	token := r.PathValue("token")
-	id, v, sh, status := s.resolveShare(token)
-	var title string
-	if status == 200 {
-		s.store.Read(func(st *State) { title = st.Artifacts[id].Title })
-	}
+	_, v, sh, title, status := s.resolveShare(token)
 	raw, err := s.shellFile("share.html")
 	if err != nil {
 		http.Error(w, "share.html missing", 500)

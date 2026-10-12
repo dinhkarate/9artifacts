@@ -97,7 +97,7 @@ func Serve(args []string, version string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	base := func(h http.Handler) *http.Server {
-		return &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 120 * time.Second}
+		return &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 15 * time.Minute, IdleTimeout: 120 * time.Second}
 	}
 	var servers []*http.Server
 	errc := make(chan error, 2)

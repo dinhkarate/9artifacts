@@ -11,7 +11,6 @@ import (
 	"io"
 	"io/fs"
 	"log"
-	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -55,6 +54,8 @@ type Server struct {
 	mu         sync.Mutex
 	challenges map[string]challenge
 	failures   map[string]*failure
+	global     failure // password failures from all addresses
+	begins     map[string]*failure
 }
 
 type challenge struct {
@@ -100,6 +101,7 @@ func New(cfg Config, st *Store) (*Server, error) {
 		appHost:    strings.ToLower(pub.Host),
 		challenges: map[string]challenge{},
 		failures:   map[string]*failure{},
+		begins:     map[string]*failure{},
 	}
 	if cfg.ContentURL != "" {
 		cu, err := url.Parse(cfg.ContentURL)
@@ -227,7 +229,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if !isContent {
 		h.Set("X-Frame-Options", "DENY")
-		h.Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: blob: "+s.contentOrigin()+"; style-src 'self' 'unsafe-inline'; frame-src "+s.contentOrigin()+" 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+		h.Set("Content-Security-Policy", s.appCSP("'none'"))
 		if strings.HasPrefix(s.cfg.PublicURL, "https://") {
 			h.Set("Strict-Transport-Security", "max-age=31536000")
 		}
@@ -247,13 +249,21 @@ var secretPath = regexp.MustCompile(`^/(c|s)/[^/]+|/shares/[^/]+`)
 
 // logRequest never records share or view tokens.
 func (s *Server) logRequest(r *http.Request, rec *statusRecorder, start time.Time) {
-	p := secretPath.ReplaceAllStringFunc(r.URL.Path, func(m string) string {
+	p := secretPath.ReplaceAllStringFunc(path.Clean("/"+r.URL.Path), func(m string) string {
 		if strings.HasPrefix(m, "/shares/") {
 			return "/shares/…"
 		}
 		return m[:3] + "…"
 	})
 	log.Printf("%s %s %d %s", r.Method, p, rec.status, time.Since(start).Round(time.Millisecond))
+}
+
+// appCSP is the policy for app pages. Scripts need a per-response nonce,
+// so files served from /c/ on a shared origin can never run as app code.
+func (s *Server) appCSP(script string) string {
+	return "default-src 'self'; script-src " + script + "; img-src 'self' data: blob: " + s.contentOrigin() +
+		"; style-src 'self' 'unsafe-inline'; frame-src " + s.contentOrigin() + " 'self'; connect-src 'self'" +
+		"; base-uri 'none'; form-action 'self'; object-src 'none'; frame-ancestors 'none'"
 }
 
 func (s *Server) contentOrigin() string {
@@ -303,8 +313,10 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 500, "index.html: "+err.Error())
 		return
 	}
+	nonce := b64.EncodeToString(randomBytes(16))
 	var buf bytes.Buffer
-	_ = tpl.Execute(&buf, map[string]any{"Name": s.cfg.Name, "Version": s.cfg.Version})
+	_ = tpl.Execute(&buf, map[string]any{"Name": s.cfg.Name, "Version": s.cfg.Version, "Nonce": nonce})
+	w.Header().Set("Content-Security-Policy", s.appCSP("'nonce-"+nonce+"'"))
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = w.Write(buf.Bytes())
@@ -371,14 +383,12 @@ var mimeTypes = map[string]string{
 	".zip": "application/zip",
 }
 
-// contentType is decided by extension, never by the uploader: curl -F
-// labels sibling CSS/JS as octet-stream, which nosniff would then block.
+// contentType is decided by extension from a fixed table, never by the
+// uploader (curl -F labels CSS/JS as octet-stream, which nosniff blocks)
+// and never by the host's MIME database (which maps .shtml, .xht, .rss...
+// to active content).
 func contentType(name string) string {
-	ext := strings.ToLower(path.Ext(name))
-	if t, ok := mimeTypes[ext]; ok {
-		return t
-	}
-	if t := mime.TypeByExtension(ext); t != "" {
+	if t, ok := mimeTypes[strings.ToLower(path.Ext(name))]; ok {
 		return t
 	}
 	return "application/octet-stream"
@@ -407,8 +417,13 @@ func readJSON(r *http.Request, v any) error {
 
 func (s *Server) clientIP(r *http.Request) string {
 	if s.cfg.TrustProxy {
-		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-			return strings.TrimSpace(strings.Split(xff, ",")[0])
+		// The rightmost entry was added by our proxy; anything left of it
+		// is client-controlled.
+		if xff := r.Header.Values("X-Forwarded-For"); len(xff) > 0 {
+			parts := strings.Split(xff[len(xff)-1], ",")
+			if ip := strings.TrimSpace(parts[len(parts)-1]); ip != "" {
+				return ip
+			}
 		}
 		if xr := r.Header.Get("X-Real-Ip"); xr != "" {
 			return xr
