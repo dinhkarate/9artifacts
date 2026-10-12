@@ -42,3 +42,10 @@ func TestNoAttributeInjection(t *testing.T) {
 		t.Fatalf("link label formatting lost: %s", out)
 	}
 }
+
+func TestAutolinkCannotSwallowPlaceholders(t *testing.T) {
+	out := Render("http://x[t](http://y/onmouseover=alert(1)//)")
+	if strings.Contains(out, "\x00") || strings.Contains(out, `onmouseover="`) || strings.Contains(out, `href="http://x<a`) {
+		t.Fatalf("unsafe output: %q", out)
+	}
+}

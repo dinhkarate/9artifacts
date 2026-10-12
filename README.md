@@ -140,7 +140,7 @@ vitrine serve --theme-dir ./my-theme ...
   MCP (`get_design_guide`) or `vitrine design` before writing, so a report made by Claude
   today and one made by Codex next month look like they belong together.
 - Built-in themes: `default`, `terminal`, `paper` (`--theme terminal`).
-- `vitrine theme init --full` also exports the app shell (HTML/JS/CSS) for deeper changes.
+- `vitrine theme init --full` also exports the app shell (HTML/JS/CSS) for deeper changes. Keep `nonce="{{.Nonce}}"` on the `<script>` tag in `index.html`, or the CSP will block the app.
 
 ## Security
 

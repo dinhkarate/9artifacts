@@ -242,7 +242,14 @@ func (s *Server) allowBegin(ip string) bool {
 	return b.count <= 20
 }
 
-func (s *Server) fail(ip string) {
+// fail records a failed attempt for ip. Only password guesses count
+// towards the global cap, so nobody can lock the owner out by spamming
+// setup codes or bogus passkeys.
+func (s *Server) fail(ip string) { s.recordFailure(ip, false) }
+
+func (s *Server) failPassword(ip string) { s.recordFailure(ip, true) }
+
+func (s *Server) recordFailure(ip string, password bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := time.Now()
@@ -256,6 +263,9 @@ func (s *Server) fail(ip string) {
 		f.lock = now.Add(lockDuration)
 		f.count = 0
 		f.first = now
+	}
+	if !password {
+		return
 	}
 	if now.Sub(s.global.first) > failWindow {
 		s.global = failure{first: now, lock: s.global.lock}
@@ -350,7 +360,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !checkPassword(body.Password, hash) {
-		s.fail(ip)
+		s.failPassword(ip)
 		if wait := s.passwordLocked(ip); wait > 0 {
 			tooMany(w, wait)
 			return
@@ -391,7 +401,7 @@ func (s *Server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
 	var hash string
 	s.store.Read(func(st *State) { hash = st.PasswordHash })
 	if !checkPassword(body.Current, hash) {
-		s.fail(ip)
+		s.failPassword(ip)
 		writeError(w, 403, "current password is wrong")
 		return
 	}
