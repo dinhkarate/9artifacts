@@ -22,11 +22,12 @@ jobs:
       - name: admin socket, token, publish, share
         run: |
           sudo vitrine status --data /var/lib/vitrine
-          export VITRINE_URL=http://127.0.0.1:8080
+          export VITRINE_URL=http://localhost:8080   # app origin; 127.0.0.1 is the content origin here
           export VITRINE_TOKEN=$(sudo vitrine token --data /var/lib/vitrine --name ci)
           printf '<!doctype html><title>CI report</title><h1>ok</h1>' > report.html
           vitrine publish report.html --tags ci --share 1h
           vitrine list
+          ! curl -fsS -H "Authorization: Bearer $VITRINE_TOKEN" http://127.0.0.1:8080/api/artifacts  # API must not answer on the content origin
       - name: logs
         if: always()
         run: sudo journalctl -u vitrine -n 50 --no-pager | sed -E 's/code=[a-z0-9]+/code=<redacted>/'
