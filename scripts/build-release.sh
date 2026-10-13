@@ -20,5 +20,21 @@ for target in linux/amd64 linux/arm64 linux/armv7 darwin/amd64 darwin/arm64 wind
   fi
   rm -rf "$out"
 done
-(cd dist && (command -v sha256sum >/dev/null && sha256sum vitrine_* || shasum -a 256 vitrine_*) > checksums.txt)
+# vitrine-ts: Tailscale built in (separate module, ~16 MB larger).
+for target in linux/amd64 linux/arm64 darwin/arm64 darwin/amd64 windows/amd64; do
+  os=${target%/*}; arch=${target#*/}
+  out="dist/vitrine-ts_${os}_${arch}"
+  mkdir -p "$out"
+  bin=vitrine-ts; [ "$os" = windows ] && bin=vitrine-ts.exe
+  (cd tailscale && CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath \
+    -ldflags "-s -w -X main.version=$VERSION" -o "../$out/$bin" .)
+  cp README.md LICENSE "$out/"
+  if [ "$os" = windows ]; then
+    (cd "$out" && zip -q "../vitrine-ts_${os}_${arch}.zip" $bin README.md LICENSE)
+  else
+    tar -czf "$out.tar.gz" -C "$out" $bin README.md LICENSE
+  fi
+  rm -rf "$out"
+done
+(cd dist && (command -v sha256sum >/dev/null && sha256sum vitrine_* vitrine-ts_* || shasum -a 256 vitrine_* vitrine-ts_*) > checksums.txt)
 ls -lh dist

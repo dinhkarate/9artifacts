@@ -164,6 +164,21 @@ only share pages, their styles and artifact files; the gallery, login, API and M
 there, so nothing private is reachable from the Internet. Agents on your devices use
 `https://box.your-tailnet.ts.net/mcp` as usual.
 
+**No Tailscale install: `vitrine-ts`.** The `vitrine-ts_*` release archives have Tailscale
+built in (about 16 MB larger). It joins your tailnet itself and sets up the same split: the
+gallery, API and MCP on `https://vitrine.your-tailnet.ts.net` for your devices only, share
+links and artifact files on `:8443` through Funnel.
+
+```bash
+TS_AUTHKEY=tskey-auth-… ./vitrine-ts serve --data ./vitrine-data --hostname vitrine
+# or run it without TS_AUTHKEY and open the login URL it prints
+```
+
+Flags: `--hostname` (machine name, part of the URL), `--funnel=false` (tailnet only, no public
+share links), plus `--name`, `--theme`, `--theme-dir`, `--max-upload-mb`, `--webhook`. Its
+tailnet state lives in `DATA/tsnet`; `vitrine-ts` uses the same data directory format as
+`vitrine`, so you can switch between them.
+
 **Everything public.** Alternatively funnel the single port (`tailscale funnel --bg 8080`): the
 whole app is then public, protected by your passkey or password like any other deployment.
 
