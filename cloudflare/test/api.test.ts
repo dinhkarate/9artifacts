@@ -51,7 +51,7 @@ describe('publish, list, get, versions, restore, delete', () => {
     expect(a.versions).toHaveLength(1);
     expect(a.shares).toEqual([]);
     expect(a.activeShares).toBe(0);
-    expect(Object.keys(a)).toEqual(['id', 'title', 'tags', 'note', 'pinned', 'createdAt', 'updatedAt', 'url', 'version', 'entry', 'files', 'size', 'viewBase', 'versions', 'shares', 'activeShares']);
+    expect(Object.keys(a)).toEqual(['id', 'title', 'tags', 'note', 'pinned', 'createdAt', 'updatedAt', 'url', 'version', 'entry', 'files', 'size', 'viewBase', 'versions', 'shares', 'activeShares', 'openComments']);
   });
 
   it('serves the files through the view token', async () => {

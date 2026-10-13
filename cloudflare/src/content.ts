@@ -1,4 +1,5 @@
 // Artifact bytes, view tokens and public share pages (internal/app/content.go).
+import { BRAND } from './brand';
 import { type Ctx, contentOrigin, isHTTPS } from './env';
 import { MARKDOWN_CSS, SHARE_HTML } from './generated/web';
 import { render as renderMarkdown } from './markdown';
@@ -8,7 +9,7 @@ import { type Share, type Version, fileKey, getVersion, shareActive, shareLive, 
 import { failed, lockedFor } from './ratelimit';
 import { renderTemplate } from './template';
 import {
-  STATUS_TEXT, b64url, baseName, cleanName, contentType, dec, escapeHTML, extOf, hmac, notFound, readBody, safeEqual, textError,
+  STATUS_TEXT, b64url, baseName, cleanName, concat, contentType, dec, enc, escapeHTML, extOf, hmac, notFound, readBody, safeEqual, textError,
 } from './util';
 
 // View tokens let sandboxed iframes (which run on an opaque origin and so
@@ -47,7 +48,8 @@ export async function handleContent(c: Ctx, vt: string, path: string): Promise<R
   if (!t) return textError(404, 'link expired, reload the page');
   const v = await getVersion(c, t.id, t.n);
   if (!v) return notFound();
-  return serveVersionFile(c, t.id, v, path, c.url.searchParams.has('download'), c.url.searchParams.has('view'));
+  const q = c.url.searchParams;
+  return serveVersionFile(c, t.id, v, path, q.has('download'), q.has('view'), q.has('vc'));
 }
 
 // ---------- shares ----------
@@ -103,7 +105,7 @@ export async function handleShareGrant(c: Ctx, token: string, grant: string, pat
 }
 
 const GRANT_TTL = 2 * 3600;
-const SHARE_COOKIE = 'vitrine_share';
+const SHARE_COOKIE = BRAND + '_share';
 
 async function makeGrant(c: Ctx, token: string): Promise<string> {
   const exp = (Math.floor(Date.now() / 1000) + GRANT_TTL).toString(36);
@@ -202,7 +204,15 @@ function contentHeaders(c: Ctx, h: Headers, sandbox: boolean): void {
   h.set('Cache-Control', 'private, max-age=3600');
 }
 
-export async function serveVersionFile(c: Ctx, id: string, v: Version, rawName: string, download: boolean, render: boolean): Promise<Response> {
+/**
+ * serveVersionFile writes one file of a version. With pick (the owner's viewer
+ * only, ?vc=1 on a view-token URL), HTML and rendered Markdown get a tiny
+ * script that reports the selected text to the viewer, so comments can quote
+ * it; downloads and share links are untouched.
+ */
+export async function serveVersionFile(
+  c: Ctx, id: string, v: Version, rawName: string, download: boolean, render: boolean, pick = false,
+): Promise<Response> {
   let name: string;
   try {
     name = cleanName(rawName || v.entry);
@@ -213,12 +223,23 @@ export async function serveVersionFile(c: Ctx, id: string, v: Version, rawName: 
   if (!f) return notFound();
   const key = fileKey(id, v.n, f);
   const h = new Headers();
-  if (render && name.toLowerCase().endsWith('.md')) {
+  if (render && !download && name.toLowerCase().endsWith('.md')) {
     const obj = await c.files.get(key, { range: { offset: 0, length: 8 << 20 } });
     if (!obj) return notFound();
     contentHeaders(c, h, true);
     h.set('Content-Type', 'text/html; charset=utf-8');
-    return new Response(c.req.method === 'HEAD' ? null : markdownPage(baseName(name), dec.decode(await obj.arrayBuffer())), { headers: h });
+    let page = markdownPage(baseName(name), dec.decode(await obj.arrayBuffer()));
+    if (pick) page += pickScript(c);
+    return new Response(c.req.method === 'HEAD' ? null : page, { headers: h });
+  }
+  if (pick && !download && contentType(name).startsWith('text/html') && f.size < 16 << 20) {
+    const obj = await c.files.get(key);
+    if (!obj) return notFound();
+    contentHeaders(c, h, true);
+    h.set('Content-Type', contentType(name));
+    h.set('Cache-Control', 'no-store');
+    const page = concat([new Uint8Array(await obj.arrayBuffer()), enc.encode(pickScript(c))]);
+    return new Response(c.req.method === 'HEAD' ? null : page, { headers: h });
   }
   let obj: R2Object | R2ObjectBody | null;
   try {
@@ -250,6 +271,15 @@ export async function serveVersionFile(c: Ctx, id: string, v: Version, rawName: 
     h.set('Content-Length', String(obj.size));
   }
   return new Response(c.req.method === 'HEAD' ? null : obj.body, { status, headers: h });
+}
+
+/**
+ * pickScript posts the current text selection to the viewer. Appended after
+ * </html> it still runs: browsers move trailing content into <body>.
+ */
+function pickScript(c: Ctx): string {
+  const origin = JSON.stringify(c.publicURL).replace(/[<>&]/g, (x) => '\\u' + x.charCodeAt(0).toString(16).padStart(4, '0'));
+  return `<script>(()=>{let t,last="";document.addEventListener("selectionchange",()=>{clearTimeout(t);t=setTimeout(()=>{const s=String(getSelection()||"").trim().slice(0,500);if(s!==last){last=s;parent.postMessage({${BRAND}:"selection",text:s},${origin})}},300)})})()</script>`;
 }
 
 function markdownPage(title: string, src: string): string {

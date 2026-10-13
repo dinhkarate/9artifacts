@@ -28,7 +28,7 @@ describe('MCP', () => {
   it('requires a bearer token', async () => {
     const r = await c.fetch('/mcp', { method: 'POST', body: '{}' });
     expect(r.status).toBe(401);
-    expect(r.headers.get('WWW-Authenticate')).toBe('Bearer realm="vitrine"');
+    expect(r.headers.get('WWW-Authenticate')).toBe('Bearer realm="vitrine", resource_metadata="http://localhost:8080/.well-known/oauth-protected-resource"');
   });
 
   it('initializes and echoes the protocol version', async () => {
@@ -44,7 +44,8 @@ describe('MCP', () => {
   it('lists the same tools as the Go server', async () => {
     const r = await rpc('tools/list');
     expect(r.result.tools.map((t: any) => t.name)).toEqual([
-      'get_design_guide', 'publish_artifact', 'list_artifacts', 'read_artifact', 'share_artifact', 'revoke_share', 'restore_version', 'delete_artifact',
+      'get_design_guide', 'publish_artifact', 'list_artifacts', 'read_artifact', 'share_artifact', 'revoke_share', 'list_comments', 'resolve_comment',
+      'restore_version', 'delete_artifact',
     ]);
     const publish = r.result.tools[1];
     expect(publish.inputSchema.required).toEqual(['files']);

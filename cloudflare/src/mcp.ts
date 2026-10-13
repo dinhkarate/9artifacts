@@ -1,15 +1,18 @@
 // A minimal Model Context Protocol server (internal/app/mcp.go): streamable
 // HTTP transport, JSON responses, no server-initiated messages.
 // Authenticate with "Authorization: Bearer vt_...".
+import { BRAND } from './brand';
 import { addVersion, createArtifact, createShare, deleteArtifact, listArtifacts, nextVersionWriter, restoreVersion, revokeShare } from './api';
 import { tokenAuth } from './auth';
+import { formatComments, listComments, resolveComment } from './comments';
 import type { Ctx } from './env';
 import { DESIGN_MD, TEMPLATE_HTML } from './generated/web';
+import { resourceMetadataURL } from './oauth';
 import { fileKey, getArtifact, getVersion } from './store';
 import { MAX_JSON_BODY, type Meta, VersionWriter, decodeJSONFiles } from './upload';
 import { HttpError, cleanName, dec, field, goQuote, json, newID, readBody } from './util';
 
-const INSTRUCTIONS = `vitrine is the user's private, self-hosted artifact gallery.
+const INSTRUCTIONS = `${BRAND} is the user's private, self-hosted artifact gallery.
 Publish finished HTML, Markdown, SVG, images or PDFs here and give the user the private URL.
 Before writing an artifact, call get_design_guide and follow it so the result matches the owner's style.
 To change an artifact, publish again with its id: the URL stays the same and open viewers refresh.
@@ -75,6 +78,16 @@ export const MCP_TOOLS = [
   },
   { name: 'revoke_share', description: 'Revoke a public share link immediately.', inputSchema: schema({ id: strProp, token: strProp }, 'id', 'token') },
   {
+    name: 'list_comments',
+    description: "Read the owner's review comments on an artifact (open ones by default). Call this when the user mentions comments or feedback, then fix the artifact with publish_artifact and resolve each comment.",
+    inputSchema: schema({ id: strProp, include_resolved: { type: 'boolean' } }, 'id'),
+  },
+  {
+    name: 'resolve_comment',
+    description: 'Mark a comment as done after publishing the fix, with a short note on what changed.',
+    inputSchema: schema({ id: strProp, comment_id: strProp, note: { type: 'string', description: 'What you changed' } }, 'id', 'comment_id'),
+  },
+  {
     name: 'restore_version',
     description: 'Publish an earlier version again as the new latest version (history is kept). Use when the user wants to undo changes.',
     inputSchema: schema({ id: strProp, version: { type: 'integer', description: 'Version number to restore' } }, 'id', 'version'),
@@ -92,7 +105,9 @@ const rpcError = (id: unknown, code: number, message: string) => ({ jsonrpc: '2.
 
 export async function handleMCP(c: Ctx): Promise<Response> {
   if (!(await tokenAuth(c))) {
-    return json(401, { error: 'send Authorization: Bearer <vitrine API token>' }, { 'WWW-Authenticate': 'Bearer realm="vitrine"' });
+    return json(401, { error: `send Authorization: Bearer <${BRAND} API token>` }, {
+      'WWW-Authenticate': `Bearer realm="${BRAND}", resource_metadata="${resourceMetadataURL(c)}"`,
+    });
   }
   let raw: string;
   try {
@@ -127,7 +142,7 @@ async function dispatch(c: Ctx, req: RPCRequest): Promise<unknown> {
   switch (req.method) {
     case 'initialize': {
       const pv = typeof params.protocolVersion === 'string' && params.protocolVersion ? params.protocolVersion : '2025-06-18';
-      return ok({ protocolVersion: pv, capabilities: { tools: {} }, serverInfo: { name: 'vitrine', version: c.version }, instructions: INSTRUCTIONS });
+      return ok({ protocolVersion: pv, capabilities: { tools: {} }, serverInfo: { name: BRAND, version: c.version }, instructions: INSTRUCTIONS });
     }
     case 'ping':
       return ok({});
@@ -188,7 +203,10 @@ async function call(c: Ctx, name: string, a: Record<string, unknown>): Promise<s
         throw e;
       }
       const out = id ? await addVersion(c, id, m, w) : await createArtifact(c, m, w);
-      return `Published ${goQuote(out.title)} (id ${out.id}, version ${out.version}).\nPrivate URL (owner login required): ${out.url}`;
+      let msg = `Published ${goQuote(out.title)} (id ${out.id}, version ${out.version}).\nPrivate URL (owner login required): ${out.url}`;
+      const open = out.openComments as number;
+      if (open > 0) msg += `\n${open} open review comment(s): if this version addresses them, call resolve_comment; see list_comments.`;
+      return msg;
     }
 
     case 'list_artifacts': {
@@ -237,6 +255,17 @@ async function call(c: Ctx, name: string, a: Record<string, unknown>): Promise<s
     case 'revoke_share':
       await revokeShare(c, s(a, 'id'), s(a, 'token'));
       return 'Share revoked.';
+
+    case 'list_comments': {
+      const id = s(a, 'id');
+      const [art, latest, comments] = await Promise.all([getArtifact(c, id), getVersion(c, id, 0), listComments(c, id)]);
+      if (!art || !latest) throw new HttpError(404, 'artifact not found');
+      return formatComments(art.title, latest.n, comments, field(a, 'include_resolved') === true);
+    }
+
+    case 'resolve_comment':
+      await resolveComment(c, s(a, 'id'), s(a, 'comment_id'), s(a, 'note'));
+      return 'Comment resolved.';
 
     case 'restore_version': {
       const version = n(a, 'version');

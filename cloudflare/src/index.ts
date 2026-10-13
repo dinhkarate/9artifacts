@@ -1,11 +1,14 @@
 // vitrine on Cloudflare Workers: routes, host separation, security headers and
 // access logging (internal/app/server.go).
+import { BRAND } from './brand';
 import * as api from './api';
 import * as auth from './auth';
+import * as comments from './comments';
 import { handleContent, handleShareContent, handleShareGrant, handleSharePage, serveVersionFile } from './content';
 import { type Ctx, contentOrigin, isHTTPS, newCtx } from './env';
 import { DESIGN_MD, INDEX_HTML, TEMPLATE_HTML } from './generated/web';
 import { handleMCP } from './mcp';
+import * as oauth from './oauth';
 import { getVersion } from './store';
 import { renderTemplate } from './template';
 import { HttpError, b64url, json, jsonError, notFound, randomBytes, textError } from './util';
@@ -27,7 +30,7 @@ function route(spec: string, h: Handler, guard: Guard = null) {
 }
 
 // App shell and theme.
-for (const p of ['/', '/a/{id}', '/settings', '/setup', '/login']) route('GET ' + p, (c) => handleIndex(c));
+for (const p of ['/', '/a/{id}', '/settings', '/setup', '/login', '/oauth/authorize']) route('GET ' + p, (c) => handleIndex(c));
 route('GET /assets/{name}', (c, p) => handleAsset(c, p.name));
 route('GET /design.md', () => new Response(DESIGN_MD, { headers: { 'Content-Type': 'text/markdown; charset=utf-8' } }));
 route('GET /template.html', () => new Response(TEMPLATE_HTML, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } }));
@@ -56,11 +59,25 @@ route('DELETE /api/artifacts/{id}', (c, p) => api.handleDelete(c, p.id), 'auth')
 route('POST /api/artifacts/{id}/versions', (c, p) => api.handleNewVersion(c, p.id), 'auth');
 route('POST /api/artifacts/{id}/versions/{n}/restore', (c, p) => api.handleRestore(c, p.id, p.n), 'auth');
 route('POST /api/artifacts/{id}/shares', (c, p) => api.handleShareCreate(c, p.id), 'auth');
+route('POST /api/artifacts/{id}/comments', (c, p) => comments.handleCommentCreate(c, p.id), 'auth');
+route('POST /api/artifacts/{id}/comments/{cid}/resolve', (c, p) => comments.handleCommentResolve(c, p.id, p.cid), 'auth');
+route('DELETE /api/artifacts/{id}/comments/{cid}', (c, p) => comments.handleCommentDelete(c, p.id, p.cid), 'auth');
 route('DELETE /api/artifacts/{id}/shares/{token}', (c, p) => api.handleShareRevoke(c, p.id, p.token), 'auth');
 route('GET /api/artifacts/{id}/download/{path...}', (c, p) => handleDownload(c, p.id, p.path), 'auth');
 // MCP for agents.
-route('POST /mcp', handleMCP);
-route('GET /mcp', () => json(405, { error: 'use POST (MCP streamable HTTP, JSON responses)' }, { Allow: 'POST' }));
+route('POST /mcp', oauth.cors(handleMCP));
+route('OPTIONS /mcp', oauth.cors(null));
+route('GET /mcp', oauth.cors(() => json(405, { error: 'use POST (MCP streamable HTTP, JSON responses)' }, { Allow: 'POST' })));
+// OAuth for MCP connectors (see oauth.ts).
+route('GET /.well-known/oauth-protected-resource', oauth.cors(oauth.handleResourceMetadata));
+route('GET /.well-known/oauth-protected-resource/mcp', oauth.cors(oauth.handleResourceMetadata));
+route('GET /.well-known/oauth-authorization-server', oauth.cors(oauth.handleAuthServerMetadata));
+route('POST /oauth/register', oauth.cors(oauth.handleOAuthRegister));
+route('OPTIONS /oauth/register', oauth.cors(null));
+route('POST /oauth/token', oauth.cors(oauth.handleOAuthToken));
+route('OPTIONS /oauth/token', oauth.cors(null));
+route('GET /api/oauth/client', oauth.handleOAuthClientInfo, 'session');
+route('POST /api/oauth/authorize', oauth.handleOAuthDecision, 'session');
 // Public share page.
 route('GET /s/{token}', (c, p) => handleSharePage(c, p.token));
 route('POST /s/{token}', (c, p) => handleSharePage(c, p.token));
@@ -220,7 +237,7 @@ export default {
       c = newCtx(req, env, exec);
     } catch (e) {
       console.error('configuration error:', (e as Error).message);
-      return textError(500, 'vitrine is misconfigured: ' + (e as Error).message);
+      return textError(500, BRAND + ' is misconfigured: ' + (e as Error).message);
     }
     const resp = secure(c, await serve(c));
     console.log(`${req.method} ${redactPath(c.url.pathname)} ${resp.status} ${Date.now() - start}ms`);
@@ -239,5 +256,6 @@ export async function cleanup(db: D1Database, now: number): Promise<void> {
     db.prepare('DELETE FROM challenges WHERE expires < ?').bind(now),
     db.prepare('DELETE FROM failures WHERE lock < ?1 AND first < ?2').bind(now, now - 15 * 60e3),
     db.prepare('DELETE FROM share_recent WHERE at < ?').bind(now - 3600e3),
+    db.prepare('DELETE FROM oauth_codes WHERE expires < ?').bind(now),
   ]);
 }

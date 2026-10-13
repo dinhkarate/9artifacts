@@ -1,4 +1,5 @@
 // REST API for artifacts, versions and shares (internal/app/api.go).
+import { type Comment, commentView, listComments } from './comments';
 import { type Ctx, shareURL } from './env';
 import { viewBase } from './content';
 import { title as markdownTitle } from './markdown';
@@ -49,7 +50,8 @@ export interface ArtifactView {
 
 /** The artifact JSON; full adds versions and shares (list view leaves them out). */
 export async function artifactView(
-  c: Ctx, a: Artifact, latest: Version, opts: { versions?: Version[]; shares?: Share[]; activeShares?: number },
+  c: Ctx, a: Artifact, latest: Version,
+  opts: { versions?: Version[]; shares?: Share[]; activeShares?: number; comments?: Comment[]; openComments?: number },
 ): Promise<ArtifactView> {
   const now = Date.now();
   const out: ArtifactView = {
@@ -60,16 +62,18 @@ export async function artifactView(
   if (opts.versions) out.versions = await Promise.all([...opts.versions].reverse().map((v) => versionView(c, a.id, v)));
   out.shares = opts.shares ? opts.shares.map((s) => shareView(c, s, now)) : [];
   out.activeShares = opts.shares ? opts.shares.filter((s) => shareActive(s, now)).length : (opts.activeShares ?? 0);
+  if (opts.comments?.length) out.comments = opts.comments.map(commentView);
+  out.openComments = opts.comments ? opts.comments.filter((x) => !x.resolvedAt).length : (opts.openComments ?? 0);
   return out;
 }
 
 /** The full artifact view, or null when it does not exist. */
 export async function fullView(c: Ctx, id: string): Promise<ArtifactView | null> {
-  const [a, versions, shares] = await Promise.all([getArtifact(c, id), listVersions(c, id), listShares(c, id)]);
+  const [a, versions, shares, comments] = await Promise.all([getArtifact(c, id), listVersions(c, id), listShares(c, id), listComments(c, id)]);
   if (!a) return null;
   const latest = versions.find((v) => v.n === a.latest);
   if (!latest) return null;
-  return artifactView(c, a, latest, { versions, shares });
+  return artifactView(c, a, latest, { versions, shares, comments });
 }
 
 // ---------- list ----------
@@ -78,6 +82,7 @@ export interface ListItem {
   a: Artifact;
   latest: Version;
   active: number;
+  open: number;
 }
 
 /** All artifacts, pinned first then newest, with their latest version. */
@@ -85,7 +90,8 @@ export async function listArtifacts(c: Ctx): Promise<ListItem[]> {
   const { results } = await c.db
     .prepare(
       `SELECT a.*, v.entry AS v_entry, v.files AS v_files, v.message AS v_message, v.created_at AS v_created_at,
-        (SELECT COUNT(*) FROM shares s WHERE s.artifact_id = a.id AND ${ACTIVE_SQL}) AS active
+        (SELECT COUNT(*) FROM shares s WHERE s.artifact_id = a.id AND ${ACTIVE_SQL}) AS active,
+        (SELECT COUNT(*) FROM comments m WHERE m.artifact_id = a.id AND m.resolved_at IS NULL) AS open
        FROM artifacts a JOIN versions v ON v.artifact_id = a.id AND v.n = a.latest
        ORDER BY a.pinned DESC, a.updated_at DESC`,
     )
@@ -95,6 +101,7 @@ export async function listArtifacts(c: Ctx): Promise<ListItem[]> {
     a: toArtifact(r),
     latest: { n: r.latest as number, entry: r.v_entry as string, message: r.v_message as string, files: JSON.parse(r.v_files as string), createdAt: r.v_created_at as string },
     active: r.active as number,
+    open: r.open as number,
   }));
 }
 
@@ -104,12 +111,12 @@ export async function handleList(c: Ctx): Promise<Response> {
   const limit = parseInt(c.url.searchParams.get('limit') ?? '', 10) || 0;
   const items: Promise<ArtifactView>[] = [];
   const tags: Record<string, number> = {};
-  for (const { a, latest, active } of await listArtifacts(c)) {
+  for (const { a, latest, active, open } of await listArtifacts(c)) {
     for (const t of a.tags) tags[t] = (tags[t] ?? 0) + 1;
     if (tag && !a.tags.includes(tag)) continue;
     if (q && !`${a.title} ${a.tags.join(' ')} ${a.note}`.toLowerCase().includes(q)) continue;
     if (limit > 0 && items.length >= limit) continue;
-    items.push(artifactView(c, a, latest, { activeShares: active }));
+    items.push(artifactView(c, a, latest, { activeShares: active, openComments: open }));
   }
   return json(200, { artifacts: await Promise.all(items), tags });
 }
@@ -311,10 +318,11 @@ export async function deleteArtifact(c: Ctx, id: string): Promise<void> {
   const rs = await c.db.batch([
     c.db.prepare('DELETE FROM share_visitors WHERE token IN (SELECT token FROM shares WHERE artifact_id = ?)').bind(id),
     c.db.prepare('DELETE FROM shares WHERE artifact_id = ?').bind(id),
+    c.db.prepare('DELETE FROM comments WHERE artifact_id = ?').bind(id),
     c.db.prepare('DELETE FROM versions WHERE artifact_id = ?').bind(id),
     c.db.prepare('DELETE FROM artifacts WHERE id = ?').bind(id),
   ]);
-  if (!rs[3].meta.changes) throw new HttpError(404, 'artifact not found');
+  if (!rs[rs.length - 1].meta.changes) throw new HttpError(404, 'artifact not found');
   await deletePrefix(c, `artifacts/${id}/`);
 }
 

@@ -1,5 +1,6 @@
 // Webhooks (internal/app/notify.go): best-effort POSTs after the response,
 // via ctx.waitUntil. Share tokens are never sent, only the private URL.
+import { BRAND } from './brand';
 import type { Ctx } from './env';
 import { goQuote } from './util';
 
@@ -50,7 +51,7 @@ async function deliver(c: Ctx, hook: string, ev: { artifact: EventItem }, msg: s
     console.log(`webhook ${hookHost(hook)}: invalid webhook URL (use https://… or ntfy+https://…)`);
     return;
   }
-  const headers: Record<string, string> = { 'User-Agent': 'vitrine/' + c.version };
+  const headers: Record<string, string> = { 'User-Agent': BRAND + '/' + c.version };
   let target = hook;
   let body: string;
   if (hook.startsWith('ntfy+')) {

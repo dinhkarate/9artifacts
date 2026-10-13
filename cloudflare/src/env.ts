@@ -1,5 +1,6 @@
 // Per-request server context: the Go server's Config and Server fields,
 // resolved from Worker vars, secrets and the request.
+import { BRAND } from './brand';
 import { b64url, randomBytes, unb64url } from './util';
 
 declare global {
@@ -126,7 +127,7 @@ export function newCtx(req: Request, env: Env, exec: ExecutionContext): Ctx {
     appHost: pub.host.toLowerCase(),
     contHost,
     onContent: contHost !== '' && url.host.toLowerCase() === contHost,
-    name: env.NAME || 'vitrine',
+    name: env.NAME || BRAND,
     version: env.VERSION || 'cf',
     maxUpload: (Number.isFinite(mb) && mb > 0 ? mb : 50) * (1 << 20),
     sharesOnContent,

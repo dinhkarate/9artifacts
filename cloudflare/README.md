@@ -10,6 +10,11 @@ vitrine.<you>.workers.dev          app: gallery, REST API, /mcp, share pages
 vitrine-content.<you>.workers.dev  sandboxed artifact bytes (/c/…, /s/…/f/…)
 ```
 
+It includes review comments (the owner comments in the viewer, and agents read them with
+`list_comments` and resolve them with `resolve_comment`). It also includes **remote MCP with
+OAuth**, so you can add `https://vitrine.<you>.workers.dev/mcp` as a connector in claude.ai or
+ChatGPT. They register themselves and you approve them on a consent page.
+
 The content Worker owns no data. It forwards every request to `vitrine` over a service binding,
 and `vitrine` serves only sandboxed content on that host, the same host separation the Go server
 does with `--content-url`.
@@ -44,7 +49,8 @@ npm run deploy                          # deploy vitrine, migrate D1, deploy vit
 ```
 
 Then open `https://vitrine.<you>.workers.dev`, enter the setup token, and add a passkey on the
-Settings page. Create an API token on the same page for your agents:
+Settings page. To connect claude.ai or ChatGPT, add `https://vitrine.<you>.workers.dev/mcp` as a
+custom connector and approve it while signed in. Create an API token on the same page for your agents:
 
 ```bash
 claude mcp add --transport http vitrine https://vitrine.<you>.workers.dev/mcp \
@@ -100,6 +106,7 @@ included. Pass `--log-level warn` if that matters to you.
 | 128 MB memory | Files over 8 MiB go to R2 as multipart uploads in 8 MiB parts, so memory stays bounded. |
 | 100 MB request body | Cloudflare's cap. vitrine caps multipart at `MAX_UPLOAD_MB` (50). |
 | 1,000 D1/R2 operations per request | Up to 500 files per version. Kept and restored files are referenced, never copied. |
+| 3 MB Worker size (compressed) | The app Worker is about 40 KB gzipped. |
 | D1 5 GB, R2 10 GB storage | Free-tier storage. R2 egress is free. |
 
 ## Differences from the Go server
@@ -122,8 +129,12 @@ included. Pass `--log-level warn` if that matters to you.
 - **Cloudflare Access JWT checks (`--cf-access-*`) are not ported.** You can still put Access in
   front of the workers.dev URL. If you do, bypass `/mcp`, `/api` and the content host for agents.
 - **Themes are chosen at build time** (`VITRINE_THEME`, `VITRINE_THEME_DIR`), not at runtime.
-- **State is shared through D1.** Lockouts, challenges and the hourly visit dedupe live in D1,
-  because Worker isolates share no memory. An hourly cron removes expired rows.
+- **State is shared through D1.** Lockouts, passkey challenges, OAuth authorization codes and
+  the hourly visit dedupe live in D1, because Worker isolates share no memory. An hourly cron
+  removes expired rows.
+- **The `?vc=1` selection script.** Like Go, it is added only to HTML and rendered Markdown on the
+  owner's view-token URLs, never to downloads or share links. Those HTML responses are read
+  whole, up to 16 MB.
 - **New version numbers are reserved before upload.** A failed upload usually releases its
   number. If two agents publish at once, both versions are kept, where Go would return 409 for
   one of them.
@@ -131,7 +142,14 @@ included. Pass `--log-level warn` if that matters to you.
   Cloudflare's tooling records full URLs (`wrangler tail`, Workers Logs, `wrangler dev`'s request
   log). `observability` is off in `wrangler.jsonc` for that reason.
 - **`/api/me` has two extra fields**, `edition: "cloudflare"` and `passkeyOnly: true`.
+- **OAuth connectors are on parity with Go.** They use the same endpoints, PKCE S256 only, 1-hour
+  access tokens and rotating 90-day refresh tokens. The consent page needs a passkey session,
+  which the setup token can also open.
 
-Data layout: D1 tables are in `migrations/0001_init.sql`. Files are stored in R2 under
+The parts of the name used in identifiers (cookie names, the MCP server name, the viewer's
+`postMessage` key, the User-Agent) come from one constant, `src/brand.ts`. The displayed name is
+the `NAME` variable.
+
+Data layout: D1 tables are in `migrations/` (`0001_init.sql`, `0002_comments_oauth.sql`). Files are stored in R2 under
 `artifacts/<id>/v<n>/<path>`. A file kept or restored from an earlier version points at that
 version's object.

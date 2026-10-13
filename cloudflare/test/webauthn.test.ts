@@ -224,7 +224,7 @@ describe('passkey-only owner sign-in over HTTP', () => {
     const t = await body(await browser.browser('POST', '/api/tokens', { name: 'claude-code on laptop' }));
     expect(t.token).toMatch(/^vt_[A-Za-z0-9_-]{32}$/);
     const list = await body<any[]>(await browser.browser('GET', '/api/tokens'));
-    expect(list).toEqual([{ id: t.id, name: 'claude-code on laptop', prefix: t.token.slice(0, 7), createdAt: expect.any(String), lastUsedAt: null }]);
+    expect(list).toEqual([{ id: t.id, name: 'claude-code on laptop', prefix: t.token.slice(0, 7), createdAt: expect.any(String), lastUsedAt: null, oauth: false }]);
     const agent = new Client(undefined, t.token);
     expect((await agent.api('GET', '/api/artifacts')).status).toBe(200);
     // Agents cannot mint tokens or touch passkeys.

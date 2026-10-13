@@ -6,12 +6,13 @@
 // so the owner can register the first passkey; it keeps working as a
 // rate-limited recovery code on the sign-in screen until the owner deletes the
 // secret.
+import { BRAND } from './brand';
 import { type Ctx, isHTTPS } from './env';
 import { allowBegin, failed, lockedFor, secretLockedFor, tooMany } from './ratelimit';
 import { type Credential, WebAuthnError, assert, decodeField, register } from './webauthn';
 import { HttpError, b64url, hashSecret, hmac, json, newID, nowISO, randomBytes, readJSON, safeEqual, str, unb64url } from './util';
 
-const SESSION_COOKIE = 'vitrine_session';
+const SESSION_COOKIE = BRAND + '_session';
 const SESSION_TTL = 30 * 86400e3;
 const CHALLENGE_TTL = 5 * 60e3;
 export const MIN_SETUP_TOKEN = 16;
@@ -53,28 +54,44 @@ export function hasSession(c: Ctx): Promise<boolean> {
   return p;
 }
 
-const tokenMemo = new WeakMap<Request, Promise<boolean>>();
+const tokenMemo = new WeakMap<Request, Promise<{ id: string; name: string } | null>>();
 
-/** tokenAuth validates an "Authorization: Bearer vt_..." header. */
-export function tokenAuth(c: Ctx): Promise<boolean> {
+/**
+ * The valid, unexpired API token on an "Authorization: Bearer vt_..." header,
+ * or null. OAuth access tokens expire; tokens made in Settings never do.
+ */
+function bearerToken(c: Ctx): Promise<{ id: string; name: string } | null> {
   let p = tokenMemo.get(c.req);
   if (!p) {
     p = (async () => {
       const h = c.req.headers.get('Authorization') ?? '';
-      if (!h.startsWith('Bearer ')) return false;
+      if (!h.startsWith('Bearer ')) return null;
       const secret = h.slice(7);
-      if (!secret.startsWith('vt_')) return false;
+      if (!secret.startsWith('vt_')) return null;
       const want = await hashSecret(secret.trim());
-      const r = await c.db.prepare('SELECT id, last_used_at FROM tokens WHERE hash = ?').bind(want).first<{ id: string; last_used_at: string | null }>();
-      if (!r) return false;
+      const r = await c.db
+        .prepare('SELECT id, name, last_used_at FROM tokens WHERE hash = ? AND (expires_at IS NULL OR expires_at > ?)')
+        .bind(want, nowISO())
+        .first<{ id: string; name: string; last_used_at: string | null }>();
+      if (!r) return null;
       if (!r.last_used_at || Date.now() - Date.parse(r.last_used_at) > 60e3) {
         c.waitUntil(c.db.prepare('UPDATE tokens SET last_used_at = ? WHERE id = ?').bind(nowISO(), r.id).run());
       }
-      return true;
+      return { id: r.id, name: r.name };
     })();
     tokenMemo.set(c.req, p);
   }
   return p;
+}
+
+/** tokenAuth validates an "Authorization: Bearer vt_..." header. */
+export async function tokenAuth(c: Ctx): Promise<boolean> {
+  return (await bearerToken(c)) !== null;
+}
+
+/** tokenName returns the name of the API token on the request, or "". */
+export async function tokenName(c: Ctx): Promise<string> {
+  return (await bearerToken(c))?.name ?? '';
 }
 
 /** Cookie-authenticated writes must come from our own JavaScript, which sends X-Vitrine: 1. */
@@ -330,9 +347,9 @@ export async function createToken(c: Ctx, rawName: string): Promise<{ id: string
 
 export async function handleTokenList(c: Ctx): Promise<Response> {
   const { results } = await c.db
-    .prepare('SELECT id, name, prefix, created_at, last_used_at FROM tokens ORDER BY created_at, rowid')
-    .all<{ id: string; name: string; prefix: string; created_at: string; last_used_at: string | null }>();
-  return json(200, results.map((t) => ({ id: t.id, name: t.name, prefix: t.prefix, createdAt: t.created_at, lastUsedAt: t.last_used_at })));
+    .prepare('SELECT id, name, prefix, created_at, last_used_at, client_id FROM tokens ORDER BY created_at, rowid')
+    .all<{ id: string; name: string; prefix: string; created_at: string; last_used_at: string | null; client_id: string }>();
+  return json(200, results.map((t) => ({ id: t.id, name: t.name, prefix: t.prefix, createdAt: t.created_at, lastUsedAt: t.last_used_at, oauth: t.client_id !== '' })));
 }
 
 export async function handleTokenCreate(c: Ctx): Promise<Response> {
