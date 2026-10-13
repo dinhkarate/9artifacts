@@ -568,3 +568,49 @@ func TestShareViewLimit(t *testing.T) {
 		t.Fatalf("negative maxViews: %d", rec.Code)
 	}
 }
+
+func TestWebhooks(t *testing.T) {
+	type hit struct{ body, title, ctype string }
+	got := make(chan hit, 16)
+	hook := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		got <- hit{string(b), r.Header.Get("Title"), r.Header.Get("Content-Type")}
+	}))
+	defer hook.Close()
+	e := newEnv(t, Config{Webhooks: []string{hook.URL + "/json", "ntfy+" + hook.URL + "/topic"}})
+	a := decode[artifactView](t, e.upload("/api/artifacts", map[string]string{"title": "Q3 report"}, map[string]string{"index.html": "x"}))
+	e.upload("/api/artifacts/"+a.ID+"/versions", map[string]string{"message": "fix chart"}, map[string]string{"index.html": "y"})
+	sh := decode[shareView](t, e.api("POST", "/api/artifacts/"+a.ID+"/shares", map[string]any{"ttl": "1h"}))
+	e.do("GET", "/s/"+sh.Token, nil, nil)
+	events := map[string]bool{}
+	for range 8 {
+		select {
+		case h := <-got:
+			if strings.Contains(h.body, sh.Token) {
+				t.Fatalf("share token leaked to webhook: %s", h.body)
+			}
+			if h.title != "" {
+				if strings.HasPrefix(h.body, "{") || h.ctype == "application/json" {
+					t.Fatalf("ntfy hook got JSON: %q", h.body)
+				}
+				continue
+			}
+			var ev event
+			if err := json.Unmarshal([]byte(h.body), &ev); err != nil || ev.Text == "" || ev.Artifact.ID != a.ID {
+				t.Fatalf("bad event %q: %v", h.body, err)
+			}
+			events[ev.Event] = true
+		case <-time.After(5 * time.Second):
+			t.Fatalf("missing webhooks, got %v", events)
+		}
+	}
+	for _, k := range []string{EventPublished, EventVersion, EventShared, EventShareVisit} {
+		if !events[k] {
+			t.Errorf("no %s event", k)
+		}
+	}
+	st, _ := OpenStore(t.TempDir())
+	if _, err := New(Config{Webhooks: []string{"ftp://x"}}, st); err == nil {
+		t.Error("non-HTTP webhook accepted")
+	}
+}

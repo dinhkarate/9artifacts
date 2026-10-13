@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"net/http"
@@ -109,8 +110,18 @@ func (s *Server) resolveShare(r *http.Request, token string) (id string, v *Vers
 			id, v, title, status = a.ID, &c, a.Title, 200
 		}
 	})
-	if status == 200 && !s.countView(token, s.clientIP(r)) {
-		return "", nil, sh, "", 410
+	if status == 200 {
+		ok, first := s.countView(token, s.clientIP(r))
+		if !ok {
+			return "", nil, sh, "", 410
+		}
+		if first {
+			detail := fmt.Sprintf("visitor %d", sh.Views+1)
+			if sh.MaxViews > 0 {
+				detail += fmt.Sprintf(" of %d", sh.MaxViews)
+			}
+			s.notify(EventShareVisit, eventItem{ID: id, Title: title, URL: s.cfg.PublicURL + "/a/" + id, Version: v.N}, detail)
+		}
 	}
 	return id, v, sh, title, status
 }
@@ -118,16 +129,17 @@ func (s *Server) resolveShare(r *http.Request, token string) (id string, v *Vers
 const maxViewers = 10000
 
 // countView records at most one view per visitor address per hour, so page
-// reloads and the files a page loads count once. It reports false when the
-// link has used up its views and this visitor was not already counted.
-func (s *Server) countView(token, ip string) bool {
+// reloads and the files a page loads count once. ok is false when the link
+// has used up its views and this visitor was not already counted; first is
+// true when this request was counted as a new visit.
+func (s *Server) countView(token, ip string) (ok, first bool) {
 	key := token + "|" + ip
 	now := time.Now()
 	s.mu.Lock()
-	seen, ok := s.viewers[key]
+	seen, known := s.viewers[key]
 	s.mu.Unlock()
-	if ok && now.Sub(seen) < time.Hour {
-		return true
+	if known && now.Sub(seen) < time.Hour {
+		return true, false
 	}
 	err := s.store.Update(func(st *State) error {
 		_, sh := st.FindShare(token)
@@ -140,7 +152,7 @@ func (s *Server) countView(token, ip string) bool {
 		return nil
 	})
 	if err != nil {
-		return false
+		return false, false
 	}
 	s.mu.Lock()
 	if len(s.viewers) >= maxViewers {
@@ -155,7 +167,7 @@ func (s *Server) countView(token, ip string) bool {
 	}
 	s.viewers[key] = now
 	s.mu.Unlock()
-	return true
+	return true, true
 }
 
 var errViewLimit = errors.New("share link is no longer available")

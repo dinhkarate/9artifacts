@@ -63,6 +63,7 @@ func Serve(args []string, version string) error {
 	trust := proxyMode(env("VITRINE_TRUST_PROXY", ""))
 	fs.Var(&trust, "trust-proxy", "behind a proxy: take the client IP from X-Forwarded-For (bare flag or xff), CF-Connecting-IP (cloudflare) or Tailscale Serve/Funnel (tailscale)")
 	maxMB := fs.Int("max-upload-mb", atoiDef(env("VITRINE_MAX_UPLOAD_MB", "100"), 100), "maximum upload size in MB")
+	webhook := fs.String("webhook", env("VITRINE_WEBHOOK", ""), "comma-separated URLs to notify on publishes, shares and share visits (Slack, Discord, any JSON endpoint; prefix ntfy+ for ntfy)")
 	artifactCSP := fs.String("artifact-csp", env("VITRINE_ARTIFACT_CSP", ""), "extra CSP directives for artifact pages, e.g. \"connect-src 'none'\"")
 	_ = fs.Parse(args)
 
@@ -79,6 +80,7 @@ func Serve(args []string, version string) error {
 	srv, err := app.New(app.Config{
 		DataDir: *data, PublicURL: *public, ContentURL: *content, Name: *name, Theme: *theme, ThemeDir: *themeDir,
 		TrustProxy: string(trust), MaxUpload: int64(*maxMB) << 20, Version: version, ArtifactCSP: *artifactCSP,
+		Webhooks: splitList(*webhook),
 	}, st)
 	if err != nil {
 		return err
@@ -371,4 +373,14 @@ func (p *proxyMode) IsBoolFlag() bool { return true }
 func (p *proxyMode) Set(v string) error {
 	*p = proxyMode(v)
 	return nil
+}
+
+func splitList(v string) []string {
+	var out []string
+	for _, x := range strings.Split(v, ",") {
+		if x = strings.TrimSpace(x); x != "" {
+			out = append(out, x)
+		}
+	}
+	return out
 }

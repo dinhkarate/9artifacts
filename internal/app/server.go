@@ -37,7 +37,8 @@ type Config struct {
 	TrustProxy  string // "", "xff", "cloudflare" or "tailscale": which proxy header carries the client IP
 	MaxUpload   int64
 	Version     string
-	ArtifactCSP string // extra CSP directives appended for artifact content
+	ArtifactCSP string   // extra CSP directives appended for artifact content
+	Webhooks    []string // URLs notified of publishes, shares and share visits ("ntfy+https://…" for ntfy)
 }
 
 // Server is the vitrine HTTP handler.
@@ -90,6 +91,12 @@ func New(cfg Config, st *Store) (*Server, error) {
 	}
 	if cfg.MaxUpload <= 0 {
 		cfg.MaxUpload = 100 << 20
+	}
+	for _, hook := range cfg.Webhooks {
+		u, err := url.Parse(strings.TrimPrefix(hook, "ntfy+"))
+		if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+			return nil, fmt.Errorf("invalid webhook URL for host %q (use https://… or ntfy+https://…)", hookHost(hook))
+		}
 	}
 	switch strings.ToLower(cfg.TrustProxy) {
 	case "", "0", "false", "off":

@@ -86,6 +86,22 @@ bearer token.
 | `restore_version` | publish an earlier version again as the latest |
 | `delete_artifact` | delete; only when the user asks |
 
+## Webhooks
+
+With `--webhook URL` the server POSTs a JSON event for `artifact.published`, `artifact.version`,
+`share.created` and `share.visited` (a new visitor opened a share link):
+
+```json
+{"event": "share.visited", "text": "Public link opened: \"Q3 report\" v2 (visitor 1)\nhttps://art.example.com/a/k3xq...",
+ "content": "…same as text…", "artifact": {"id": "k3xq...", "title": "Q3 report", "url": "https://art.example.com/a/k3xq...", "version": 2},
+ "at": "2026-10-13T08:00:00Z"}
+```
+
+`text` and `content` make Slack and Discord incoming webhooks work unchanged. With an
+`ntfy+https://ntfy.sh/topic` URL the message is sent as plain text with `Title` and `Click`
+headers. Share tokens are never sent. Delivery is best-effort (10 s timeout, no retries);
+failures are logged with the webhook host only.
+
 ## Misc
 
 | Path | |

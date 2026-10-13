@@ -474,6 +474,9 @@ func (s *Server) CreateArtifact(m meta, files []upload) (artifactView, error) {
 		out = s.view(a, true)
 		return nil
 	})
+	if err == nil {
+		s.notify(EventPublished, eventItem{ID: out.ID, Title: out.Title, URL: out.URL, Version: out.Version}, "")
+	}
 	return out, err
 }
 
@@ -546,6 +549,7 @@ func (s *Server) AddVersion(id string, m meta, files []upload) (artifactView, in
 		os.RemoveAll(s.store.VersionDir(id, next))
 		return artifactView{}, 409, err
 	}
+	s.notify(EventVersion, eventItem{ID: out.ID, Title: out.Title, URL: out.URL, Version: out.Version}, m.Message)
 	return out, 201, nil
 }
 
@@ -685,11 +689,13 @@ func (s *Server) CreateShare(id, ttl, note string, version, maxViews int) (share
 	now := time.Now().UTC()
 	sh := Share{Token: b64.EncodeToString(randomBytes(18)), Version: version, Note: truncate(note, 1000),
 		CreatedAt: now, ExpiresAt: now.Add(d), MaxViews: maxViews}
+	var title string
 	err := s.store.Update(func(st *State) error {
 		a := st.Artifacts[id]
 		if a == nil {
 			return errors.New("artifact not found")
 		}
+		title = a.Title
 		if version != 0 && a.Version(version) == nil {
 			return errors.New("no such version")
 		}
@@ -708,6 +714,11 @@ func (s *Server) CreateShare(id, ttl, note string, version, maxViews int) (share
 	if err != nil {
 		return shareView{}, 404, err
 	}
+	detail := "expires in " + ttl
+	if maxViews > 0 {
+		detail += fmt.Sprintf(", max %d viewers", maxViews)
+	}
+	s.notify(EventShared, eventItem{ID: id, Title: title, URL: s.cfg.PublicURL + "/a/" + id, Version: sh.Version}, detail)
 	return shareView{Token: sh.Token, URL: s.cfg.PublicURL + "/s/" + sh.Token, Version: sh.Version, Note: sh.Note,
 		CreatedAt: now, ExpiresAt: sh.ExpiresAt, Active: true, MaxViews: maxViews}, 201, nil
 }

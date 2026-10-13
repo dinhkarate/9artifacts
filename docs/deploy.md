@@ -180,6 +180,7 @@ Every flag has an environment variable.
 | `--theme-dir` | `VITRINE_THEME_DIR` | — | directory overriding theme or shell files |
 | `--trust-proxy[=MODE]` | `VITRINE_TRUST_PROXY=1\|cloudflare\|tailscale` | off | behind a proxy, take the client IP for rate limiting from `X-Forwarded-For` (bare flag, `xff`), `CF-Connecting-IP` (`cloudflare`) or Tailscale Serve/Funnel (`tailscale`); only trusted on loopback or private-network connections |
 | `--max-upload-mb` | `VITRINE_MAX_UPLOAD_MB` | `100` | request size limit |
+| `--webhook` | `VITRINE_WEBHOOK` | — | comma-separated URLs notified on publishes, new versions, new share links and new share visitors; Slack and Discord incoming-webhook URLs work as-is, prefix `ntfy+` for ntfy (e.g. `ntfy+https://ntfy.sh/my-topic`) |
 | `--artifact-csp` | `VITRINE_ARTIFACT_CSP` | — | extra CSP for artifacts, e.g. `connect-src 'none'` to block network access |
 
 ## Backups and upgrades
