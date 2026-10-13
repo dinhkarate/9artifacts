@@ -83,8 +83,9 @@ go install github.com/dinhkarate/vitrine/cmd/vitrine@latest
 vitrine serve --url http://localhost:8080
 ```
 
-Running behind nginx, Caddy or a Cloudflare Tunnel? See [docs/deploy.md](docs/deploy.md).
-There is also a guide to hosting it on a **free** VM.
+Running behind nginx, Caddy, a Cloudflare Tunnel or Tailscale? See [docs/deploy.md](docs/deploy.md).
+There is also a guide to running it for **free**: on your own machine with Tailscale or a
+Cloudflare Tunnel, or on a free-tier VM.
 
 ## Connect your AI agent
 
@@ -174,8 +175,9 @@ Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 
 ## FAQ
 
-**Can I run it for free?** Yes. It fits easily in Oracle Cloud Always Free, a Google Cloud
-`e2-micro` or a Raspberry Pi behind a free Cloudflare Tunnel. See [docs/deploy.md](docs/deploy.md#free-hosting).
+**Can I run it for free?** Yes. Run it on any machine you own and expose it with Tailscale
+(free `*.ts.net` HTTPS, no domain needed) or a Cloudflare Tunnel, or use Oracle Cloud Always
+Free or a Google Cloud `e2-micro`. See [docs/deploy.md](docs/deploy.md#free-hosting).
 
 **Multiple users?** Not yet. Vitrine is single-owner by design; share with others through expiring links.
 

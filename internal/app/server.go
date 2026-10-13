@@ -34,7 +34,7 @@ type Config struct {
 	Name        string // brand shown in the UI
 	Theme       string // built-in theme name
 	ThemeDir    string // optional directory overriding theme and shell files
-	TrustProxy  bool   // honour X-Forwarded-For for rate limiting
+	TrustProxy  string // "", "xff", "cloudflare" or "tailscale": which proxy header carries the client IP
 	MaxUpload   int64
 	Version     string
 	ArtifactCSP string // extra CSP directives appended for artifact content
@@ -89,6 +89,16 @@ func New(cfg Config, st *Store) (*Server, error) {
 	}
 	if cfg.MaxUpload <= 0 {
 		cfg.MaxUpload = 100 << 20
+	}
+	switch strings.ToLower(cfg.TrustProxy) {
+	case "", "0", "false", "off":
+		cfg.TrustProxy = ""
+	case "1", "true", "on", "xff":
+		cfg.TrustProxy = "xff"
+	case "cloudflare", "tailscale":
+		cfg.TrustProxy = strings.ToLower(cfg.TrustProxy)
+	default:
+		return nil, fmt.Errorf("invalid trust-proxy mode %q (use xff, cloudflare or tailscale)", cfg.TrustProxy)
 	}
 	pub, err := url.Parse(cfg.PublicURL)
 	if err != nil || pub.Host == "" {
@@ -416,22 +426,37 @@ func readJSON(r *http.Request, v any) error {
 }
 
 func (s *Server) clientIP(r *http.Request) string {
-	if s.cfg.TrustProxy {
-		// The rightmost entry was added by our proxy; anything left of it
-		// is client-controlled.
-		if xff := r.Header.Values("X-Forwarded-For"); len(xff) > 0 {
-			parts := strings.Split(xff[len(xff)-1], ",")
-			if ip := strings.TrimSpace(parts[len(parts)-1]); ip != "" {
-				return ip
-			}
-		}
-		if xr := r.Header.Get("X-Real-Ip"); xr != "" {
-			return xr
-		}
-	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		return r.RemoteAddr
+		host = r.RemoteAddr
+	}
+	// Proxy headers are only believed when the connection itself comes from
+	// the proxy (loopback or a private network such as a Docker bridge), so a
+	// port accidentally left open to the Internet cannot spoof addresses.
+	if s.cfg.TrustProxy == "" || !privatePeer(host) {
+		return host
+	}
+	if s.cfg.TrustProxy == "cloudflare" {
+		if ip := strings.TrimSpace(r.Header.Get("Cf-Connecting-Ip")); ip != "" {
+			return ip
+		}
+	}
+	// The rightmost entry was added by our proxy; anything left of it is
+	// client-controlled. Tailscale Serve/Funnel overwrite the header with the
+	// real client address.
+	if xff := r.Header.Values("X-Forwarded-For"); len(xff) > 0 {
+		parts := strings.Split(xff[len(xff)-1], ",")
+		if ip := strings.TrimSpace(parts[len(parts)-1]); ip != "" {
+			return ip
+		}
+	}
+	if xr := r.Header.Get("X-Real-Ip"); xr != "" {
+		return xr
 	}
 	return host
+}
+
+func privatePeer(host string) bool {
+	ip := net.ParseIP(host)
+	return ip != nil && (ip.IsLoopback() || ip.IsPrivate())
 }

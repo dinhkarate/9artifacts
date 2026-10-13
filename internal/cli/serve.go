@@ -60,7 +60,8 @@ func Serve(args []string, version string) error {
 	name := fs.String("name", env("VITRINE_NAME", "vitrine"), "name shown in the UI")
 	theme := fs.String("theme", env("VITRINE_THEME", "default"), "built-in theme: "+strings.Join(builtinThemes(), ", "))
 	themeDir := fs.String("theme-dir", env("VITRINE_THEME_DIR", ""), "directory overriding theme files (see vitrine theme init)")
-	trust := fs.Bool("trust-proxy", env("VITRINE_TRUST_PROXY", "") == "1", "trust X-Forwarded-For (behind nginx/Caddy/Cloudflare)")
+	trust := proxyMode(env("VITRINE_TRUST_PROXY", ""))
+	fs.Var(&trust, "trust-proxy", "behind a proxy: take the client IP from X-Forwarded-For (bare flag or xff), CF-Connecting-IP (cloudflare) or Tailscale Serve/Funnel (tailscale)")
 	maxMB := fs.Int("max-upload-mb", atoiDef(env("VITRINE_MAX_UPLOAD_MB", "100"), 100), "maximum upload size in MB")
 	artifactCSP := fs.String("artifact-csp", env("VITRINE_ARTIFACT_CSP", ""), "extra CSP directives for artifact pages, e.g. \"connect-src 'none'\"")
 	_ = fs.Parse(args)
@@ -77,7 +78,7 @@ func Serve(args []string, version string) error {
 	}
 	srv, err := app.New(app.Config{
 		DataDir: *data, PublicURL: *public, ContentURL: *content, Name: *name, Theme: *theme, ThemeDir: *themeDir,
-		TrustProxy: *trust, MaxUpload: int64(*maxMB) << 20, Version: version, ArtifactCSP: *artifactCSP,
+		TrustProxy: string(trust), MaxUpload: int64(*maxMB) << 20, Version: version, ArtifactCSP: *artifactCSP,
 	}, st)
 	if err != nil {
 		return err
@@ -360,4 +361,14 @@ func readSecret(prompt string) (string, error) {
 		return "", errors.New("no input")
 	}
 	return strings.TrimRight(line, "\r\n"), nil
+}
+
+// proxyMode is --trust-proxy: a bare flag means "xff", or name the proxy.
+type proxyMode string
+
+func (p *proxyMode) String() string   { return string(*p) }
+func (p *proxyMode) IsBoolFlag() bool { return true }
+func (p *proxyMode) Set(v string) error {
+	*p = proxyMode(v)
+	return nil
 }

@@ -43,9 +43,16 @@ func newEnv(t *testing.T, cfg Config) *env {
 	return &env{t: t, srv: srv, token: tok}
 }
 
+// remoteAddr in a header map sets the connecting address instead of a header.
+const remoteAddr = ":remote"
+
 func (e *env) do(method, target string, body io.Reader, hdr map[string]string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(method, target, body)
 	for k, v := range hdr {
+		if k == remoteAddr {
+			req.RemoteAddr = v
+			continue
+		}
 		req.Header.Set(k, v)
 	}
 	if req.Host == "example.com" {
@@ -396,10 +403,10 @@ func TestEverythingButPDFIsSandboxed(t *testing.T) {
 }
 
 func TestTrustProxyUsesRightmostAddress(t *testing.T) {
-	e := newEnv(t, Config{TrustProxy: true})
+	e := newEnv(t, Config{TrustProxy: "xff"})
 	login := func(xff string) int {
 		return e.do("POST", "/api/auth/login", strings.NewReader(`{"password":"wrong password"}`),
-			map[string]string{"Content-Type": "application/json", "X-Forwarded-For": xff}).Code
+			map[string]string{"Content-Type": "application/json", "X-Forwarded-For": xff, remoteAddr: "127.0.0.1:5000"}).Code
 	}
 	var last int
 	for i := range 6 {
@@ -410,12 +417,41 @@ func TestTrustProxyUsesRightmostAddress(t *testing.T) {
 	}
 }
 
+func TestTrustProxyModes(t *testing.T) {
+	ip := func(mode, remote string, hdr map[string]string) string {
+		e := newEnv(t, Config{TrustProxy: mode})
+		req := httptest.NewRequest("GET", "/", nil)
+		req.RemoteAddr = remote
+		for k, v := range hdr {
+			req.Header.Set(k, v)
+		}
+		return e.srv.clientIP(req)
+	}
+	cf := map[string]string{"CF-Connecting-IP": "203.0.113.9", "X-Forwarded-For": "198.51.100.1, 203.0.113.8"}
+	cases := []struct{ name, mode, remote, want string }{
+		{"off ignores headers", "", "127.0.0.1:1", "127.0.0.1"},
+		{"cloudflare uses CF-Connecting-IP", "cloudflare", "127.0.0.1:1", "203.0.113.9"},
+		{"xff uses rightmost entry", "true", "10.0.0.5:1", "203.0.113.8"},
+		{"tailscale uses rightmost entry", "tailscale", "[::1]:1", "203.0.113.8"},
+		{"public peer is not trusted", "cloudflare", "198.51.100.77:1", "198.51.100.77"},
+	}
+	for _, c := range cases {
+		if got := ip(c.mode, c.remote, cf); got != c.want {
+			t.Errorf("%s: got %s, want %s", c.name, got, c.want)
+		}
+	}
+	st, _ := OpenStore(t.TempDir())
+	if _, err := New(Config{TrustProxy: "nginx"}, st); err == nil {
+		t.Error("unknown trust-proxy mode accepted")
+	}
+}
+
 func TestGlobalPasswordCap(t *testing.T) {
-	e := newEnv(t, Config{TrustProxy: true})
+	e := newEnv(t, Config{TrustProxy: "xff"})
 	var last int
 	for i := range globalFailLimit + 1 {
 		last = e.do("POST", "/api/auth/login", strings.NewReader(`{"password":"nope"}`),
-			map[string]string{"Content-Type": "application/json", "X-Forwarded-For": "198.51.100." + strconv.Itoa(i)}).Code
+			map[string]string{"Content-Type": "application/json", "X-Forwarded-For": "198.51.100." + strconv.Itoa(i), remoteAddr: "172.18.0.2:5000"}).Code
 	}
 	if last != 429 {
 		t.Fatalf("distributed guessing not capped: %d", last)
@@ -473,4 +509,18 @@ func TestSharesPinVersionAndHTTPSCookie(t *testing.T) {
 func TestMain(m *testing.M) {
 	pbkdf2Iter = 1000
 	os.Exit(m.Run())
+}
+
+func TestUploadOverLimitIs413(t *testing.T) {
+	e := newEnv(t, Config{MaxUpload: 1 << 20})
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	fw, _ := mw.CreateFormFile("files", "big.html")
+	fw.Write(bytes.Repeat([]byte("a"), 2<<20))
+	mw.Close()
+	hdr := map[string]string{"Authorization": "Bearer " + e.token, "Content-Type": mw.FormDataContentType()}
+	rec := e.do("POST", "/api/artifacts", &buf, hdr)
+	if rec.Code != 413 || !strings.Contains(rec.Body.String(), "max-upload-mb") {
+		t.Fatalf("oversized upload: %d %s", rec.Code, rec.Body)
+	}
 }

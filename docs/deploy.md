@@ -7,6 +7,7 @@ Pick the setup that matches your server.
 - [2. Behind nginx, Caddy or Traefik](#2-behind-nginx-caddy-or-traefik)
 - [3. Docker / Compose](#3-docker--compose)
 - [4. Home server or laptop with Cloudflare Tunnel](#4-home-server-with-cloudflare-tunnel)
+- [5. Home server or laptop with Tailscale](#5-home-server-with-tailscale)
 - [Free hosting](#free-hosting)
 - [Configuration reference](#configuration-reference)
 - [Backups and upgrades](#backups-and-upgrades)
@@ -74,11 +75,13 @@ See [`docker-compose.yml`](../docker-compose.yml).
 
 ## 4. Home server with Cloudflare Tunnel
 
-No public IP, no open ports, free TLS:
+No public IP, no open ports, free TLS. You need a domain on Cloudflare (any registrar; the
+tunnel itself is free). Quick tunnels (`*.trycloudflare.com`) get a new hostname on every
+restart, which breaks passkeys, so use a named tunnel.
 
 ```bash
 vitrine serve --addr 127.0.0.1:8080 --url https://art.example.com \
-  --content-url https://art-content.example.com --trust-proxy
+  --content-url https://art-content.example.com --trust-proxy=cloudflare
 cloudflared tunnel create vitrine
 # ~/.cloudflared/config.yml
 #   ingress:
@@ -92,23 +95,72 @@ cloudflared tunnel route dns vitrine art-content.example.com
 cloudflared tunnel run vitrine
 ```
 
-Cloudflare puts the visitor IP in `CF-Connecting-IP`/`X-Forwarded-For`, so keep
-`--trust-proxy` on for login rate limiting.
+`--trust-proxy=cloudflare` takes the visitor IP from `CF-Connecting-IP` for login rate
+limiting. Like every proxy mode, it only trusts the header on connections from loopback or a
+private network, so keep vitrine bound to `127.0.0.1` (or a Docker network).
+
+Things to know on the Cloudflare Free plan:
+
+- Uploads are capped at 100 MB by Cloudflare (about 95 MB of files after multipart overhead).
+- Don't enable Bot Fight Mode or "I'm Under Attack" on the app hostname; they challenge
+  non-browser clients and break `/mcp`, `/api` and the CLI.
+- Cloudflare's terms allow it to limit free-plan zones that mostly serve video or large files.
+  A gallery of HTML, Markdown and PDFs is fine; don't use it as a video host.
+
+### Optional: Cloudflare Access in front of the app
+
+Cloudflare Zero Trust's free plan can put an extra login (email code, GitHub, Google) in front
+of the gallery while share links keep working. Create these Access applications:
+
+| Application | Policy |
+|---|---|
+| `art.example.com` | Allow: your email |
+| `art.example.com/s/*` | Bypass: everyone (public share pages) |
+| `art.example.com/assets/*` | Bypass: everyone (share-page styles) |
+| `art.example.com/mcp`, `art.example.com/api/*` | Bypass (vitrine's API tokens still apply), or Service Auth if your agents can send `CF-Access-Client-Id`/`-Secret` headers |
+| `art-content.example.com` | **None.** Sandboxed artifacts can't send the Access cookie; the content host is already protected by signed view and share tokens |
+
+## 5. Home server with Tailscale
+
+Free, and no domain needed: Tailscale gives each machine `name.your-tailnet.ts.net` with HTTPS.
+
+**Private (tailnet only).** Only your own devices can reach vitrine; agents on those devices
+use it as usual.
+
+```bash
+vitrine serve --addr 127.0.0.1:8080 --url https://box.your-tailnet.ts.net --trust-proxy=tailscale
+tailscale serve --bg 8080
+```
+
+**Public share links with Funnel.** To let other people open share links, publish the same
+port to the Internet with Funnel instead (`tailscale funnel --bg 8080`, after enabling Funnel
+in the tailnet policy). Then the whole app is public, protected by your passkey or password
+like any other deployment.
+
+Things to know:
+
+- Funnel is free on the Personal plan but still in beta, only uses ports 443, 8443 and 10000,
+  and can't use your own domain.
+- A machine has one name, so this setup has a single origin; the sandbox still isolates
+  artifacts from your session.
+- Machine names appear in public certificate-transparency logs. Renaming the machine or the
+  tailnet changes the URL, which invalidates registered passkeys (password login still works).
 
 ## Free hosting
 
-Vitrine needs roughly 10 MB of RAM and almost no CPU, so free tiers are plenty. Free-tier
+Vitrine needs roughly 10 MB of RAM and almost no CPU, so free options are plenty. Free-tier
 terms change; check the provider's current page before you rely on one.
 
-| Option | What you get | Notes |
-|---|---|---|
-| **Oracle Cloud Always Free** | AMD micro VMs and Arm Ampere capacity, 200 GB block storage | Arm capacity is often "out of host capacity" in popular regions, so retry or use the AMD micro. |
-| **Google Cloud `e2-micro`** | 1 always-free VM in `us-west1`, `us-central1` or `us-east1`, 30 GB disk | An external IPv4 address is billed separately; put it behind a Cloudflare Tunnel to avoid that. |
-| **Raspberry Pi / old laptop + Cloudflare Tunnel** | Your hardware, free tunnel and TLS | Use the `linux_arm64` or `linux_armv7` release. |
-| **AWS / Azure free trials** | 12-month micro instances | Fine for trying it out. |
+| Option | Cost | What you get | Notes |
+|---|---|---|---|
+| **Your own machine + Tailscale** ([§5](#5-home-server-with-tailscale)) | $0, no domain | `*.ts.net` HTTPS, tailnet-only or public via Funnel | Funnel is beta; single origin |
+| **Your own machine + Cloudflare Tunnel** ([§4](#4-home-server-with-cloudflare-tunnel)) | $0 + a domain | Two hostnames, no open ports, optional Access login | 100 MB upload cap; quick tunnels break passkeys |
+| **Oracle Cloud Always Free** | $0 | AMD micro VMs or Arm Ampere (2 OCPU / 12 GB), 200 GB block storage, 10 TB egress | Idle instances may be reclaimed; Arm capacity is often "out of host capacity" |
+| **Google Cloud `e2-micro`** | $0 | 1 VM in `us-west1`, `us-central1` or `us-east1`, 30 GB disk | Only 1 GB/month egress is free, tunnel traffic included; an external IPv4 address is billed |
+| **Raspberry Pi / old laptop** | your hardware | Use the `linux_arm64` or `linux_armv7` release with §4 or §5 | |
 
-Serverless platforms with ephemeral disks (Render free, Vercel, Netlify) are **not**
-suitable: Vitrine stores your files on local disk.
+Platforms with ephemeral disks or no free tier (Render free, Koyeb free, Fly.io for new
+accounts, Vercel, Netlify) are **not** suitable: vitrine stores your files on local disk.
 
 ## Configuration reference
 
@@ -126,7 +178,7 @@ Every flag has an environment variable.
 | `--name` | `VITRINE_NAME` | `vitrine` | name shown in the UI |
 | `--theme` | `VITRINE_THEME` | `default` | `default`, `terminal`, `paper` |
 | `--theme-dir` | `VITRINE_THEME_DIR` | — | directory overriding theme or shell files |
-| `--trust-proxy` | `VITRINE_TRUST_PROXY=1` | off | use `X-Forwarded-For` for rate limiting |
+| `--trust-proxy[=MODE]` | `VITRINE_TRUST_PROXY=1\|cloudflare\|tailscale` | off | behind a proxy, take the client IP for rate limiting from `X-Forwarded-For` (bare flag, `xff`), `CF-Connecting-IP` (`cloudflare`) or Tailscale Serve/Funnel (`tailscale`); only trusted on loopback or private-network connections |
 | `--max-upload-mb` | `VITRINE_MAX_UPLOAD_MB` | `100` | request size limit |
 | `--artifact-csp` | `VITRINE_ARTIFACT_CSP` | — | extra CSP for artifacts, e.g. `connect-src 'none'` to block network access |
 

@@ -77,6 +77,16 @@ func cleanName(name string) (string, error) {
 	return strings.Join(parts, "/"), nil
 }
 
+// errTooLarge marks uploads over the size limit (HTTP 413).
+var errTooLarge = errors.New("upload too large")
+
+func uploadStatus(err error) int {
+	if errors.Is(err, errTooLarge) {
+		return http.StatusRequestEntityTooLarge
+	}
+	return http.StatusBadRequest
+}
+
 // parseUpload reads either multipart/form-data (fields: title, tags, note,
 // entry, message, files[]) or JSON ({title, tags, files:[{name, content,
 // encoding}]}).
@@ -85,6 +95,10 @@ func (s *Server) parseUpload(w http.ResponseWriter, r *http.Request) (meta, []up
 	if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 		limit = min(limit, maxJSONBody)
 	}
+	tooLarge := fmt.Errorf("%w: the limit is %d MB (multipart) and 32 MB (JSON); raise it with --max-upload-mb", errTooLarge, s.cfg.MaxUpload>>20)
+	if r.ContentLength > limit {
+		return meta{}, nil, tooLarge
+	}
 	r.Body = http.MaxBytesReader(w, r.Body, limit)
 	var m meta
 	var files []upload
@@ -92,7 +106,10 @@ func (s *Server) parseUpload(w http.ResponseWriter, r *http.Request) (meta, []up
 	switch {
 	case strings.HasPrefix(ct, "multipart/form-data"):
 		if err := r.ParseMultipartForm(32 << 20); err != nil {
-			return m, nil, fmt.Errorf("upload too large or malformed: %w", err)
+			if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+				return m, nil, tooLarge
+			}
+			return m, nil, fmt.Errorf("malformed upload: %w", err)
 		}
 		f := r.MultipartForm
 		if v := f.Value["title"]; len(v) > 0 {
@@ -130,7 +147,10 @@ func (s *Server) parseUpload(w http.ResponseWriter, r *http.Request) (meta, []up
 		}
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&body); err != nil {
-			return m, nil, errors.New("invalid JSON body, or larger than 32 MB (use multipart/form-data for big files)")
+			if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+				return m, nil, tooLarge
+			}
+			return m, nil, errors.New("invalid JSON body")
 		}
 		m = body.meta
 		for _, jf := range body.Files {
@@ -410,7 +430,7 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleCreate(w http.ResponseWriter, r *http.Request) {
 	m, files, err := s.parseUpload(w, r)
 	if err != nil {
-		writeError(w, 400, err.Error())
+		writeError(w, uploadStatus(err), err.Error())
 		return
 	}
 	a, err := s.CreateArtifact(m, files)
@@ -457,7 +477,7 @@ func (s *Server) CreateArtifact(m meta, files []upload) (artifactView, error) {
 func (s *Server) handleNewVersion(w http.ResponseWriter, r *http.Request) {
 	m, files, err := s.parseUpload(w, r)
 	if err != nil {
-		writeError(w, 400, err.Error())
+		writeError(w, uploadStatus(err), err.Error())
 		return
 	}
 	out, status, err := s.AddVersion(r.PathValue("id"), m, files)

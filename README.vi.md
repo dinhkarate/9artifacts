@@ -38,7 +38,8 @@ agent** để lấy lệnh kết nối Claude Code:
 claude mcp add --transport http vitrine https://art.example.com/mcp --header "Authorization: Bearer vt_..."
 ```
 
-Muốn chạy **miễn phí**: Oracle Cloud Always Free, Google Cloud `e2-micro`, hoặc Raspberry Pi
-kèm Cloudflare Tunnel. Xem [docs/deploy.md](docs/deploy.md#free-hosting).
+Muốn chạy **miễn phí**: máy của bạn + Tailscale (HTTPS `*.ts.net` free, không cần domain)
+hoặc Cloudflare Tunnel, hay Oracle Cloud Always Free, Google Cloud `e2-micro`. Xem
+[docs/deploy.md](docs/deploy.md#free-hosting).
 
 Tài liệu đầy đủ (bảo mật, API, theme) nằm trong [README tiếng Anh](README.md).
