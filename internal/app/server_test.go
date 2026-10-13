@@ -563,6 +563,10 @@ func TestShareViewLimit(t *testing.T) {
 	if c := from(file, "198.51.100.11"); c != 410 {
 		t.Fatalf("second visitor got %d, want 410", c)
 	}
+	clear(e.srv.viewers) // a restart forgets in-memory state
+	if c := from(page, "198.51.100.10"); c != 200 {
+		t.Fatalf("counted visitor after restart: %d", c)
+	}
 	got := decode[artifactView](t, e.api("GET", "/api/artifacts/"+a.ID, nil))
 	if s := got.Shares[0]; s.Views != 1 || s.Active || s.LastView == nil {
 		t.Fatalf("share after limit: views=%d active=%v last=%v", s.Views, s.Active, s.LastView)
@@ -666,9 +670,17 @@ func TestPasswordProtectedShare(t *testing.T) {
 		t.Fatalf("wrong password: %d", rec.Code)
 	}
 	rec = e.do("POST", page, strings.NewReader("password=hunter22"), form)
+	cookie := rec.Result().Cookies()
+	if rec.Code != 303 || len(cookie) != 1 || cookie[0].Path != page || !cookie[0].HttpOnly {
+		t.Fatalf("unlock: %d cookies=%v", rec.Code, cookie)
+	}
+	rec = e.do("GET", page, nil, map[string]string{"Cookie": cookie[0].Name + "=" + cookie[0].Value})
 	m := regexp.MustCompile(`/s/[^/"]+/g/[^/"]+/index\.html`).FindString(rec.Body.String())
 	if rec.Code != 200 || m == "" {
-		t.Fatalf("unlock: %d, grant src found: %v", rec.Code, m != "")
+		t.Fatalf("unlocked page: %d, grant src found: %v", rec.Code, m != "")
+	}
+	if c := e.do("GET", page, nil, map[string]string{"Cookie": cookie[0].Name + "=1.forged"}).Code; c != 401 {
+		t.Fatalf("forged unlock cookie: %d", c)
 	}
 	if c := e.do("GET", m, nil, nil).Code; c != 200 {
 		t.Fatalf("granted file: %d", c)

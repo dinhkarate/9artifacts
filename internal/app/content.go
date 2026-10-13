@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -115,7 +116,10 @@ func (s *Server) handleShareGrant(w http.ResponseWriter, r *http.Request) {
 	s.serveVersionFile(w, r, id, v, r.PathValue("path"), r.URL.Query().Has("download"), r.URL.Query().Has("view"))
 }
 
-const grantTTL = 2 * time.Hour
+const (
+	grantTTL    = 2 * time.Hour
+	shareCookie = "vitrine_share" // unlock grant for one password-protected link
+)
 
 func (s *Server) grant(token string) string {
 	exp := strconv.FormatInt(time.Now().Add(grantTTL).Unix(), 36)
@@ -181,47 +185,73 @@ func isPreviewBot(ua string) bool {
 
 const maxViewers = 10000
 
-// countView records at most one view per visitor address per hour, so page
-// reloads and the files a page loads count once. ok is false when the link
-// has used up its views and this visitor was not already counted; first is
-// true when this request was counted as a new visit.
+// countView counts each visitor (client address) once. On links with a view
+// limit the visitor is remembered for the link's lifetime, so people who were
+// counted can always come back; elsewhere a visit counts once per hour. ok is
+// false when the link has no views left for this visitor; first is true when
+// this request was counted as a new visit.
 func (s *Server) countView(token, ip string) (ok, first bool) {
 	key := token + "|" + ip
+	visitor := s.sign("visitor|" + key)
 	now := time.Now()
-	s.mu.Lock()
-	seen, known := s.viewers[key]
-	s.mu.Unlock()
-	if known && now.Sub(seen) < time.Hour {
+	var limited, known bool
+	s.store.Read(func(st *State) {
+		if _, sh := st.FindShare(token); sh != nil {
+			limited, known = sh.MaxViews > 0, slices.Contains(sh.Visitors, visitor)
+		}
+	})
+	if known {
 		return true, false
+	}
+	if !limited {
+		s.mu.Lock()
+		seen, recent := s.viewers[key]
+		s.mu.Unlock()
+		if recent && now.Sub(seen) < time.Hour {
+			return true, false
+		}
 	}
 	err := s.store.Update(func(st *State) error {
 		_, sh := st.FindShare(token)
+		if sh != nil && slices.Contains(sh.Visitors, visitor) {
+			return errCounted
+		}
 		if sh == nil || !sh.Active(now) {
 			return errViewLimit
+		}
+		if sh.MaxViews > 0 {
+			sh.Visitors = append(sh.Visitors, visitor)
 		}
 		sh.Views++
 		t := now.UTC()
 		sh.LastViewedAt = &t
 		return nil
 	})
+	if errors.Is(err, errCounted) {
+		return true, false
+	}
 	if err != nil {
 		return false, false
 	}
-	s.mu.Lock()
-	if len(s.viewers) >= maxViewers {
-		for k, t := range s.viewers {
-			if now.Sub(t) >= time.Hour {
-				delete(s.viewers, k)
+	if !limited {
+		s.mu.Lock()
+		if len(s.viewers) >= maxViewers {
+			for k, t := range s.viewers {
+				if now.Sub(t) >= time.Hour {
+					delete(s.viewers, k)
+				}
+			}
+			if len(s.viewers) >= maxViewers {
+				clear(s.viewers)
 			}
 		}
-		if len(s.viewers) >= maxViewers {
-			clear(s.viewers)
-		}
+		s.viewers[key] = now
+		s.mu.Unlock()
 	}
-	s.viewers[key] = now
-	s.mu.Unlock()
 	return true, true
 }
+
+var errCounted = errors.New("visitor already counted")
 
 var errViewLimit = errors.New("share link is no longer available")
 
@@ -350,6 +380,14 @@ func (s *Server) handleSharePage(w http.ResponseWriter, r *http.Request) {
 		// password is right; a wrong guess costs a login-style failure.
 		ip := "share|" + s.clientIP(r)
 		status = http.StatusUnauthorized
+		if c, err := r.Cookie(shareCookie); err == nil && r.Method == http.MethodGet && s.checkGrant(token, c.Value) {
+			status = 200
+			base = s.contentOrigin() + "/s/" + token + "/g/" + c.Value + "/"
+			if !s.recordVisit(r, token, id, title, v, sh) {
+				status = 410
+			}
+			break
+		}
 		if r.Method != http.MethodPost {
 			break
 		}
@@ -364,11 +402,16 @@ func (s *Server) handleSharePage(w http.ResponseWriter, r *http.Request) {
 			data["Error"] = "Wrong password."
 			break
 		}
-		status = 200
-		base = s.contentOrigin() + "/s/" + token + "/g/" + s.grant(token) + "/"
 		if !s.recordVisit(r, token, id, title, v, sh) {
 			status = 410
+			break
 		}
+		// Remember the unlock for this link only, then redirect so a reload
+		// is a plain GET instead of a form resubmission.
+		http.SetCookie(w, &http.Cookie{Name: shareCookie, Value: s.grant(token), Path: "/s/" + token, MaxAge: int(grantTTL.Seconds()),
+			HttpOnly: true, Secure: strings.HasPrefix(s.cfg.PublicURL, "https://"), SameSite: http.SameSiteLaxMode})
+		http.Redirect(w, r, "/s/"+token, http.StatusSeeOther)
+		return
 	case r.Method == http.MethodPost:
 		status = http.StatusMethodNotAllowed
 	case !isPreviewBot(r.UserAgent()):

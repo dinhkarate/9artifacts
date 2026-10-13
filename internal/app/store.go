@@ -45,6 +45,9 @@ type Share struct {
 	MaxViews     int        `json:"maxViews,omitempty"` // 0 means unlimited
 	LastViewedAt *time.Time `json:"lastViewedAt,omitempty"`
 	PasswordHash string     `json:"passwordHash,omitempty"` // viewers must enter this password
+	// Visitors holds keyed hashes (never raw addresses) of the visitors
+	// counted against MaxViews, so they can come back, even after a restart.
+	Visitors []string `json:"visitors,omitempty"`
 }
 
 // Active reports whether the share link still works.
