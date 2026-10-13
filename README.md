@@ -15,7 +15,7 @@ One ~10 MB Go binary · ~10 MB RAM · no database · no Node · no Docker requir
 
 English · [Tiếng Việt](README.vi.md)
 
-<img src="docs/images/demo.gif" alt="An agent publishes a dashboard to vitrine over MCP, publishes v2 and the open tab live-reloads, then an expiring share link is created" width="100%">
+<img src="docs/images/demo.gif" alt="An agent publishes a dashboard to Vitrine over MCP, publishes v2 and the open tab live-reloads, then an expiring share link is created" width="100%">
 
 </div>
 
@@ -25,7 +25,7 @@ Claude, ChatGPT, Codex and Cursor are great at producing **artifacts**: dashboar
 diagrams, landing-page drafts. But they end up in a chat sidebar, a `/tmp` folder, or a public
 link on someone else's servers.
 
-If you already rent a VPS, vitrine gives those artifacts a home you own:
+If you already rent a VPS, Vitrine gives those artifacts a home you own:
 
 - **Private by default.** Everything needs your passkey. Nothing is public until you create a
   link, and every public link **expires** (1 hour to 30 days) and can be revoked.
@@ -65,7 +65,7 @@ curl -fsSL https://raw.githubusercontent.com/dinhkarate/vitrine/main/install.sh 
   | sudo sh -s -- --domain art.example.com --content-domain art-content.example.com --email you@example.com
 ```
 
-This installs the binary and a hardened systemd service. vitrine fetches Let's Encrypt certificates
+This installs the binary and a hardened systemd service. Vitrine fetches Let's Encrypt certificates
 itself. Open the first-run link it prints, set a password, and add a passkey.
 
 ### Docker
@@ -144,16 +144,16 @@ vitrine serve --theme-dir ./my-theme ...
 
 ## Security
 
-vitrine is meant for documents you would not paste into a public pastebin. The design:
+Vitrine is meant for documents you would not paste into a public pastebin. The design:
 
-| Concern | How vitrine handles it |
+| Concern | How Vitrine handles it |
 |---|---|
 | Malicious or buggy artifact JS | Every artifact response except PDFs carries `Content-Security-Policy: sandbox`, so it runs on an opaque origin with no cookies and no API access, even when opened in a new tab. Content types come from a fixed table, and unknown extensions download as `application/octet-stream`. With `--content-url`, artifacts also live on a **separate origin**, which is how Claude.ai isolates them. |
 | Sub-resources in a sandbox | Short-lived HMAC **view tokens** are scoped to one artifact version, so sibling CSS and images load without exposing your session. |
 | Login | **Passkeys** (WebAuthn, user verification required, signature-counter checks) or a PBKDF2 password. Lockout applies after 5 failures per address plus a global cap. Sessions use a `__Host-` cookie that is `HttpOnly`, `Secure` and `SameSite=Strict`, plus a CSRF header check. |
 | Agent access | API tokens are stored only as SHA-256 hashes and can be revoked. Agents cannot mint tokens or change login settings. |
 | Public links | Unguessable 144-bit tokens, **pinned to the version you shared**. Every link must expire, and revoked or expired links return `410 Gone`. |
-| Logs | Share and view tokens are **redacted** from vitrine's request log. |
+| Logs | Share and view tokens are **redacted** from Vitrine's request log. |
 | Files | Upload paths are validated and written through `os.Root`, so traversal is impossible. Responses are served with `nosniff`. |
 | App UI | Nonce-based CSP (an uploaded `.js` can never run as app code), `X-Frame-Options: DENY`, and HSTS on HTTPS. |
 
@@ -161,7 +161,7 @@ Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 
 ## How it compares
 
-| | vitrine | Claude.ai artifacts | Static hosting / S3 |
+| | Vitrine | Claude.ai artifacts | Static hosting / S3 |
 |---|---|---|---|
 | Runs on your server | ✅ | ❌ | ✅ |
 | Private by default | ✅ passkey | ❌ (publish = public) | ❌ |
@@ -177,7 +177,7 @@ Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 **Can I run it for free?** Yes. It fits easily in Oracle Cloud Always Free, a Google Cloud
 `e2-micro` or a Raspberry Pi behind a free Cloudflare Tunnel. See [docs/deploy.md](docs/deploy.md#free-hosting).
 
-**Multiple users?** Not yet. vitrine is single-owner by design; share with others through expiring links.
+**Multiple users?** Not yet. Vitrine is single-owner by design; share with others through expiring links.
 
 **Where is my data?** Everything lives in one directory: a `vitrine.json` index plus your files under
 `artifacts/<id>/v<n>/`. Back it up with `tar` or `restic`.
@@ -195,7 +195,7 @@ Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 ## Contributing
 
 Issues and PRs are welcome. Run `go test ./...` before sending a PR; see [CONTRIBUTING.md](CONTRIBUTING.md).
-If vitrine is useful to you, a ⭐ helps other self-hosters find it.
+If Vitrine is useful to you, a ⭐ helps other self-hosters find it.
 
 ## License
 

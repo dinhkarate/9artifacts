@@ -42,7 +42,7 @@ JSON, which is easier from code (up to 32 MB; use multipart for anything bigger)
 ```
 
 The **entry** file is the one opened by default: `entry` if given, else `index.html`, else
-the first top-level `.html`, `.md`, `.pdf`, `.svg` or image. Without a `title`, vitrine uses
+the first top-level `.html`, `.md`, `.pdf`, `.svg` or image. Without a `title`, Vitrine uses
 the HTML `<title>` or the first Markdown `# heading`.
 
 ### Artifact object

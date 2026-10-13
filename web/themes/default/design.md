@@ -14,7 +14,7 @@ this file (`vitrine theme init`) to change the house style.
   `https://cdn.jsdelivr.net` with a pinned version. No analytics, trackers
   or remote fonts that phone home.
 - The page runs in a sandbox: no cookies, no `localStorage` guarantees, no
-  access to the vitrine API. Keep state in memory.
+  access to the Vitrine API. Keep state in memory.
 - Always set a meaningful `<title>`; it becomes the artifact title.
 
 ## Look

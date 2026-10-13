@@ -1,12 +1,12 @@
 # Contributing
 
-Thanks for helping! A few principles keep vitrine what it is:
+Thanks for helping! A few principles keep Vitrine what it is:
 
 - **Small and dependency-light.** The only module dependency is `golang.org/x/crypto`
   (ACME). The web UI is plain HTML/CSS/JS with no build step. Please keep it that way.
 - **Secure by default.** Anything that serves artifact bytes must keep the sandbox CSP and
   stay on the content origin. Public links must always expire.
-- **One owner.** vitrine is a personal vault, not a multi-tenant SaaS.
+- **One owner.** Vitrine is a personal vault, not a multi-tenant SaaS.
 
 ## Development
 

@@ -10,7 +10,7 @@
 
 </div>
 
-AI agent (Claude Code, Codex, Cursor…) tạo ra rất nhiều dashboard, báo cáo, sơ đồ. vitrine là nơi
+AI agent (Claude Code, Codex, Cursor…) tạo ra rất nhiều dashboard, báo cáo, sơ đồ. Vitrine là nơi
 lưu chúng **trên server của bạn**:
 
 - **Riêng tư mặc định.** Đăng nhập bằng passkey. Link công khai **luôn có hạn** (1 giờ đến 30 ngày)

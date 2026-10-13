@@ -1,6 +1,6 @@
-# Deploying vitrine
+# Deploying Vitrine
 
-vitrine is a single binary that keeps all its state in one data directory.
+Vitrine is a single binary that keeps all its state in one data directory.
 Pick the setup that matches your server.
 
 - [1. Standalone with automatic HTTPS](#1-standalone-with-automatic-https) (simplest)
@@ -13,7 +13,7 @@ Pick the setup that matches your server.
 
 ## Two domains (recommended)
 
-Artifacts are untrusted HTML. vitrine always sandboxes them, but serving them from a
+Artifacts are untrusted HTML. Vitrine always sandboxes them, but serving them from a
 **second origin** adds a second wall, and it is the same model Claude.ai uses. Use a sibling
 name such as `art-content.example.com`, or better, a domain you use for nothing else.
 With one domain everything still works; the sandbox alone protects your session.
@@ -40,7 +40,7 @@ sudo vitrine passwd --data /var/lib/vitrine            # reset the owner passwor
 
 ## 2. Behind nginx, Caddy or Traefik
 
-Let vitrine listen on localhost and tell it its public URLs:
+Let Vitrine listen on localhost and tell it its public URLs:
 
 ```bash
 vitrine serve --addr 127.0.0.1:8080 \
@@ -53,7 +53,7 @@ With the installer: `sudo sh install.sh --url https://art.example.com --content-
 Proxy both host names to `127.0.0.1:8080` and keep the `Host` header. Examples:
 [`deploy/Caddyfile`](../deploy/Caddyfile) and [`deploy/nginx.conf`](../deploy/nginx.conf).
 
-> Share-link tokens appear in URLs. vitrine redacts them from its own log, but your proxy's
+> Share-link tokens appear in URLs. Vitrine redacts them from its own log, but your proxy's
 > access log will record them unless you disable or filter it (`access_log off;` in nginx).
 
 ## 3. Docker / Compose
@@ -97,7 +97,7 @@ Cloudflare puts the visitor IP in `CF-Connecting-IP`/`X-Forwarded-For`, so keep
 
 ## Free hosting
 
-vitrine needs roughly 10 MB of RAM and almost no CPU, so free tiers are plenty. Free-tier
+Vitrine needs roughly 10 MB of RAM and almost no CPU, so free tiers are plenty. Free-tier
 terms change; check the provider's current page before you rely on one.
 
 | Option | What you get | Notes |
@@ -108,7 +108,7 @@ terms change; check the provider's current page before you rely on one.
 | **AWS / Azure free trials** | 12-month micro instances | Fine for trying it out. |
 
 Serverless platforms with ephemeral disks (Render free, Vercel, Netlify) are **not**
-suitable: vitrine stores your files on local disk.
+suitable: Vitrine stores your files on local disk.
 
 ## Configuration reference
 

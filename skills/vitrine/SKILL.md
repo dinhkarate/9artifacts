@@ -5,7 +5,7 @@ description: Publish HTML, Markdown, SVG, image or PDF artifacts to the user's s
 
 # vitrine
 
-vitrine is the user's private artifact gallery. You publish a file, the user
+Vitrine is the user's private artifact gallery. You publish a file, the user
 opens the private URL (they sign in with a passkey), and they can share a
 public link that expires.
 
@@ -13,10 +13,10 @@ public link that expires.
 
 Needs `VITRINE_URL` and `VITRINE_TOKEN` in the environment (or a saved
 `vitrine login`). If neither is available, ask the user to create a token in
-vitrine → Settings → "Connect an AI agent". Never print the token.
+Vitrine → Settings → "Connect an AI agent". Never print the token.
 
 Prefer the `vitrine` CLI if it is installed (`vitrine version`); otherwise use
-`curl` as shown below. If the vitrine MCP server is connected, its tools
+`curl` as shown below. If the Vitrine MCP server is connected, its tools
 (`publish_artifact`, `get_design_guide`, ...) do the same thing.
 
 ## 1. Match the owner's style

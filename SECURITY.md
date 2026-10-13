@@ -1,6 +1,6 @@
 # Security policy
 
-vitrine stores documents people consider private, so security reports are welcome and taken
+Vitrine stores documents people consider private, so security reports are welcome and taken
 seriously.
 
 ## Reporting
