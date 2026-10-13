@@ -70,6 +70,22 @@ type Artifact struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 	Versions  []Version `json:"versions"`
 	Shares    []Share   `json:"shares"`
+	Comments  []Comment `json:"comments,omitempty"`
+}
+
+// Comment is review feedback on one version of an artifact, usually from
+// the owner to the agent that made it. Agents read open comments over MCP
+// and resolve them, optionally with a note, after publishing a fix.
+type Comment struct {
+	ID         string     `json:"id"`
+	Version    int        `json:"version"`
+	File       string     `json:"file,omitempty"`
+	Quote      string     `json:"quote,omitempty"` // text the comment is about
+	Body       string     `json:"body"`
+	Author     string     `json:"author"` // "owner" or "agent: <token name>"
+	CreatedAt  time.Time  `json:"createdAt"`
+	ResolvedAt *time.Time `json:"resolvedAt,omitempty"`
+	Resolution string     `json:"resolution,omitempty"` // note left when resolving
 }
 
 // Latest returns the newest version.

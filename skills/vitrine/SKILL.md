@@ -70,6 +70,15 @@ vitrine share ID --ttl 7d [--max-views 5] [--password]
 vitrine revoke ID SHARE_TOKEN
 ```
 
+## 3. Review comments
+
+The owner can select text in an artifact and leave comments for you. When they mention
+comments or feedback ("fix the comments on X"), call `list_comments` (MCP) or
+`GET /api/artifacts/ID` (`comments` with no `resolvedAt`). Fix the artifact, publish the new
+version with the same id, then `resolve_comment` each one with a one-line note of what changed
+(`POST /api/artifacts/ID/comments/CID/resolve {"note": "..."}`). A publish result that says
+"open review comments" is a reminder to do this.
+
 ## Rules
 
 - Default to the private URL. Never create a public link on your own.

@@ -139,6 +139,24 @@ func (st *Store) CreateToken(name string) (string, Token, error) {
 }
 
 // tokenAuth validates an "Authorization: Bearer vt_..." header.
+// tokenName returns the name of the API token on the request, or "".
+func (s *Server) tokenName(r *http.Request) string {
+	secret, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if !ok || !strings.HasPrefix(secret, "vt_") {
+		return ""
+	}
+	want := hashSecret(strings.TrimSpace(secret))
+	name := ""
+	s.store.Read(func(st *State) {
+		for _, t := range st.Tokens {
+			if subtle.ConstantTimeCompare([]byte(t.Hash), []byte(want)) == 1 {
+				name = t.Name
+			}
+		}
+	})
+	return name
+}
+
 func (s *Server) tokenAuth(r *http.Request) bool {
 	h := r.Header.Get("Authorization")
 	secret, ok := strings.CutPrefix(h, "Bearer ")

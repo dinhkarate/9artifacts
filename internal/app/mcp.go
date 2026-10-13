@@ -174,6 +174,10 @@ var (
 				"password":  map[string]any{"type": "string", "description": "Only when the user gives one: viewers must enter it"}}, "id", "ttl")},
 		{"name": "revoke_share", "description": "Revoke a public share link immediately.",
 			"inputSchema": schema(map[string]any{"id": strProp, "token": strProp}, "id", "token")},
+		{"name": "list_comments", "description": "Read the owner's review comments on an artifact (open ones by default). Call this when the user mentions comments or feedback, then fix the artifact with publish_artifact and resolve each comment.",
+			"inputSchema": schema(map[string]any{"id": strProp, "include_resolved": map[string]any{"type": "boolean"}}, "id")},
+		{"name": "resolve_comment", "description": "Mark a comment as done after publishing the fix, with a short note on what changed.",
+			"inputSchema": schema(map[string]any{"id": strProp, "comment_id": strProp, "note": map[string]any{"type": "string", "description": "What you changed"}}, "id", "comment_id")},
 		{"name": "restore_version", "description": "Publish an earlier version again as the new latest version (history is kept). Use when the user wants to undo changes.",
 			"inputSchema": schema(map[string]any{"id": strProp, "version": map[string]any{"type": "integer", "description": "Version number to restore"}}, "id", "version")},
 		{"name": "delete_artifact", "description": "Permanently delete an artifact and all its versions. Only when the user explicitly asks.",
@@ -228,7 +232,11 @@ func (s *Server) mcpCall(name string, raw json.RawMessage) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("Published %q (id %s, version %d).\nPrivate URL (owner login required): %s", out.Title, out.ID, out.Version, out.URL), nil
+		msg := fmt.Sprintf("Published %q (id %s, version %d).\nPrivate URL (owner login required): %s", out.Title, out.ID, out.Version, out.URL)
+		if out.Open > 0 {
+			msg += fmt.Sprintf("\n%d open review comment(s): if this version addresses them, call resolve_comment; see list_comments.", out.Open)
+		}
+		return msg, nil
 
 	case "list_artifacts":
 		var a struct {
@@ -331,6 +339,37 @@ func (s *Server) mcpCall(name string, raw json.RawMessage) (string, error) {
 			return "", err
 		}
 		return "Share revoked.", nil
+
+	case "list_comments":
+		var a struct {
+			ID              string
+			IncludeResolved bool `json:"include_resolved"`
+		}
+		_ = json.Unmarshal(raw, &a)
+		var out string
+		found := false
+		s.store.Read(func(st *State) {
+			if art := st.Artifacts[a.ID]; art != nil {
+				found = true
+				out = formatComments(art, a.IncludeResolved)
+			}
+		})
+		if !found {
+			return "", errors.New("artifact not found")
+		}
+		return out, nil
+
+	case "resolve_comment":
+		var a struct {
+			ID        string
+			CommentID string `json:"comment_id"`
+			Note      string
+		}
+		_ = json.Unmarshal(raw, &a)
+		if _, err := s.ResolveComment(a.ID, a.CommentID, a.Note); err != nil {
+			return "", err
+		}
+		return "Comment resolved.", nil
 
 	case "restore_version":
 		var a struct {

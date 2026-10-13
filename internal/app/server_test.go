@@ -745,3 +745,54 @@ func TestSharesOnContentBehindTailscale(t *testing.T) {
 		t.Fatalf("spoofed X-Forwarded-Host changed routing: %d", rec.Code)
 	}
 }
+
+func TestCommentsRoundTrip(t *testing.T) {
+	e := newEnv(t, Config{})
+	a := decode[artifactView](t, e.upload("/api/artifacts", map[string]string{"title": "Q3"}, map[string]string{"index.html": "<h1>Revenue</h1>"}))
+	c := decode[Comment](t, e.api("POST", "/api/artifacts/"+a.ID+"/comments", map[string]any{"body": "Make the chart blue", "quote": "Revenue"}))
+	if c.Version != 1 || c.File != "index.html" || c.Author != "agent: test" {
+		t.Fatalf("comment: %+v", c)
+	}
+	if rec := e.api("POST", "/api/artifacts/"+a.ID+"/comments", map[string]any{"body": "  "}); rec.Code != 400 {
+		t.Fatalf("empty comment: %d", rec.Code)
+	}
+	if got := decode[artifactView](t, e.api("GET", "/api/artifacts/"+a.ID, nil)); got.Open != 1 || len(got.Comments) != 1 {
+		t.Fatalf("open comments: %d", got.Open)
+	}
+	mcp := func(name string, args map[string]any) string {
+		b, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": map[string]any{"name": name, "arguments": args}})
+		rec := e.do("POST", "/mcp", bytes.NewReader(b), map[string]string{"Authorization": "Bearer " + e.token, "Content-Type": "application/json"})
+		return rec.Body.String()
+	}
+	if out := mcp("list_comments", map[string]any{"id": a.ID}); !strings.Contains(out, "Make the chart blue") || !strings.Contains(out, c.ID) {
+		t.Fatalf("list_comments: %s", out)
+	}
+	if out := mcp("publish_artifact", map[string]any{"id": a.ID, "files": []map[string]string{{"name": "index.html", "content": "<h1>Revenue</h1>"}}}); !strings.Contains(out, "1 open review comment") {
+		t.Fatalf("publish should mention open comments: %s", out)
+	}
+	mcp("resolve_comment", map[string]any{"id": a.ID, "comment_id": c.ID, "note": "Chart is blue now"})
+	got := decode[artifactView](t, e.api("GET", "/api/artifacts/"+a.ID, nil))
+	if got.Open != 0 || got.Comments[0].Resolution != "Chart is blue now" {
+		t.Fatalf("after resolve: open=%d %+v", got.Open, got.Comments[0])
+	}
+	if out := mcp("list_comments", map[string]any{"id": a.ID}); !strings.Contains(out, "No open comments") {
+		t.Fatalf("list after resolve: %s", out)
+	}
+	if rec := e.api("DELETE", "/api/artifacts/"+a.ID+"/comments/"+c.ID, nil); rec.Code != 200 {
+		t.Fatalf("delete comment: %d", rec.Code)
+	}
+}
+
+func TestSelectionScriptOnlyInOwnerViewer(t *testing.T) {
+	e := newEnv(t, Config{})
+	a := decode[artifactView](t, e.upload("/api/artifacts", nil, map[string]string{"index.html": "<p>hi</p>", "n.md": "# x"}))
+	base := pathOf(a.ViewBase)
+	has := func(path string) bool { return strings.Contains(e.do("GET", path, nil, nil).Body.String(), `vitrine:"selection"`) }
+	if !has(base+"index.html?vc=1") || !has(base+"n.md?view=1&vc=1") {
+		t.Fatal("viewer HTML/Markdown without selection script")
+	}
+	sh := decode[shareView](t, e.api("POST", "/api/artifacts/"+a.ID+"/shares", map[string]any{"ttl": "1h"}))
+	if has(base+"index.html") || has(base+"index.html?vc=1&download=1") || has("/s/"+sh.Token+"/f/index.html?vc=1") {
+		t.Fatal("selection script leaked into plain view, download or share")
+	}
+}

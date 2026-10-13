@@ -21,6 +21,7 @@ function h(tag, attrs, ...children) {
 }
 
 const ICONS = {
+  comment: '<path d="M21 14a2 2 0 0 1-2 2H8l-5 4V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
   key: '<circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.3-9.3M16 7l3 3M18 5l2 2"/>',
   logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
@@ -459,7 +460,13 @@ async function pollViewer() {
     const a = await api('GET', `/api/artifacts/${viewer.artifact.id}`);
     if (!viewer || a.id !== viewer.artifact.id) return;
     const newer = a.version > viewer.artifact.version;
+    const sig = (x) => (x.comments || []).map((c) => c.id + (c.resolvedAt ? '1' : '0')).join();
+    const commentsChanged = sig(a) !== sig(viewer.artifact);
     viewer.artifact = a;
+    if (commentsChanged && !newer) {
+      if (viewer.drawer === 'comments' && !document.activeElement.matches('textarea')) paintDrawer();
+      else paintCommentBadge();
+    }
     if (newer && !viewer.version) {
       viewer.file = null;
       renderViewer();
@@ -501,6 +508,7 @@ function renderViewer() {
         h('button', { class: 'icon-btn', type: 'button', title: 'Copy private link', 'aria-label': 'Copy private link', icon: 'link',
           onclick: async () => toast(await copyText(a.url) ? 'Private link copied (login required)' : 'Copy failed') }),
         viewer.openLink, viewer.downloadLink,
+        h('button', { class: 'icon-btn badge-btn', type: 'button', id: 'btn-comments', title: 'Comments (c)', 'aria-label': 'Comments', icon: 'comment', onclick: () => toggleDrawer('comments') }),
         h('button', { class: 'icon-btn', type: 'button', id: 'btn-info', title: 'Details (i)', 'aria-label': 'Details', icon: 'info', onclick: () => toggleDrawer('info') }),
         h('button', { class: 'btn primary', type: 'button', id: 'btn-share', onclick: () => toggleDrawer('share') }, icon('share'), h('span', { class: 'hide-sm', text: 'Share' })))),
     h('div', { class: 'viewer-body' },
@@ -519,7 +527,10 @@ function paintStage() {
   stage.textContent = '';
   viewer.openLink.href = viewSrc(v.viewBase, name);
   viewer.downloadLink.href = `/api/artifacts/${a.id}/download/${name.split('/').map(encodeURIComponent).join('/')}?v=${v.n}`;
-  if (kind === 'html' || kind === 'markdown') stage.append(h('iframe', { src: viewSrc(v.viewBase, name), sandbox: SANDBOX, referrerpolicy: 'no-referrer', title: a.title }));
+  if (kind === 'html' || kind === 'markdown') {
+    const src = viewSrc(v.viewBase, name);
+    stage.append(h('iframe', { src: src + (src.includes('?') ? '&' : '?') + 'vc=1', sandbox: SANDBOX, referrerpolicy: 'no-referrer', title: a.title }));
+  }
   else if (kind === 'pdf' || kind === 'text') stage.append(h('iframe', { src: fileUrl(v.viewBase, name), referrerpolicy: 'no-referrer', title: a.title, class: kind === 'text' ? 'text-frame' : '' }));
   else if (kind === 'image') stage.append(h('div', { class: 'stage-image' }, h('img', { src: fileUrl(v.viewBase, name), alt: a.title })));
   else {
@@ -539,15 +550,91 @@ function paintDrawer() {
   drawer.hidden = !viewer.drawer;
   $('#btn-info').classList.toggle('active', viewer.drawer === 'info');
   $('#btn-share').classList.toggle('active', viewer.drawer === 'share');
+  paintCommentBadge();
   if (!viewer.drawer) return;
   const tab = (id, label) => h('button', { type: 'button', role: 'tab', class: viewer.drawer === id ? 'active' : '',
     'aria-selected': String(viewer.drawer === id), onclick: () => { viewer.drawer = id; paintDrawer(); } }, label);
   drawer.append(
     h('div', { class: 'drawer-head' },
-      h('div', { class: 'drawer-tabs', role: 'tablist' }, tab('info', 'Details'), tab('share', 'Share')),
+      h('div', { class: 'drawer-tabs', role: 'tablist' }, tab('info', 'Details'), tab('comments', 'Comments'), tab('share', 'Share')),
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Close', icon: 'close', onclick: () => toggleDrawer(viewer.drawer) })),
-    h('div', { class: 'drawer-body' }, viewer.drawer === 'info' ? infoPanel() : sharePanel()));
+    h('div', { class: 'drawer-body' }, { info: infoPanel, comments: commentsPanel, share: sharePanel }[viewer.drawer]()));
 }
+
+function paintCommentBadge() {
+  const b = $('#btn-comments');
+  if (!b) return;
+  b.classList.toggle('active', viewer.drawer === 'comments');
+  const n = viewer.artifact.openComments || 0;
+  b.dataset.count = n ? String(n) : '';
+  b.title = n ? `Comments: ${n} open (c)` : 'Comments (c)';
+}
+
+/* Review comments: the owner writes them, the agent reads them over MCP
+   (list_comments), publishes a fix and resolves them. */
+function commentsPanel() {
+  const a = viewer.artifact;
+  const v = currentVersion();
+  const quote = h('blockquote', { class: 'comment-quote' });
+  const paintQuote = () => {
+    quote.textContent = '';
+    quote.hidden = !viewer.selection;
+    if (viewer.selection) quote.append(h('span', { text: viewer.selection }),
+      h('button', { class: 'icon-btn sm', type: 'button', 'aria-label': 'Clear quote', icon: 'close', onclick: () => { viewer.selection = ''; paintQuote(); } }));
+  };
+  viewer.paintQuote = paintQuote;
+  paintQuote();
+  const body = h('textarea', { rows: 3, maxLength: 4000, placeholder: 'What should change? Select text in the artifact to quote it.' });
+  const add = h('button', { class: 'btn primary block', type: 'button', onclick: async () => {
+    if (!body.value.trim()) return body.focus();
+    add.disabled = true;
+    try {
+      await api('POST', `/api/artifacts/${a.id}/comments`, { body: body.value, quote: viewer.selection || '', version: v.n, file: viewer.file });
+      viewer.selection = '';
+      viewer.artifact = await api('GET', `/api/artifacts/${a.id}`);
+      paintDrawer();
+    } catch (e) { apiError(e); add.disabled = false; }
+  } }, icon('comment'), 'Add comment');
+  const all = (a.comments || []).slice().reverse();
+  const open = all.filter((c) => !c.resolvedAt);
+  const done = all.filter((c) => c.resolvedAt);
+  return [
+    h('p', { class: 'hint' }, 'Then tell your agent ', h('strong', { text: `“fix the comments on ${a.title}”` }), '. It reads them, publishes a new version and resolves them.'),
+    quote, body, add,
+    h('h3', { text: `Open (${open.length})` }),
+    open.length ? h('ul', { class: 'comment-list' }, open.map(commentRow)) : h('p', { class: 'muted', text: 'No open comments.' }),
+    done.length ? h('details', { class: 'share-history' }, h('summary', { text: `Resolved (${done.length})` }), h('ul', { class: 'comment-list' }, done.map(commentRow))) : null,
+  ];
+}
+
+function commentRow(c) {
+  const a = viewer.artifact;
+  const actions = h('div', { class: 'form-row' }, h('span', { class: 'spacer' }),
+    c.resolvedAt ? null : h('button', { class: 'btn ghost sm', type: 'button', text: 'Resolve', onclick: async () => {
+      try { await api('POST', `/api/artifacts/${a.id}/comments/${c.id}/resolve`, {}); viewer.artifact = await api('GET', `/api/artifacts/${a.id}`); paintDrawer(); } catch (e) { apiError(e); }
+    } }),
+    confirmButton('Delete', 'Click again', async () => {
+      await api('DELETE', `/api/artifacts/${a.id}/comments/${c.id}`);
+      viewer.artifact = await api('GET', `/api/artifacts/${a.id}`);
+      paintDrawer();
+    }));
+  return h('li', { class: `comment ${c.resolvedAt ? 'resolved' : ''}` },
+    h('div', { class: 'comment-meta muted small', text: `v${c.version} · ${c.author} · ${ago(c.createdAt)}` }),
+    c.quote ? h('blockquote', { class: 'comment-quote', text: c.quote }) : null,
+    h('p', { class: 'comment-body', text: c.body }),
+    c.resolution ? h('p', { class: 'comment-resolution small', text: `Resolved: ${c.resolution}` }) : null,
+    actions);
+}
+
+// The artifact iframe reports selected text (see pickScript on the server).
+// Sandboxed frames have an opaque origin, so check the sender's window.
+window.addEventListener('message', (e) => {
+  if (!viewer || !e.data || e.data.vitrine !== 'selection') return;
+  const f = $('#stage iframe');
+  if (!f || e.source !== f.contentWindow) return;
+  viewer.selection = String(e.data.text || '').slice(0, 500);
+  if (viewer.drawer === 'comments' && viewer.paintQuote) viewer.paintQuote();
+});
 
 function confirmButton(label, armedLabel, onConfirm, cls = 'btn ghost sm danger') {
   const b = h('button', { class: cls, type: 'button', text: label });
@@ -815,6 +902,7 @@ document.addEventListener('keydown', (e) => {
   if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === '/' && !$('#view-gallery').hidden) { e.preventDefault(); $('#search').focus(); }
   if (viewer && e.key === 'i') toggleDrawer('info');
+  if (viewer && e.key === 'c') toggleDrawer('comments');
   if (viewer && e.key === 's') toggleDrawer('share');
 });
 

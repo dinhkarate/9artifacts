@@ -225,6 +225,9 @@ func (s *Server) routes() {
 	m.HandleFunc("POST /api/artifacts/{id}/versions", s.auth(s.handleNewVersion))
 	m.HandleFunc("POST /api/artifacts/{id}/versions/{n}/restore", s.auth(s.handleRestore))
 	m.HandleFunc("POST /api/artifacts/{id}/shares", s.auth(s.handleShareCreate))
+	m.HandleFunc("POST /api/artifacts/{id}/comments", s.auth(s.handleCommentCreate))
+	m.HandleFunc("POST /api/artifacts/{id}/comments/{cid}/resolve", s.auth(s.handleCommentResolve))
+	m.HandleFunc("DELETE /api/artifacts/{id}/comments/{cid}", s.auth(s.handleCommentDelete))
 	m.HandleFunc("DELETE /api/artifacts/{id}/shares/{token}", s.auth(s.handleShareRevoke))
 	m.HandleFunc("GET /api/artifacts/{id}/download/{path...}", s.auth(s.handleDownload))
 	// MCP for agents.

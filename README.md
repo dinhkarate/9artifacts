@@ -125,7 +125,8 @@ curl -H "Authorization: Bearer $VITRINE_TOKEN" -F files=@report.html \
 ```
 
 MCP tools: `get_design_guide`, `publish_artifact`, `list_artifacts`, `read_artifact`,
-`share_artifact`, `revoke_share`, `restore_version`, `delete_artifact`. The full REST API is in
+`share_artifact`, `revoke_share`, `restore_version`, `list_comments`, `resolve_comment`,
+`delete_artifact`. The full REST API is in
 [docs/api.md](docs/api.md).
 
 ## Make it yours

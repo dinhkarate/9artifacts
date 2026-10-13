@@ -87,7 +87,22 @@ bearer token.
 | `share_artifact` | expiring public link; only when the user asks |
 | `revoke_share` | revoke a link |
 | `restore_version` | publish an earlier version again as the latest |
+| `list_comments` | the owner's review comments (open ones by default) |
+| `resolve_comment` | mark a comment done, with a note on what changed |
 | `delete_artifact` | delete; only when the user asks |
+
+## Comments
+
+| Method | Path | Body | Result |
+|---|---|---|---|
+| `POST` | `/api/artifacts/{id}/comments` | `{body, quote?, version?, file?}` | `201` comment on that version (default latest) |
+| `POST` | `/api/artifacts/{id}/comments/{cid}/resolve` | `{note?}` | resolved comment |
+| `DELETE` | `/api/artifacts/{id}/comments/{cid}` | — | `{ok: true}` |
+
+`GET /api/artifacts/{id}` includes `comments` and `openComments`. The author is `owner` for the
+browser and `agent: <token name>` for API tokens. In the viewer, selecting text inside an HTML or
+Markdown artifact quotes it in the comment box: the owner's viewer (and only it, never share
+links or downloads) adds a small script that reports the selection to the page.
 
 ## Webhooks
 

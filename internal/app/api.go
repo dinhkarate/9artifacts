@@ -355,6 +355,8 @@ type artifactView struct {
 	Versions  []versionView `json:"versions,omitempty"`
 	Shares    []shareView   `json:"shares"`
 	Active    int           `json:"activeShares"`
+	Comments  []Comment     `json:"comments,omitempty"`
+	Open      int           `json:"openComments"`
 }
 
 func (s *Server) view(a *Artifact, full bool) artifactView {
@@ -367,6 +369,14 @@ func (s *Server) view(a *Artifact, full bool) artifactView {
 	}
 	for _, f := range lv.Files {
 		out.Size += f.Size
+	}
+	for _, c := range a.Comments {
+		if c.ResolvedAt == nil {
+			out.Open++
+		}
+	}
+	if full {
+		out.Comments = a.Comments
 	}
 	for _, sh := range a.Shares {
 		if sh.Active(now) {
@@ -789,5 +799,5 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 404, "not found")
 		return
 	}
-	s.serveVersionFile(w, r, id, v, r.PathValue("path"), true, false)
+	s.serveVersionFile(w, r, id, v, r.PathValue("path"), true, false, false)
 }

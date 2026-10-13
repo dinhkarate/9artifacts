@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -80,7 +81,7 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	s.serveVersionFile(w, r, id, v, r.PathValue("path"), r.URL.Query().Has("download"), r.URL.Query().Has("view"))
+	s.serveVersionFile(w, r, id, v, r.PathValue("path"), r.URL.Query().Has("download"), r.URL.Query().Has("view"), r.URL.Query().Has("vc"))
 }
 
 func (s *Server) handleShareContent(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +98,7 @@ func (s *Server) handleShareContent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(status), status)
 		return
 	}
-	s.serveVersionFile(w, r, id, v, r.PathValue("path"), r.URL.Query().Has("download"), r.URL.Query().Has("view"))
+	s.serveVersionFile(w, r, id, v, r.PathValue("path"), r.URL.Query().Has("download"), r.URL.Query().Has("view"), false)
 }
 
 // handleShareGrant serves the files of a password-protected link to a visitor
@@ -113,7 +114,7 @@ func (s *Server) handleShareGrant(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(status), status)
 		return
 	}
-	s.serveVersionFile(w, r, id, v, r.PathValue("path"), r.URL.Query().Has("download"), r.URL.Query().Has("view"))
+	s.serveVersionFile(w, r, id, v, r.PathValue("path"), r.URL.Query().Has("download"), r.URL.Query().Has("view"), false)
 }
 
 const (
@@ -278,7 +279,10 @@ func (s *Server) contentHeaders(w http.ResponseWriter, sandbox bool) {
 	h.Set("Cache-Control", "private, max-age=3600")
 }
 
-func (s *Server) serveVersionFile(w http.ResponseWriter, r *http.Request, id string, v *Version, name string, download, render bool) {
+// serveVersionFile writes one file of a version. With pick (the owner's
+// viewer only), HTML gets a tiny script that reports the selected text to the
+// viewer, so comments can quote it; downloads and share links are untouched.
+func (s *Server) serveVersionFile(w http.ResponseWriter, r *http.Request, id string, v *Version, name string, download, render, pick bool) {
 	if name == "" {
 		name = v.Entry
 	}
@@ -329,12 +333,35 @@ func (s *Server) serveVersionFile(w http.ResponseWriter, r *http.Request, id str
 		}
 		s.contentHeaders(w, true)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write(s.markdownPage(path.Base(name), string(raw)))
+		page := s.markdownPage(path.Base(name), string(raw))
+		if pick {
+			page = append(page, s.pickScript()...)
+		}
+		_, _ = w.Write(page)
+		return
+	}
+	if pick && strings.HasPrefix(contentType(name), "text/html") && st.Size() < 16<<20 {
+		raw, err := io.ReadAll(f)
+		if err != nil {
+			http.Error(w, "read error", 500)
+			return
+		}
+		s.contentHeaders(w, true)
+		w.Header().Set("Content-Type", contentType(name))
+		w.Header().Set("Cache-Control", "no-store")
+		_, _ = w.Write(append(raw, s.pickScript()...))
 		return
 	}
 	s.contentHeaders(w, needsSandbox(name))
 	w.Header().Set("Content-Type", contentType(name))
 	http.ServeContent(w, r, "", st.ModTime(), f)
+}
+
+// pickScript posts the current text selection to the vitrine viewer. Appended
+// after </html> it still runs: browsers move trailing content into <body>.
+func (s *Server) pickScript() []byte {
+	origin, _ := json.Marshal(s.cfg.PublicURL)
+	return []byte(`<script>(()=>{let t,last="";document.addEventListener("selectionchange",()=>{clearTimeout(t);t=setTimeout(()=>{const s=String(getSelection()||"").trim().slice(0,500);if(s!==last){last=s;parent.postMessage({vitrine:"selection",text:s},` + string(origin) + `)}},300)})})()</script>`)
 }
 
 func (s *Server) markdownPage(title, src string) []byte {
