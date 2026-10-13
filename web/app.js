@@ -1,4 +1,4 @@
-// vitrine web app — no build step, no dependencies.
+// Vitrine web app — no build step, no dependencies.
 'use strict';
 
 const $ = (s, root = document) => root.querySelector(s);
@@ -684,7 +684,7 @@ async function openSettings() {
   const me = state.me;
   const tokenOut = h('div', { class: 'token-out', hidden: true });
 
-  const tokenName = h('input', { placeholder: 'e.g. claude-code on laptop', maxLength: 60, 'aria-label': 'Token name' });
+  const tokenName = h('input', { placeholder: 'e.g. claude-code on laptop', maxLength: 60, autocomplete: 'off', 'aria-label': 'Token name' });
   const createToken = h('button', { class: 'btn primary', type: 'button', text: 'Create token', onclick: async () => {
     try {
       const t = await api('POST', '/api/tokens', { name: tokenName.value || 'agent' });
@@ -714,13 +714,15 @@ async function openSettings() {
       confirmButton('Remove', 'Click again', async () => { await api('DELETE', `/api/passkeys/${encodeURIComponent(p.id)}`); toast('Passkey removed'); refreshPasskeys(); })));
   };
   refreshPasskeys();
-  const pkName = h('input', { placeholder: 'e.g. MacBook Touch ID', maxLength: 60, 'aria-label': 'Passkey name' });
+  const pkName = h('input', { placeholder: 'e.g. MacBook Touch ID', maxLength: 60, autocomplete: 'off', 'aria-label': 'Passkey name' });
   const addPk = h('button', { class: 'btn primary', type: 'button', onclick: async () => {
     try { await registerPasskey(pkName.value || 'Passkey'); pkName.value = ''; toast('Passkey added'); refreshPasskeys(); } catch (e) {
       if (e && e.name === 'NotAllowedError') toast('Passkey setup cancelled', 'error'); else apiError(e);
     }
   } }, icon('key'), 'Add passkey');
 
+  // Password managers attach saved logins to this hidden field instead of the passkey name.
+  const user = h('input', { type: 'text', autocomplete: 'username', value: me.name, hidden: true, tabIndex: -1, 'aria-hidden': 'true' });
   const cur = h('input', { type: 'password', autocomplete: 'current-password', 'aria-label': 'Current password', placeholder: 'Current password' });
   const next = h('input', { type: 'password', autocomplete: 'new-password', minLength: 10, 'aria-label': 'New password', placeholder: 'New password (10+ chars)' });
   const changePw = h('button', { class: 'btn', type: 'button', text: 'Change password', onclick: async () => {
@@ -745,7 +747,7 @@ async function openSettings() {
         pkList),
       h('section', { class: 'panel' },
         h('h2', {}, icon('settings'), 'Password'),
-        h('div', { class: 'form-row wrap' }, cur, next, changePw)),
+        h('div', { class: 'form-row wrap' }, user, cur, next, changePw)),
       h('section', { class: 'panel' },
         h('h2', {}, icon('note'), 'Look & feel'),
         h('p', { class: 'muted' }, 'Agents read ', h('a', { href: '/design.md', target: '_blank', text: '/design.md' }), ' before writing artifacts, so everything they publish matches your style. Export the theme with ', h('code', { text: 'vitrine theme init ./my-theme' }), ', ask your AI to restyle it, then run with ', h('code', { text: '--theme-dir ./my-theme' }), '.'),
