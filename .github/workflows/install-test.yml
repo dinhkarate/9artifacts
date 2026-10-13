@@ -16,18 +16,18 @@ jobs:
         run: sudo sh install.sh --url http://localhost:8080 --content-url http://127.0.0.1:8080
       - name: service is healthy and hardened
         run: |
-          systemctl is-active glasshelf
+          systemctl is-active vitryn
           curl -fsS http://127.0.0.1:8080/health
-          systemctl show glasshelf -p DynamicUser -p NoNewPrivileges -p ProtectSystem
+          systemctl show vitryn -p DynamicUser -p NoNewPrivileges -p ProtectSystem
       - name: admin socket, token, publish, share
         run: |
-          sudo glasshelf status --data /var/lib/glasshelf
-          export GLASSHELF_URL=http://localhost:8080   # app origin; 127.0.0.1 is the content origin here
-          export GLASSHELF_TOKEN=$(sudo glasshelf token --data /var/lib/glasshelf --name ci)
+          sudo vitryn status --data /var/lib/vitryn
+          export VITRYN_URL=http://localhost:8080   # app origin; 127.0.0.1 is the content origin here
+          export VITRYN_TOKEN=$(sudo vitryn token --data /var/lib/vitryn --name ci)
           printf '<!doctype html><title>CI report</title><h1>ok</h1>' > report.html
-          glasshelf publish report.html --tags ci --share 1h
-          glasshelf list
-          ! curl -fsS -H "Authorization: Bearer $GLASSHELF_TOKEN" http://127.0.0.1:8080/api/artifacts  # API must not answer on the content origin
+          vitryn publish report.html --tags ci --share 1h
+          vitryn list
+          ! curl -fsS -H "Authorization: Bearer $VITRYN_TOKEN" http://127.0.0.1:8080/api/artifacts  # API must not answer on the content origin
       - name: logs
         if: always()
-        run: sudo journalctl -u glasshelf -n 50 --no-pager | sed -E 's/code=[a-z0-9]+/code=<redacted>/'
+        run: sudo journalctl -u vitryn -n 50 --no-pager | sed -E 's/code=[a-z0-9]+/code=<redacted>/'

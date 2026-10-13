@@ -1,4 +1,4 @@
-// Package cli implements the glasshelf subcommands.
+// Package cli implements the vitryn subcommands.
 package cli
 
 import (
@@ -26,57 +26,59 @@ import (
 
 	"golang.org/x/crypto/acme/autocert"
 
-	"github.com/dinhkarate/glasshelf/internal/app"
-	"github.com/dinhkarate/glasshelf/web"
+	"github.com/dinhkarate/vitryn/internal/app"
+	"github.com/dinhkarate/vitryn/web"
 )
 
-// env reads GLASSHELF_* settings, falling back to the VITRINE_* names the
-// project used before it was renamed.
+// env reads VITRYN_* settings, falling back to GLASSHELF_* and VITRINE_*,
+// the names the project used before.
 func env(key, def string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
 	}
-	if old, ok := strings.CutPrefix(key, "GLASSHELF_"); ok {
-		if v := os.Getenv("VITRINE_" + old); v != "" {
-			return v
+	if rest, ok := strings.CutPrefix(key, "VITRYN_"); ok {
+		for _, prefix := range []string{"GLASSHELF_", "VITRINE_"} { // earlier names
+			if v := os.Getenv(prefix + rest); v != "" {
+				return v
+			}
 		}
 	}
 	return def
 }
 
 func defaultDataDir() string {
-	if v := env("GLASSHELF_DATA", ""); v != "" {
+	if v := env("VITRYN_DATA", ""); v != "" {
 		return v
 	}
-	for _, d := range []string{"/var/lib/glasshelf", "/var/lib/vitrine"} { // pre-rename installs
+	for _, d := range []string{"/var/lib/vitryn", "/var/lib/glasshelf", "/var/lib/vitrine"} { // earlier names
 		if st, err := os.Stat(d); err == nil && st.IsDir() {
 			return d
 		}
 	}
-	return "./glasshelf-data"
+	return "./vitryn-data"
 }
 
 // Serve runs the HTTP server.
 func Serve(args []string, version string) error {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
-	addr := fs.String("addr", env("GLASSHELF_ADDR", ":8080"), "listen address (ignored with --domain)")
+	addr := fs.String("addr", env("VITRYN_ADDR", ":8080"), "listen address (ignored with --domain)")
 	data := fs.String("data", defaultDataDir(), "data directory")
-	public := fs.String("url", env("GLASSHELF_URL", ""), "public URL users browse, e.g. https://art.example.com")
-	content := fs.String("content-url", env("GLASSHELF_CONTENT_URL", ""), "separate origin for artifact content, e.g. https://art-usercontent.example.com (recommended)")
-	domain := fs.String("domain", env("GLASSHELF_DOMAIN", ""), "serve HTTPS on :443 with automatic Let's Encrypt certificates for this domain")
-	contentDomain := fs.String("content-domain", env("GLASSHELF_CONTENT_DOMAIN", ""), "with --domain: also get a certificate for this content domain")
-	email := fs.String("email", env("GLASSHELF_EMAIL", ""), "with --domain: contact email for Let's Encrypt")
-	name := fs.String("name", env("GLASSHELF_NAME", "glasshelf"), "name shown in the UI")
-	theme := fs.String("theme", env("GLASSHELF_THEME", "default"), "built-in theme: "+strings.Join(builtinThemes(), ", "))
-	themeDir := fs.String("theme-dir", env("GLASSHELF_THEME_DIR", ""), "directory overriding theme files (see glasshelf theme init)")
-	trust := proxyMode(env("GLASSHELF_TRUST_PROXY", ""))
+	public := fs.String("url", env("VITRYN_URL", ""), "public URL users browse, e.g. https://art.example.com")
+	content := fs.String("content-url", env("VITRYN_CONTENT_URL", ""), "separate origin for artifact content, e.g. https://art-usercontent.example.com (recommended)")
+	domain := fs.String("domain", env("VITRYN_DOMAIN", ""), "serve HTTPS on :443 with automatic Let's Encrypt certificates for this domain")
+	contentDomain := fs.String("content-domain", env("VITRYN_CONTENT_DOMAIN", ""), "with --domain: also get a certificate for this content domain")
+	email := fs.String("email", env("VITRYN_EMAIL", ""), "with --domain: contact email for Let's Encrypt")
+	name := fs.String("name", env("VITRYN_NAME", "vitryn"), "name shown in the UI")
+	theme := fs.String("theme", env("VITRYN_THEME", "default"), "built-in theme: "+strings.Join(builtinThemes(), ", "))
+	themeDir := fs.String("theme-dir", env("VITRYN_THEME_DIR", ""), "directory overriding theme files (see vitryn theme init)")
+	trust := proxyMode(env("VITRYN_TRUST_PROXY", ""))
 	fs.Var(&trust, "trust-proxy", "behind a proxy: take the client IP from X-Forwarded-For (bare flag or xff), CF-Connecting-IP (cloudflare) or Tailscale Serve/Funnel (tailscale)")
-	maxMB := fs.Int("max-upload-mb", atoiDef(env("GLASSHELF_MAX_UPLOAD_MB", "100"), 100), "maximum upload size in MB")
-	sharesOnContent := fs.Bool("shares-on-content", env("GLASSHELF_SHARES_ON_CONTENT", "") == "1", "serve public share pages from --content-url, so the app host can stay private (Tailscale, Cloudflare Access)")
-	cfTeam := fs.String("cf-access-team", env("GLASSHELF_CF_ACCESS_TEAM", ""), "Cloudflare Access team URL, e.g. https://myteam.cloudflareaccess.com (with --cf-access-aud)")
-	cfAUD := fs.String("cf-access-aud", env("GLASSHELF_CF_ACCESS_AUD", ""), "Cloudflare Access application AUD tag: browser requests to the app host must carry a valid Access JWT")
-	webhook := fs.String("webhook", env("GLASSHELF_WEBHOOK", ""), "comma-separated URLs to notify on publishes, shares and share visits (Slack, Discord, any JSON endpoint; prefix ntfy+ for ntfy)")
-	artifactCSP := fs.String("artifact-csp", env("GLASSHELF_ARTIFACT_CSP", ""), "extra CSP directives for artifact pages, e.g. \"connect-src 'none'\"")
+	maxMB := fs.Int("max-upload-mb", atoiDef(env("VITRYN_MAX_UPLOAD_MB", "100"), 100), "maximum upload size in MB")
+	sharesOnContent := fs.Bool("shares-on-content", env("VITRYN_SHARES_ON_CONTENT", "") == "1", "serve public share pages from --content-url, so the app host can stay private (Tailscale, Cloudflare Access)")
+	cfTeam := fs.String("cf-access-team", env("VITRYN_CF_ACCESS_TEAM", ""), "Cloudflare Access team URL, e.g. https://myteam.cloudflareaccess.com (with --cf-access-aud)")
+	cfAUD := fs.String("cf-access-aud", env("VITRYN_CF_ACCESS_AUD", ""), "Cloudflare Access application AUD tag: browser requests to the app host must carry a valid Access JWT")
+	webhook := fs.String("webhook", env("VITRYN_WEBHOOK", ""), "comma-separated URLs to notify on publishes, shares and share visits (Slack, Discord, any JSON endpoint; prefix ntfy+ for ntfy)")
+	artifactCSP := fs.String("artifact-csp", env("VITRYN_ARTIFACT_CSP", ""), "extra CSP directives for artifact pages, e.g. \"connect-src 'none'\"")
 	_ = fs.Parse(args)
 
 	if *domain != "" {
@@ -105,7 +107,7 @@ func Serve(args []string, version string) error {
 	}()
 	defer os.Remove(app.AdminSocketPath(*data))
 
-	log.Printf("glasshelf %s — data %s", version, *data)
+	log.Printf("vitryn %s — data %s", version, *data)
 	if u := srv.SetupURL(); u != "" {
 		log.Printf("first run: open %s to set the owner password", u)
 	}
@@ -184,7 +186,7 @@ func builtinThemes() []string {
 func adminClient(data string) (*http.Client, error) {
 	sock := app.AdminSocketPath(data)
 	if _, err := os.Stat(sock); err != nil {
-		return nil, fmt.Errorf("no running server found at %s (is glasshelf serve running with --data %s? are you the right user?)", sock, data)
+		return nil, fmt.Errorf("no running server found at %s (is vitryn serve running with --data %s? are you the right user?)", sock, data)
 	}
 	return &http.Client{Timeout: 30 * time.Second, Transport: &http.Transport{
 		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
@@ -274,7 +276,7 @@ func Status(args []string) error {
 // Theme exports theme files for customisation.
 func Theme(args []string) error {
 	if len(args) < 1 || args[0] != "init" {
-		return errors.New("usage: glasshelf theme init DIR [--from default] [--full]")
+		return errors.New("usage: vitryn theme init DIR [--from default] [--full]")
 	}
 	fs := flag.NewFlagSet("theme init", flag.ExitOnError)
 	from := fs.String("from", "default", "built-in theme to start from: "+strings.Join(builtinThemes(), ", "))
@@ -289,7 +291,7 @@ func Theme(args []string) error {
 		dir = fs.Arg(0)
 	}
 	if dir == "" {
-		return errors.New("usage: glasshelf theme init DIR")
+		return errors.New("usage: vitryn theme init DIR")
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
@@ -331,7 +333,7 @@ func Theme(args []string) error {
 			}
 		}
 	}
-	fmt.Fprintf(os.Stderr, "\nRestart with: glasshelf serve --theme-dir %s\nThen ask your AI: \"Restyle %s/theme.css to look like <brand>, and update design.md to match.\"\n", dir, dir)
+	fmt.Fprintf(os.Stderr, "\nRestart with: vitryn serve --theme-dir %s\nThen ask your AI: \"Restyle %s/theme.css to look like <brand>, and update design.md to match.\"\n", dir, dir)
 	return nil
 }
 

@@ -3,8 +3,8 @@
 Rebased on `feat/free-hosting`. Not deployed yet.
 
 ## What works
-- Two Workers: `glasshelf` holds D1 (metadata), R2 (files), static assets and an hourly cleanup
-  cron; `glasshelf-content` forwards to it, giving a separate sandboxed content origin.
+- Two Workers: `vitryn` holds D1 (metadata), R2 (files), static assets and an hourly cleanup
+  cron; `vitryn-content` forwards to it, giving a separate sandboxed content origin.
 - Same REST API and JSON shapes as the Go server, and the same 10 MCP tools (including
   `list_comments` and `resolve_comment`).
 - Share pages behave the same: expiry, view limits, passwords, link previews, webhooks.
@@ -34,6 +34,6 @@ Rebased on `feat/free-hosting`. Not deployed yet.
 
 ## Deploy
     cd cloudflare && npm ci && npx wrangler login
-    npx wrangler r2 bucket create glasshelf-files
+    npx wrangler r2 bucket create vitryn-files
     openssl rand -base64 32 | npx wrangler secret put SETUP_TOKEN
     npm run deploy

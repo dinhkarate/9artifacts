@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dinhkarate/glasshelf/internal/markdown"
+	"github.com/dinhkarate/vitryn/internal/markdown"
 )
 
 // View tokens let sandboxed iframes (which run on an opaque origin and so
@@ -119,7 +119,7 @@ func (s *Server) handleShareGrant(w http.ResponseWriter, r *http.Request) {
 
 const (
 	grantTTL    = 2 * time.Hour
-	shareCookie = "glasshelf_share" // unlock grant for one password-protected link
+	shareCookie = "vitryn_share" // unlock grant for one password-protected link
 )
 
 func (s *Server) grant(token string) string {
@@ -357,11 +357,11 @@ func (s *Server) serveVersionFile(w http.ResponseWriter, r *http.Request, id str
 	http.ServeContent(w, r, "", st.ModTime(), f)
 }
 
-// pickScript posts the current text selection to the glasshelf viewer. Appended
+// pickScript posts the current text selection to the vitryn viewer. Appended
 // after </html> it still runs: browsers move trailing content into <body>.
 func (s *Server) pickScript() []byte {
 	origin, _ := json.Marshal(s.cfg.PublicURL)
-	return []byte(`<script>(()=>{let t,last="";document.addEventListener("selectionchange",()=>{clearTimeout(t);t=setTimeout(()=>{const s=String(getSelection()||"").trim().slice(0,500);if(s!==last){last=s;parent.postMessage({glasshelf:"selection",text:s},` + string(origin) + `)}},300)})})()</script>`)
+	return []byte(`<script>(()=>{let t,last="";document.addEventListener("selectionchange",()=>{clearTimeout(t);t=setTimeout(()=>{const s=String(getSelection()||"").trim().slice(0,500);if(s!==last){last=s;parent.postMessage({vitryn:"selection",text:s},` + string(origin) + `)}},300)})})()</script>`)
 }
 
 func (s *Server) markdownPage(title, src string) []byte {

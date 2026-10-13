@@ -18,7 +18,7 @@ export interface Ctx {
   files: R2Bucket;
   req: Request;
   url: URL;
-  /** Origin users browse, e.g. https://glasshelf.me.workers.dev (no trailing slash). */
+  /** Origin users browse, e.g. https://vitryn.me.workers.dev (no trailing slash). */
   publicURL: string;
   /** Separate content origin, or "" when content shares the app origin. */
   contentURL: string;
@@ -49,7 +49,7 @@ function originOf(u: string): URL | null {
   }
 }
 
-/** glasshelf.me.workers.dev → glasshelf-content.me.workers.dev */
+/** vitryn.me.workers.dev → vitryn-content.me.workers.dev */
 function contentSibling(u: URL): string {
   const [first, ...rest] = u.hostname.split('.');
   return `${u.protocol}//${first}-content.${rest.join('.')}${u.port ? ':' + u.port : ''}`;

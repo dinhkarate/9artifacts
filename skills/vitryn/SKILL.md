@@ -1,22 +1,22 @@
 ---
-name: glasshelf
-description: Publish HTML, Markdown, SVG, image or PDF artifacts to the user's self-hosted glasshelf server and return a private link — like Claude artifacts, but on their own VPS. Use when the user asks to publish, upload, host, share or "make an artifact/link" of a report, dashboard, page, diagram or document, or to update or share an artifact already in glasshelf.
+name: vitryn
+description: Publish HTML, Markdown, SVG, image or PDF artifacts to the user's self-hosted vitryn server and return a private link — like Claude artifacts, but on their own VPS. Use when the user asks to publish, upload, host, share or "make an artifact/link" of a report, dashboard, page, diagram or document, or to update or share an artifact already in vitryn.
 ---
 
-# glasshelf
+# vitryn
 
-Glasshelf is the user's private artifact gallery. You publish a file, the user
+Vitryn is the user's private artifact gallery. You publish a file, the user
 opens the private URL (they sign in with a passkey), and they can share a
 public link that expires.
 
 ## Setup check
 
-Needs `GLASSHELF_URL` and `GLASSHELF_TOKEN` in the environment (or a saved
-`glasshelf login`). If neither is available, ask the user to create a token in
-Glasshelf → Settings → "Connect an AI agent". Never print the token.
+Needs `VITRYN_URL` and `VITRYN_TOKEN` in the environment (or a saved
+`vitryn login`). If neither is available, ask the user to create a token in
+Vitryn → Settings → "Connect an AI agent". Never print the token.
 
-Prefer the `glasshelf` CLI if it is installed (`glasshelf version`); otherwise use
-`curl` as shown below. If the Glasshelf MCP server is connected, its tools
+Prefer the `vitryn` CLI if it is installed (`vitryn version`); otherwise use
+`curl` as shown below. If the Vitryn MCP server is connected, its tools
 (`publish_artifact`, `get_design_guide`, ...) do the same thing.
 
 ## 1. Match the owner's style
@@ -24,7 +24,7 @@ Prefer the `glasshelf` CLI if it is installed (`glasshelf version`); otherwise u
 Before writing a new artifact, read the owner's design guide and follow it:
 
 ```bash
-glasshelf design            # or: curl -fsS "$GLASSHELF_URL/design.md"
+vitryn design            # or: curl -fsS "$VITRYN_URL/design.md"
 ```
 
 Write one self-contained `index.html` (inline CSS/JS) unless the content is
@@ -34,15 +34,15 @@ becomes the artifact title.
 ## 2. Publish
 
 ```bash
-glasshelf publish report.html --tags q3,finance
-glasshelf publish ./site/                     # a folder: index.html + assets/
+vitryn publish report.html --tags q3,finance
+vitryn publish ./site/                     # a folder: index.html + assets/
 ```
 
 With curl:
 
 ```bash
-curl -fsS -H "Authorization: Bearer $GLASSHELF_TOKEN" \
-  -F files=@report.html -F tags=q3,finance "$GLASSHELF_URL/api/artifacts"
+curl -fsS -H "Authorization: Bearer $VITRYN_TOKEN" \
+  -F files=@report.html -F tags=q3,finance "$VITRYN_URL/api/artifacts"
 ```
 
 The response contains `url` (private, sign-in required) and `id`. Give the
@@ -53,9 +53,9 @@ user the private `url`. Keep the `id` for updates.
 Publishing a new version keeps the URL, and the user's open tab refreshes:
 
 ```bash
-glasshelf publish --update ID --keep --message "fix totals" report.html
-curl -fsS -H "Authorization: Bearer $GLASSHELF_TOKEN" -F keep=1 \
-  -F files=@report.html "$GLASSHELF_URL/api/artifacts/ID/versions"
+vitryn publish --update ID --keep --message "fix totals" report.html
+curl -fsS -H "Authorization: Bearer $VITRYN_TOKEN" -F keep=1 \
+  -F files=@report.html "$VITRYN_URL/api/artifacts/ID/versions"
 ```
 
 `--keep` / `keep=1` carries over files you did not resend (images, CSS).
@@ -66,8 +66,8 @@ Create a public link only when the user explicitly asks to share publicly.
 Every link expires (`1h`, `24h`, `7d`, `30d`).
 
 ```bash
-glasshelf share ID --ttl 7d [--max-views 5] [--password]
-glasshelf revoke ID SHARE_TOKEN
+vitryn share ID --ttl 7d [--max-views 5] [--password]
+vitryn revoke ID SHARE_TOKEN
 ```
 
 ## 3. Review comments
@@ -83,5 +83,5 @@ version with the same id, then `resolve_comment` each one with a one-line note o
 
 - Default to the private URL. Never create a public link on your own.
 - Do not upload secrets, credentials or `.env` files.
-- Do not delete artifacts unless the user asks (`glasshelf rm ID`).
+- Do not delete artifacts unless the user asks (`vitryn rm ID`).
 - Relative paths only between files (`assets/chart.png`), no absolute `/` paths.

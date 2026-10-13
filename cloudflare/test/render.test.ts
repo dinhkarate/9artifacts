@@ -48,7 +48,7 @@ describe('share.html via the Go-template subset', () => {
 
   it('renders a live link with escaping', () => {
     const html = renderTemplate(SHARE_HTML, {
-      Name: 'glasshelf', Status: 200, Title: 'Q3 <script>', Note: 'a "note" & more', Kind: 'html', Src: 'https://c/s/t/f/index.html', Files: files, Expires: '2026-10-20 08:00 UTC',
+      Name: 'vitryn', Status: 200, Title: 'Q3 <script>', Note: 'a "note" & more', Kind: 'html', Src: 'https://c/s/t/f/index.html', Files: files, Expires: '2026-10-20 08:00 UTC',
     });
     expect(html).toContain('<title>Q3 &lt;script&gt;</title>');
     expect(html).toContain('<meta property="og:description" content="a &#34;note&#34; &amp; more">');

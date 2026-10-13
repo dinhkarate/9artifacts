@@ -37,7 +37,7 @@ type rpcResponse struct {
 	Error   *rpcError       `json:"error,omitempty"`
 }
 
-const mcpInstructions = `glasshelf is the user's private, self-hosted artifact gallery.
+const mcpInstructions = `vitryn is the user's private, self-hosted artifact gallery.
 Publish finished HTML, Markdown, SVG, images or PDFs here and give the user the private URL.
 Before writing an artifact, call get_design_guide and follow it so the result matches the owner's style.
 To change an artifact, publish again with its id: the URL stays the same and open viewers refresh.
@@ -45,8 +45,8 @@ Never create public share links unless the user explicitly asks for one.`
 
 func (s *Server) handleMCP(w http.ResponseWriter, r *http.Request) {
 	if !s.tokenAuth(r) {
-		w.Header().Set("WWW-Authenticate", `Bearer realm="glasshelf", resource_metadata="`+s.resourceMetadataURL()+`"`)
-		writeError(w, 401, "send Authorization: Bearer <glasshelf API token>")
+		w.Header().Set("WWW-Authenticate", `Bearer realm="vitryn", resource_metadata="`+s.resourceMetadataURL()+`"`)
+		writeError(w, 401, "send Authorization: Bearer <vitryn API token>")
 		return
 	}
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, min(s.cfg.MaxUpload, maxJSONBody)))
@@ -105,7 +105,7 @@ func (s *Server) mcpDispatch(req rpcRequest) (rpcResponse, bool) {
 		resp.Result = map[string]any{
 			"protocolVersion": p.ProtocolVersion,
 			"capabilities":    map[string]any{"tools": map[string]any{}},
-			"serverInfo":      map[string]any{"name": "glasshelf", "version": s.cfg.Version},
+			"serverInfo":      map[string]any{"name": "vitryn", "version": s.cfg.Version},
 			"instructions":    mcpInstructions,
 		}
 	case "ping":

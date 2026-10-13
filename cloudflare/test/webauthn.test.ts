@@ -128,7 +128,7 @@ describe('passkey-only owner sign-in over HTTP', () => {
 
   async function registerPasskey(c: Client, a: Authenticator, name: string) {
     const begin = await body(await c.browser('POST', '/api/passkeys/begin', {}));
-    expect(begin.rp).toEqual({ id: 'localhost', name: 'glasshelf' });
+    expect(begin.rp).toEqual({ id: 'localhost', name: 'vitryn' });
     expect(begin.authenticatorSelection).toEqual({ residentKey: 'preferred', userVerification: 'required' });
     expect(begin.user.id).toMatch(/^[A-Za-z0-9_-]{22}$/);
     const ad = await a.authData('localhost', 0x45, true);
@@ -160,7 +160,7 @@ describe('passkey-only owner sign-in over HTTP', () => {
     const ok = await browser.fetch('/api/auth/setup', { method: 'POST', body: JSON.stringify({ code: SETUP, password: '' }) });
     expect(ok.status).toBe(201);
     const cookie = ok.headers.get('Set-Cookie')!;
-    expect(cookie).toMatch(/^glasshelf_session=[A-Za-z0-9_-]{43}; Path=\/; Max-Age=2592000; HttpOnly; SameSite=Strict$/);
+    expect(cookie).toMatch(/^vitryn_session=[A-Za-z0-9_-]{43}; Path=\/; Max-Age=2592000; HttpOnly; SameSite=Strict$/);
     browser.keepCookie(ok);
     // Signed in without a passkey: the SPA goes on to Settings, not back to setup.
     expect(await body(await browser.fetch('/api/me', { headers: { Cookie: browser.cookie } }))).toMatchObject({ authenticated: true, needsSetup: false });
@@ -197,7 +197,7 @@ describe('passkey-only owner sign-in over HTTP', () => {
   });
 
   it('logs out, then signs in with the passkey', async () => {
-    expect((await browser.browser('POST', '/api/auth/logout', {})).headers.get('Set-Cookie')).toMatch(/^glasshelf_session=; Path=\/; Max-Age=0/);
+    expect((await browser.browser('POST', '/api/auth/logout', {})).headers.get('Set-Cookie')).toMatch(/^vitryn_session=; Path=\/; Max-Age=0/);
     expect(await body(await browser.fetch('/api/me', { headers: { Cookie: browser.cookie } }))).toMatchObject({ authenticated: false });
     const r = await login(browser, authn);
     expect(r.status).toBe(200);
@@ -263,6 +263,6 @@ describe('passkey-only owner sign-in over HTTP', () => {
   it('uses a __Host- cookie on HTTPS', async () => {
     const https = new Client({ PUBLIC_URL: 'https://art.example.com', CONTENT_URL: '' });
     const r = await https.fetch('https://art.example.com/api/auth/login', { method: 'POST', body: JSON.stringify({ password: SETUP }) });
-    expect(r.headers.get('Set-Cookie')).toMatch(/^__Host-glasshelf_session=[^;]+; Path=\/; Max-Age=2592000; HttpOnly; Secure; SameSite=Strict$/);
+    expect(r.headers.get('Set-Cookie')).toMatch(/^__Host-vitryn_session=[^;]+; Path=\/; Max-Age=2592000; HttpOnly; Secure; SameSite=Strict$/);
   });
 });

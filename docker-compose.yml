@@ -1,15 +1,15 @@
-# docker compose up -d   then open the first-run link from: docker compose logs glasshelf
+# docker compose up -d   then open the first-run link from: docker compose logs vitryn
 services:
-  glasshelf:
-    image: ghcr.io/dinhkarate/glasshelf:latest
+  vitryn:
+    image: ghcr.io/dinhkarate/vitryn:latest
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:8080"   # put Caddy/nginx/Cloudflare Tunnel in front
     environment:
-      GLASSHELF_URL: https://art.example.com
-      # GLASSHELF_CONTENT_URL: https://art-content.example.com   # recommended
-      GLASSHELF_TRUST_PROXY: "1"
+      VITRYN_URL: https://art.example.com
+      # VITRYN_CONTENT_URL: https://art-content.example.com   # recommended
+      VITRYN_TRUST_PROXY: "1"
     volumes:
-      - glasshelf-data:/data
+      - vitryn-data:/data
 volumes:
-  glasshelf-data:
+  vitryn-data:

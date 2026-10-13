@@ -144,7 +144,7 @@ describe('shares', () => {
     expect(ok.status).toBe(303);
     expect(ok.headers.get('Location')).toBe(`/s/${sh.token}`);
     const cookie = ok.headers.get('Set-Cookie')!;
-    expect(cookie).toMatch(new RegExp(`^glasshelf_share=[0-9a-z]+\\.[A-Za-z0-9_-]+; Path=/s/${sh.token}; Max-Age=7200; HttpOnly; SameSite=Lax$`));
+    expect(cookie).toMatch(new RegExp(`^vitryn_share=[0-9a-z]+\\.[A-Za-z0-9_-]+; Path=/s/${sh.token}; Max-Age=7200; HttpOnly; SameSite=Lax$`));
     const page = await v.fetch(`/s/${sh.token}`, { headers: { Cookie: cookie.split(';')[0] } });
     expect(page.status).toBe(200);
     const src = /<iframe src="([^"]+)"/.exec(await page.text())![1];

@@ -1,5 +1,5 @@
-/glasshelf
+/vitryn
 /dist/
-/glasshelf-data/
+/vitryn-data/
 *.test
 .DS_Store

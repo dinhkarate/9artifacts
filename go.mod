@@ -1,4 +1,4 @@
-module github.com/dinhkarate/glasshelf
+module github.com/dinhkarate/vitryn
 
 go 1.26.0
 

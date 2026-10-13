@@ -1,6 +1,6 @@
-# Caddy terminates TLS for both hosts and proxies to glasshelf.
-# Run glasshelf with:
-#   glasshelf serve --addr 127.0.0.1:8080 --url https://art.example.com \
+# Caddy terminates TLS for both hosts and proxies to vitryn.
+# Run vitryn with:
+#   vitryn serve --addr 127.0.0.1:8080 --url https://art.example.com \
 #     --content-url https://art-content.example.com --trust-proxy
 art.example.com, art-content.example.com {
 	reverse_proxy 127.0.0.1:8080

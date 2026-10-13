@@ -77,11 +77,11 @@ describe('content origin separation', () => {
 
   it('the workers.dev auto mode derives the content Worker origin', () => {
     const e = { PUBLIC_URL: '', CONTENT_URL: 'auto' } as Env;
-    expect(resolveOrigins(e, new URL('https://glasshelf.me.workers.dev/a/x'))).toEqual({
-      publicURL: 'https://glasshelf.me.workers.dev', contentURL: 'https://glasshelf-content.me.workers.dev',
+    expect(resolveOrigins(e, new URL('https://vitryn.me.workers.dev/a/x'))).toEqual({
+      publicURL: 'https://vitryn.me.workers.dev', contentURL: 'https://vitryn-content.me.workers.dev',
     });
-    expect(resolveOrigins(e, new URL('https://glasshelf-content.me.workers.dev/c/x'))).toEqual({
-      publicURL: 'https://glasshelf.me.workers.dev', contentURL: 'https://glasshelf-content.me.workers.dev',
+    expect(resolveOrigins(e, new URL('https://vitryn-content.me.workers.dev/c/x'))).toEqual({
+      publicURL: 'https://vitryn.me.workers.dev', contentURL: 'https://vitryn-content.me.workers.dev',
     });
     expect(resolveOrigins(e, new URL('http://localhost:8787/'))).toEqual({ publicURL: 'http://localhost:8787', contentURL: '' });
     expect(resolveOrigins({ PUBLIC_URL: 'https://art.example.com', CONTENT_URL: 'https://art-content.example.com' } as Env, new URL('https://x/'))).toEqual({
@@ -149,7 +149,7 @@ describe('security headers and logging', () => {
 
   it('the shell is adjusted for passkey-only sign-in', async () => {
     const html = await (await new Client().fetch('/login')).text();
-    expect(html).toContain('<title>glasshelf</title>');
+    expect(html).toContain('<title>vitryn</title>');
     expect(html).toContain('<input id="setup-pw" type="password" autocomplete="new-password" hidden="">');
     expect(html).toContain('Setup token <span class="muted">(the SETUP_TOKEN secret)</span>');
     expect(html).toContain('placeholder="Setup token"');

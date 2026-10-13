@@ -16,12 +16,12 @@ jobs:
       - run: test -z "$(gofmt -l .)"
       - run: go vet ./...
       - run: go test -race ./...
-      - run: CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o glasshelf ./cmd/glasshelf && ls -lh glasshelf
-      - name: glasshelf-ts (Tailscale build)
+      - run: CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o vitryn ./cmd/vitryn && ls -lh vitryn
+      - name: vitryn-ts (Tailscale build)
         working-directory: tailscale
         env:
           GOTOOLCHAIN: auto # tsnet needs a newer Go than the main module
-        run: go vet . && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o glasshelf-ts . && ls -lh glasshelf-ts
+        run: go vet . && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o vitryn-ts . && ls -lh vitryn-ts
   cloudflare:
     runs-on: ubuntu-latest
     defaults:

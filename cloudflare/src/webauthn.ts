@@ -147,7 +147,7 @@ async function coseES256(v: unknown): Promise<{ x: Uint8Array; y: Uint8Array }> 
 /**
  * Decodes the subset of CBOR used by COSE keys: integers, byte and text
  * strings, arrays, maps and simple values. Integers become numbers (COSE
- * labels and the values glasshelf reads are small).
+ * labels and the values vitryn reads are small).
  */
 export function decodeCBOR(b: Uint8Array, pos: number, depth: number): [unknown, number] {
   if (depth > 8) throw new Error('cbor nesting too deep');

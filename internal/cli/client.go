@@ -29,10 +29,12 @@ func configPath() string {
 	if err != nil {
 		dir = "."
 	}
-	p := filepath.Join(dir, "glasshelf", "client.json")
+	p := filepath.Join(dir, "vitryn", "client.json")
 	if _, err := os.Stat(p); err != nil {
-		if old := filepath.Join(dir, "vitrine", "client.json"); fileExists(old) { // pre-rename login
-			return old
+		for _, name := range []string{"glasshelf", "vitrine"} { // logins saved under earlier names
+			if old := filepath.Join(dir, name, "client.json"); fileExists(old) {
+				return old
+			}
 		}
 	}
 	return p
@@ -48,15 +50,15 @@ func loadClient() (clientConfig, error) {
 	if b, err := os.ReadFile(configPath()); err == nil {
 		_ = json.Unmarshal(b, &c)
 	}
-	if v := env("GLASSHELF_URL", ""); v != "" {
+	if v := env("VITRYN_URL", ""); v != "" {
 		c.URL = v
 	}
-	if v := env("GLASSHELF_TOKEN", ""); v != "" {
+	if v := env("VITRYN_TOKEN", ""); v != "" {
 		c.Token = v
 	}
 	c.URL = strings.TrimRight(c.URL, "/")
 	if c.URL == "" || c.Token == "" {
-		return c, errors.New("not configured: run `glasshelf login URL` or set GLASSHELF_URL and GLASSHELF_TOKEN")
+		return c, errors.New("not configured: run `vitryn login URL` or set VITRYN_URL and VITRYN_TOKEN")
 	}
 	return c, nil
 }
@@ -107,10 +109,10 @@ func decodeResp(resp *http.Response, out any) error {
 // Login stores the server URL and an API token in the user config dir.
 func Login(args []string) error {
 	if len(args) < 1 {
-		return errors.New("usage: glasshelf login https://art.example.com   (token is read from stdin)")
+		return errors.New("usage: vitryn login https://art.example.com   (token is read from stdin)")
 	}
 	u := strings.TrimRight(args[0], "/")
-	tok, err := readSecret("API token (create one in Settings or with `glasshelf token` on the server): ")
+	tok, err := readSecret("API token (create one in Settings or with `vitryn token` on the server): ")
 	if err != nil {
 		return err
 	}
@@ -162,7 +164,7 @@ func Publish(args []string) error {
 	asJSON := fset.Bool("json", false, "print the result as JSON")
 	paths := parseInterleaved(fset, args)
 	if len(paths) == 0 {
-		return errors.New("usage: glasshelf publish [--title T] [--tags a,b] [--update ID] FILE|DIR...")
+		return errors.New("usage: vitryn publish [--title T] [--tags a,b] [--update ID] FILE|DIR...")
 	}
 	c, err := loadClient()
 	if err != nil {
@@ -319,7 +321,7 @@ func Share(args []string) error {
 	askPw := fset.Bool("password", false, "protect the link with a password (asked on the terminal, or read from stdin)")
 	pos := parseInterleaved(fset, args)
 	if len(pos) != 1 {
-		return errors.New("usage: glasshelf share ID --ttl 7d")
+		return errors.New("usage: vitryn share ID --ttl 7d")
 	}
 	c, err := loadClient()
 	if err != nil {
@@ -337,7 +339,7 @@ func Share(args []string) error {
 	if err := c.json("POST", "/api/artifacts/"+pos[0]+"/shares", body, &sh); err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "Public link, expires %s (revoke: glasshelf revoke %s %s)\n", sh.ExpiresAt.Local().Format("2006-01-02 15:04"), pos[0], sh.Token)
+	fmt.Fprintf(os.Stderr, "Public link, expires %s (revoke: vitryn revoke %s %s)\n", sh.ExpiresAt.Local().Format("2006-01-02 15:04"), pos[0], sh.Token)
 	fmt.Println(sh.URL)
 	return nil
 }
@@ -345,7 +347,7 @@ func Share(args []string) error {
 // Revoke kills a public link.
 func Revoke(args []string) error {
 	if len(args) != 2 {
-		return errors.New("usage: glasshelf revoke ID TOKEN")
+		return errors.New("usage: vitryn revoke ID TOKEN")
 	}
 	c, err := loadClient()
 	if err != nil {
@@ -357,7 +359,7 @@ func Revoke(args []string) error {
 // Remove deletes an artifact.
 func Remove(args []string) error {
 	if len(args) != 1 {
-		return errors.New("usage: glasshelf rm ID")
+		return errors.New("usage: vitryn rm ID")
 	}
 	c, err := loadClient()
 	if err != nil {

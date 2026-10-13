@@ -5,8 +5,8 @@
 //   dist/public/_headers      security headers for those assets
 //   src/generated/web.ts      templates and theme files the Worker renders
 //
-// GLASSHELF_THEME picks a built-in theme (default, terminal, paper) and
-// GLASSHELF_THEME_DIR a directory overriding theme and shell files, like the Go
+// VITRYN_THEME picks a built-in theme (default, terminal, paper) and
+// VITRYN_THEME_DIR a directory overriding theme and shell files, like the Go
 // server's --theme and --theme-dir.
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -15,8 +15,8 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
 const web = resolve(root, '..', 'web');
-const theme = process.env.GLASSHELF_THEME || 'default';
-const themeDir = process.env.GLASSHELF_THEME_DIR ? resolve(process.env.GLASSHELF_THEME_DIR) : '';
+const theme = process.env.VITRYN_THEME || 'default';
+const themeDir = process.env.VITRYN_THEME_DIR ? resolve(process.env.VITRYN_THEME_DIR) : '';
 
 if (!existsSync(join(web, 'themes', theme, 'theme.css')) && theme !== 'default') {
   console.error(`unknown theme ${JSON.stringify(theme)}; built-in themes: ${readdirSync(join(web, 'themes')).join(', ')}`);

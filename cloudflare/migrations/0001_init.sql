@@ -1,5 +1,5 @@
--- glasshelf on Cloudflare Workers: everything the Go server keeps in
--- glasshelf.json, as D1 tables. File bytes live in R2.
+-- vitryn on Cloudflare Workers: everything the Go server keeps in
+-- vitryn.json, as D1 tables. File bytes live in R2.
 
 -- Server secrets generated on first use (the HMAC signing key).
 CREATE TABLE kv (

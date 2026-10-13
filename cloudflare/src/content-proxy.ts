@@ -1,4 +1,4 @@
-// The content origin Worker: forwards every request, unchanged, to the glasshelf
+// The content origin Worker: forwards every request, unchanged, to the vitryn
 // Worker, which recognises this host and serves only sandboxed content on it.
 interface ProxyEnv {
   APP: Fetcher;
