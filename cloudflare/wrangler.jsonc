@@ -1,0 +1,53 @@
+// vitrine app Worker: SPA, REST API, MCP, share pages, and (behind the
+// vitrine-content Worker, see wrangler.content.jsonc) sandboxed artifact bytes.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vitrine",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  // Only dist/public/assets/* is static; every other path runs the Worker.
+  "assets": {
+    "directory": "./dist/public",
+    "binding": "ASSETS",
+    "html_handling": "none",
+    "not_found_handling": "none"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "vitrine",
+      // Paste the id printed by `npx wrangler d1 create vitrine` here.
+      // (The Deploy to Cloudflare button provisions it for you.)
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    { "binding": "FILES", "bucket_name": "vitrine-files" }
+  ],
+  "vars": {
+    // Brand shown in the UI.
+    "NAME": "vitrine",
+    // Origin users browse. Empty: the request's own origin (fine on workers.dev).
+    "PUBLIC_URL": "",
+    // Separate origin for artifact bytes. "auto": on workers.dev use
+    // <worker>-content.<subdomain>.workers.dev (deployed from
+    // wrangler.content.jsonc); "" serves content from the app origin.
+    "CONTENT_URL": "auto",
+    // Upload cap for multipart uploads (JSON and MCP bodies stay at 32 MB).
+    "MAX_UPLOAD_MB": "50",
+    // "1": public share pages live on the content origin (like --shares-on-content).
+    "SHARES_ON_CONTENT": "",
+    // Extra CSP directives appended for artifact content (like --artifact-csp).
+    "ARTIFACT_CSP": "",
+    "VERSION": "cf-0.1.0"
+  },
+  // Hourly cleanup of expired sessions, challenges and rate-limit rows.
+  "triggers": { "crons": ["17 * * * *"] },
+  // Workers Logs would record full request URLs, including share and view
+  // tokens that vitrine's own log line redacts. Leave off unless you want that.
+  "observability": { "enabled": false }
+}
