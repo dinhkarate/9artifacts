@@ -83,7 +83,7 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleShareContent(w http.ResponseWriter, r *http.Request) {
-	id, v, _, _, status := s.resolveShare(r, r.PathValue("token"))
+	id, v, _, _, status := s.resolveShare(r, r.PathValue("token"), true)
 	if status != 200 {
 		http.Error(w, http.StatusText(status), status)
 		return
@@ -92,8 +92,8 @@ func (s *Server) handleShareContent(w http.ResponseWriter, r *http.Request) {
 }
 
 // resolveShare returns the artifact id, version and title for a live share
-// token and counts the visit, or 404/410.
-func (s *Server) resolveShare(r *http.Request, token string) (id string, v *Version, sh Share, title string, status int) {
+// token and (with count) records the visit, or 404/410.
+func (s *Server) resolveShare(r *http.Request, token string, count bool) (id string, v *Version, sh Share, title string, status int) {
 	status = 404
 	s.store.Read(func(st *State) {
 		a, share := st.FindShare(token)
@@ -110,7 +110,7 @@ func (s *Server) resolveShare(r *http.Request, token string) (id string, v *Vers
 			id, v, title, status = a.ID, &c, a.Title, 200
 		}
 	})
-	if status == 200 {
+	if status == 200 && count {
 		ok, first := s.countView(token, s.clientIP(r))
 		if !ok {
 			return "", nil, sh, "", 410
@@ -124,6 +124,18 @@ func (s *Server) resolveShare(r *http.Request, token string) (id string, v *Vers
 		}
 	}
 	return id, v, sh, title, status
+}
+
+// isPreviewBot matches the crawlers chat and social apps send to unfurl links.
+func isPreviewBot(ua string) bool {
+	ua = strings.ToLower(ua)
+	for _, bot := range []string{"slackbot", "discordbot", "facebookexternalhit", "twitterbot", "telegrambot",
+		"whatsapp", "linkedinbot", "skypeuripreview", "zalo", "mattermost", "redditbot", "embedly", "iframely"} {
+		if strings.Contains(ua, bot) {
+			return true
+		}
+	}
+	return false
 }
 
 const maxViewers = 10000
@@ -287,7 +299,10 @@ func fileKind(name string) string {
 
 func (s *Server) handleSharePage(w http.ResponseWriter, r *http.Request) {
 	token := r.PathValue("token")
-	_, v, sh, title, status := s.resolveShare(r, token)
+	// Chat apps fetch the page to build a link preview; that must not use up
+	// a view. Only the page shell (title, note, file names) is exempt: the
+	// artifact itself is always counted, so a spoofed User-Agent gains nothing.
+	_, v, sh, title, status := s.resolveShare(r, token, !isPreviewBot(r.UserAgent()))
 	raw, err := s.shellFile("share.html")
 	if err != nil {
 		http.Error(w, "share.html missing", 500)

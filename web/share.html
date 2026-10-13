@@ -6,6 +6,11 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
 <title>{{if eq .Status 200}}{{.Title}}{{else}}Link unavailable{{end}}</title>
+{{if eq .Status 200}}<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{.Name}}">
+<meta property="og:title" content="{{.Title}}">
+<meta property="og:description" content="{{if .Note}}{{.Note}}{{else}}Shared with {{.Name}} · link expires {{.Expires}}{{end}}">
+<meta name="twitter:card" content="summary">{{end}}
 <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/app.css">
 <link rel="stylesheet" href="/assets/theme.css">

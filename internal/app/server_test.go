@@ -614,3 +614,31 @@ func TestWebhooks(t *testing.T) {
 		t.Error("non-HTTP webhook accepted")
 	}
 }
+
+func TestSharePageLinkPreview(t *testing.T) {
+	e := newEnv(t, Config{})
+	a := decode[artifactView](t, e.upload("/api/artifacts", map[string]string{"title": `Q3 "draft" <report>`}, map[string]string{"index.html": "x"}))
+	sh := decode[shareView](t, e.api("POST", "/api/artifacts/"+a.ID+"/shares", map[string]any{"ttl": "1h", "note": "For the board"}))
+	body := e.do("GET", "/s/"+sh.Token, nil, nil).Body.String()
+	for _, want := range []string{`og:title" content="Q3 &#34;draft&#34; &lt;report&gt;"`, `og:description" content="For the board"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("share page missing %s", want)
+		}
+	}
+}
+
+func TestPreviewBotDoesNotUseAView(t *testing.T) {
+	e := newEnv(t, Config{})
+	a := decode[artifactView](t, e.upload("/api/artifacts", nil, map[string]string{"index.html": "x"}))
+	sh := decode[shareView](t, e.api("POST", "/api/artifacts/"+a.ID+"/shares", map[string]any{"ttl": "1h", "maxViews": 1}))
+	bot := map[string]string{"User-Agent": "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)", remoteAddr: "203.0.113.50:1"}
+	if c := e.do("GET", "/s/"+sh.Token, nil, bot).Code; c != 200 {
+		t.Fatalf("bot preview: %d", c)
+	}
+	if c := e.do("GET", "/s/"+sh.Token+"/f/index.html", nil, map[string]string{remoteAddr: "198.51.100.20:1"}).Code; c != 200 {
+		t.Fatalf("real visitor after bot preview: %d", c)
+	}
+	if c := e.do("GET", "/s/"+sh.Token+"/f/index.html", nil, bot).Code; c != 410 {
+		t.Fatalf("spoofed bot reading content past the limit: %d", c)
+	}
+}
