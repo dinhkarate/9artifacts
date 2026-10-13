@@ -1,8 +1,8 @@
 {
-  "name": "vitrine-cf",
+  "name": "glasshelf-cf",
   "version": "0.1.0",
   "private": true,
-  "description": "vitrine on Cloudflare Workers (D1 + R2), same API, MCP and web UI as the Go server",
+  "description": "glasshelf on Cloudflare Workers (D1 + R2), same API, MCP and web UI as the Go server",
   "type": "module",
   "scripts": {
     "build": "node scripts/build-web.mjs",

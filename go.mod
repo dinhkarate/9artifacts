@@ -1,4 +1,4 @@
-module github.com/dinhkarate/vitrine
+module github.com/dinhkarate/glasshelf
 
 go 1.26.0
 

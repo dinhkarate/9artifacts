@@ -17,10 +17,10 @@ describe('MCP OAuth (port of TestMCPOAuthFlow)', () => {
     // 1. Discovery: /mcp challenges with the resource metadata URL.
     const ch = await c.fetch(at('/mcp'), { method: 'POST', body: '{}' });
     expect(ch.status).toBe(401);
-    expect(ch.headers.get('WWW-Authenticate')).toBe(`Bearer realm="vitrine", resource_metadata="${PUB}/.well-known/oauth-protected-resource"`);
+    expect(ch.headers.get('WWW-Authenticate')).toBe(`Bearer realm="glasshelf", resource_metadata="${PUB}/.well-known/oauth-protected-resource"`);
     expect(ch.headers.get('Access-Control-Expose-Headers')).toContain('WWW-Authenticate');
     const prm = await body(await c.fetch(at('/.well-known/oauth-protected-resource')));
-    expect(prm).toEqual({ resource: PUB + '/mcp', authorization_servers: [PUB], bearer_methods_supported: ['header'], scopes_supported: ['mcp'], resource_name: 'vitrine' });
+    expect(prm).toEqual({ resource: PUB + '/mcp', authorization_servers: [PUB], bearer_methods_supported: ['header'], scopes_supported: ['mcp'], resource_name: 'glasshelf' });
     expect((await body(await c.fetch(at('/.well-known/oauth-protected-resource/mcp')))).resource).toBe(PUB + '/mcp');
     const asm = await body(await c.fetch(at('/.well-known/oauth-authorization-server')));
     expect(asm.token_endpoint).toBe(PUB + '/oauth/token');
@@ -47,7 +47,7 @@ describe('MCP OAuth (port of TestMCPOAuthFlow)', () => {
     const decide = async (approve: boolean, redirectURI: string, extra: Record<string, unknown> = {}) => {
       const resp = await c.fetch(at('/api/oauth/authorize'), {
         method: 'POST',
-        headers: { Cookie: c.cookie, 'X-Vitrine': '1', 'Content-Type': 'application/json' },
+        headers: { Cookie: c.cookie, 'X-Glasshelf': '1', 'Content-Type': 'application/json' },
         body: JSON.stringify({ client_id: client.client_id, redirect_uri: redirectURI, state: 'xyz', code_challenge: challenge, code_challenge_method: 'S256', response_type: 'code', approve, ...extra }),
       });
       return { status: resp.status, redirect: (await body(resp)).redirect as string };

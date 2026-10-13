@@ -1,14 +1,14 @@
-// vitrine-content: the separate, sandboxed origin for artifact bytes
-// (vitrine-content.<subdomain>.workers.dev). It owns no data: every request
-// is handed to the vitrine Worker over a service binding, and that Worker
+// glasshelf-content: the separate, sandboxed origin for artifact bytes
+// (glasshelf-content.<subdomain>.workers.dev). It owns no data: every request
+// is handed to the glasshelf Worker over a service binding, and that Worker
 // serves only /c/... and /s/.../f|g/... on this host (everything else is 404).
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "vitrine-content",
+  "name": "glasshelf-content",
   "main": "src/content-proxy.ts",
   "compatibility_date": "2026-08-15",
   "workers_dev": true,
   "preview_urls": false,
-  "services": [{ "binding": "APP", "service": "vitrine" }],
+  "services": [{ "binding": "APP", "service": "glasshelf" }],
   "observability": { "enabled": false }
 }

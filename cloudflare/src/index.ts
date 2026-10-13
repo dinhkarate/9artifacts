@@ -1,4 +1,4 @@
-// vitrine on Cloudflare Workers: routes, host separation, security headers and
+// glasshelf on Cloudflare Workers: routes, host separation, security headers and
 // access logging (internal/app/server.go).
 import { BRAND } from './brand';
 import * as api from './api';

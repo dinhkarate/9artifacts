@@ -1,8 +1,8 @@
 #!/bin/sh
-# vitrine installer — downloads the release binary and (on Linux with
+# glasshelf installer — downloads the release binary and (on Linux with
 # systemd) installs a hardened service.
 #
-#   curl -fsSL https://raw.githubusercontent.com/dinhkarate/vitrine/main/install.sh | sudo sh -s -- --domain art.example.com
+#   curl -fsSL https://raw.githubusercontent.com/dinhkarate/glasshelf/main/install.sh | sudo sh -s -- --domain art.example.com
 #
 # Options:
 #   --domain D           serve HTTPS for D with automatic Let's Encrypt certificates (ports 80/443)
@@ -14,7 +14,7 @@
 #   --no-service         only install the binary
 set -eu
 
-REPO="dinhkarate/vitrine"
+REPO="dinhkarate/glasshelf"
 VERSION="latest"
 DOMAIN=""
 CONTENT_DOMAIN=""
@@ -44,14 +44,14 @@ case "$(uname -m)" in
   armv7l|armv7) arch=armv7 ;;
   *) echo "unsupported architecture: $(uname -m)" >&2; exit 1 ;;
 esac
-case "$os" in linux|darwin) ;; *) echo "unsupported OS: $os (build from source: go install github.com/$REPO/cmd/vitrine@latest)" >&2; exit 1 ;; esac
+case "$os" in linux|darwin) ;; *) echo "unsupported OS: $os (build from source: go install github.com/$REPO/cmd/glasshelf@latest)" >&2; exit 1 ;; esac
 
 if [ "$VERSION" = "latest" ]; then
   base="https://github.com/$REPO/releases/latest/download"
 else
   base="https://github.com/$REPO/releases/download/$VERSION"
 fi
-asset="vitrine_${os}_${arch}.tar.gz"
+asset="glasshelf_${os}_${arch}.tar.gz"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
@@ -59,17 +59,17 @@ echo "→ downloading $asset"
 curl -fsSL "$base/$asset" -o "$tmp/$asset"
 curl -fsSL "$base/checksums.txt" -o "$tmp/checksums.txt"
 (cd "$tmp" && grep " $asset\$" checksums.txt | { if command -v sha256sum >/dev/null; then sha256sum -c -; else shasum -a 256 -c -; fi; }) >/dev/null
-tar -xzf "$tmp/$asset" -C "$tmp" vitrine
+tar -xzf "$tmp/$asset" -C "$tmp" glasshelf
 
 bindir=/usr/local/bin
 if [ ! -w "$bindir" ]; then
   if [ "$(id -u)" -ne 0 ]; then bindir="$HOME/.local/bin"; mkdir -p "$bindir"; fi
 fi
-install -m 0755 "$tmp/vitrine" "$bindir/vitrine"
-echo "→ installed $("$bindir/vitrine" version) to $bindir/vitrine"
+install -m 0755 "$tmp/glasshelf" "$bindir/glasshelf"
+echo "→ installed $("$bindir/glasshelf" version) to $bindir/glasshelf"
 
 if [ "$SERVICE" -eq 0 ] || [ "$os" != "linux" ] || ! command -v systemctl >/dev/null 2>&1; then
-  echo "Run it with: vitrine serve --url http://localhost:8080"
+  echo "Run it with: glasshelf serve --url http://localhost:8080"
   exit 0
 fi
 if [ "$(id -u)" -ne 0 ]; then
@@ -88,16 +88,16 @@ else
   [ -n "$CONTENT_URL" ] && args="$args --content-url $CONTENT_URL"
 fi
 
-cat > /etc/systemd/system/vitrine.service <<EOF
+cat > /etc/systemd/system/glasshelf.service <<EOF
 [Unit]
-Description=vitrine — self-hosted AI artifacts
+Description=glasshelf — self-hosted AI artifacts
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-ExecStart=$bindir/vitrine serve --data /var/lib/vitrine $args
+ExecStart=$bindir/glasshelf serve --data /var/lib/glasshelf $args
 DynamicUser=yes
-StateDirectory=vitrine
+StateDirectory=glasshelf
 StateDirectoryMode=0700
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
@@ -121,10 +121,10 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
-systemctl enable --now vitrine.service
+systemctl enable --now glasshelf.service
 sleep 2
 echo
-echo "vitrine is running. Open the first-run link below to set your password:"
-journalctl -u vitrine.service -n 20 --no-pager -o cat | grep -m1 "first run" || echo "(already set up — run: sudo vitrine status --data /var/lib/vitrine)"
+echo "glasshelf is running. Open the first-run link below to set your password:"
+journalctl -u glasshelf.service -n 20 --no-pager -o cat | grep -m1 "first run" || echo "(already set up — run: sudo glasshelf status --data /var/lib/glasshelf)"
 echo
-echo "Create an agent token on this server with: sudo vitrine token --data /var/lib/vitrine --name my-agent"
+echo "Create an agent token on this server with: sudo glasshelf token --data /var/lib/glasshelf --name my-agent"

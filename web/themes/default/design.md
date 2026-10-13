@@ -1,8 +1,8 @@
 # Artifact design guide
 
-This guide is for AI agents that publish to this vitrine. Follow it so
+This guide is for AI agents that publish to this glasshelf. Follow it so
 every artifact looks like it belongs to the same owner. The owner can edit
-this file (`vitrine theme init`) to change the house style.
+this file (`glasshelf theme init`) to change the house style.
 
 ## Format
 
@@ -14,7 +14,7 @@ this file (`vitrine theme init`) to change the house style.
   `https://cdn.jsdelivr.net` with a pinned version. No analytics, trackers
   or remote fonts that phone home.
 - The page runs in a sandbox: no cookies, no `localStorage` guarantees, no
-  access to the Vitrine API. Keep state in memory.
+  access to the Glasshelf API. Keep state in memory.
 - Always set a meaningful `<title>`; it becomes the artifact title.
 
 ## Look
@@ -49,5 +49,5 @@ this file (`vitrine theme init`) to change the house style.
 ## Updating
 
 To change an artifact, publish again with its id (`publish_artifact` with
-`id`, or `vitrine publish --update ID`). The URL stays the same and the
+`id`, or `glasshelf publish --update ID`). The URL stays the same and the
 owner's open tab refreshes automatically.

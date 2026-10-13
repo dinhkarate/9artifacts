@@ -1,14 +1,14 @@
 # Security policy
 
-Vitrine stores documents people consider private, so security reports are welcome and taken
+Glasshelf stores documents people consider private, so security reports are welcome and taken
 seriously.
 
 ## Reporting
 
 Please **do not open a public issue**. Use GitHub's
-[private vulnerability reporting](https://github.com/dinhkarate/vitrine/security/advisories/new).
+[private vulnerability reporting](https://github.com/dinhkarate/glasshelf/security/advisories/new).
 You should get a reply within a few days. Include steps to reproduce, the affected version
-(`vitrine version`), and your deployment mode (built-in TLS, behind a proxy, Docker).
+(`glasshelf version`), and your deployment mode (built-in TLS, behind a proxy, Docker).
 
 ## Supported versions
 

@@ -1,9 +1,9 @@
-module github.com/dinhkarate/vitrine/tailscale
+module github.com/dinhkarate/glasshelf/tailscale
 
 go 1.27.1
 
 require (
-	github.com/dinhkarate/vitrine v0.0.0
+	github.com/dinhkarate/glasshelf v0.0.0
 	tailscale.com v1.104.1
 )
 
@@ -53,4 +53,4 @@ require (
 	gvisor.dev/gvisor v0.0.0-20260915211658-a6f909f08a72 // indirect
 )
 
-replace github.com/dinhkarate/vitrine => ../
+replace github.com/dinhkarate/glasshelf => ../

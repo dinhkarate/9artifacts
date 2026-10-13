@@ -1,4 +1,4 @@
-/* vitrine app shell. Colours, fonts and radii come from theme.css tokens. */
+/* glasshelf app shell. Colours, fonts and radii come from theme.css tokens. */
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0;height:100%}

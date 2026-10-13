@@ -93,7 +93,7 @@ func (s *Server) deliver(hook string, ev event, msg string) {
 		log.Printf("webhook %s: %v", hookHost(hook), err)
 		return
 	}
-	req.Header.Set("User-Agent", "vitrine/"+s.cfg.Version)
+	req.Header.Set("User-Agent", "glasshelf/"+s.cfg.Version)
 	resp, err := webhookClient.Do(req)
 	if err != nil {
 		log.Printf("webhook %s: %v", hookHost(hook), err)

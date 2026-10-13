@@ -46,7 +46,7 @@ export class Client {
   /** Browser-style request with the session cookie and CSRF header. */
   browser(method: string, path: string, body?: unknown, csrf = true): Promise<Response> {
     const headers: Record<string, string> = { Cookie: this.cookie };
-    if (csrf) headers['X-Vitrine'] = '1';
+    if (csrf) headers['X-Glasshelf'] = '1';
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     return this.fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
   }

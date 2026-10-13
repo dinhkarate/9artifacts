@@ -73,7 +73,7 @@ describe('selection script (port of TestSelectionScriptOnlyInOwnerViewer)', () =
   it('is injected only into the owner viewer HTML/Markdown', async () => {
     const a = await body(await c.upload('/api/artifacts', {}, { 'index.html': '<p>hi</p>', 'n.md': '# x', 'a.css': 'p{}' }));
     const base = pathOf(a.viewBase);
-    const has = async (path: string) => (await (await c.fetch(path)).text()).includes('vitrine:"selection"');
+    const has = async (path: string) => (await (await c.fetch(path)).text()).includes('glasshelf:"selection"');
     expect(await has(base + 'index.html?vc=1')).toBe(true);
     expect(await has(base + 'n.md?view=1&vc=1')).toBe(true);
     const sh = await body(await c.api('POST', `/api/artifacts/${a.id}/shares`, { ttl: '1h' }));
@@ -84,7 +84,7 @@ describe('selection script (port of TestSelectionScriptOnlyInOwnerViewer)', () =
     const r = await c.fetch(base + 'index.html?vc=1');
     expect(r.headers.get('Content-Security-Policy')).toMatch(/^sandbox /);
     expect(r.headers.get('Cache-Control')).toBe('no-store');
-    expect(await r.text()).toContain(`parent.postMessage({vitrine:"selection",text:s},"${APP}")`);
+    expect(await r.text()).toContain(`parent.postMessage({glasshelf:"selection",text:s},"${APP}")`);
   });
 
   it('posts to the app origin when content is on its own origin', async () => {

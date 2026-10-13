@@ -1,37 +1,37 @@
-# vitrine on Cloudflare Workers
+# glasshelf on Cloudflare Workers
 
-The same vitrine, with no server, no domain and no bill: it runs on the Cloudflare Workers free
+The same glasshelf, with no server, no domain and no bill: it runs on the Cloudflare Workers free
 plan, with **D1** holding metadata and **R2** holding file bytes. It speaks the Go server's HTTP API,
-MCP endpoint and web UI, so the `web/` app, the `vitrine` CLI, the agent skill and
+MCP endpoint and web UI, so the `web/` app, the `glasshelf` CLI, the agent skill and
 `claude mcp add` all work against it unchanged.
 
 ```
-vitrine.<you>.workers.dev          app: gallery, REST API, /mcp, share pages
-vitrine-content.<you>.workers.dev  sandboxed artifact bytes (/c/…, /s/…/f/…)
+glasshelf.<you>.workers.dev          app: gallery, REST API, /mcp, share pages
+glasshelf-content.<you>.workers.dev  sandboxed artifact bytes (/c/…, /s/…/f/…)
 ```
 
 It includes review comments (the owner comments in the viewer, and agents read them with
 `list_comments` and resolve them with `resolve_comment`). It also includes **remote MCP with
-OAuth**, so you can add `https://vitrine.<you>.workers.dev/mcp` as a connector in claude.ai or
+OAuth**, so you can add `https://glasshelf.<you>.workers.dev/mcp` as a connector in claude.ai or
 ChatGPT. They register themselves and you approve them on a consent page.
 
-The content Worker owns no data. It forwards every request to `vitrine` over a service binding,
-and `vitrine` serves only sandboxed content on that host, the same host separation the Go server
+The content Worker owns no data. It forwards every request to `glasshelf` over a service binding,
+and `glasshelf` serves only sandboxed content on that host, the same host separation the Go server
 does with `--content-url`.
 
 ## Deploy with one click
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dinhkarate/vitrine/tree/main/cloudflare)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dinhkarate/glasshelf/tree/main/cloudflare)
 
 ```markdown
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dinhkarate/vitrine/tree/main/cloudflare)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dinhkarate/glasshelf/tree/main/cloudflare)
 ```
 
 The button URL is `https://deploy.workers.cloudflare.com/?url=<public GitHub URL of this
 directory>`, in the form `…/tree/<branch>/cloudflare`. **The repository must be public.**
 Cloudflare clones it into your account, creates the D1 database and the R2 bucket named in
-`wrangler.jsonc`, and runs `npm run deploy`, which builds, deploys `vitrine`, applies the D1
-migrations and deploys `vitrine-content`. When it asks for secrets (listed in
+`wrangler.jsonc`, and runs `npm run deploy`, which builds, deploys `glasshelf`, applies the D1
+migrations and deploys `glasshelf-content`. When it asks for secrets (listed in
 `.dev.vars.example`), set `SETUP_TOKEN`. If you skip that step, run
 `npx wrangler secret put SETUP_TOKEN` afterwards.
 
@@ -41,30 +41,30 @@ migrations and deploys `vitrine-content`. When it asks for secrets (listed in
 cd cloudflare
 npm ci
 npx wrangler login
-npx wrangler r2 bucket create vitrine-files
-npx wrangler d1 create vitrine          # optional: `wrangler deploy` creates it otherwise;
+npx wrangler r2 bucket create glasshelf-files
+npx wrangler d1 create glasshelf          # optional: `wrangler deploy` creates it otherwise;
                                         # if you run it, add "database_id" to wrangler.jsonc
 openssl rand -base64 32 | npx wrangler secret put SETUP_TOKEN
-npm run deploy                          # deploy vitrine, migrate D1, deploy vitrine-content
+npm run deploy                          # deploy glasshelf, migrate D1, deploy glasshelf-content
 ```
 
-Then open `https://vitrine.<you>.workers.dev`, enter the setup token, and add a passkey on the
-Settings page. To connect claude.ai or ChatGPT, add `https://vitrine.<you>.workers.dev/mcp` as a
+Then open `https://glasshelf.<you>.workers.dev`, enter the setup token, and add a passkey on the
+Settings page. To connect claude.ai or ChatGPT, add `https://glasshelf.<you>.workers.dev/mcp` as a
 custom connector and approve it while signed in. Create an API token on the same page for your agents:
 
 ```bash
-claude mcp add --transport http vitrine https://vitrine.<you>.workers.dev/mcp \
+claude mcp add --transport http glasshelf https://glasshelf.<you>.workers.dev/mcp \
   --header "Authorization: Bearer vt_..."
-VITRINE_URL=https://vitrine.<you>.workers.dev VITRINE_TOKEN=vt_... vitrine publish report.html
+GLASSHELF_URL=https://glasshelf.<you>.workers.dev GLASSHELF_TOKEN=vt_... glasshelf publish report.html
 ```
 
 `npm run deploy` runs these steps:
 
 1. `npm run build`: copies `../web` (shell plus theme) into `dist/public/assets` and `src/generated/`.
-2. `wrangler deploy`: deploys the `vitrine` Worker and provisions D1 and R2 if needed.
+2. `wrangler deploy`: deploys the `glasshelf` Worker and provisions D1 and R2 if needed.
 3. `wrangler d1 migrations apply DB --remote`: creates or updates the tables.
-4. `wrangler deploy -c wrangler.content.jsonc`: deploys `vitrine-content`. It has to come after
-   `vitrine`, because it binds to that Worker.
+4. `wrangler deploy -c wrangler.content.jsonc`: deploys `glasshelf-content`. It has to come after
+   `glasshelf`, because it binds to that Worker.
 
 ### Settings (`vars` in `wrangler.jsonc`, secrets with `wrangler secret put`)
 
@@ -77,8 +77,8 @@ VITRINE_URL=https://vitrine.<you>.workers.dev VITRINE_TOKEN=vt_... vitrine publi
 | `SHARES_ON_CONTENT` | off | `1`: public share pages live on the content origin (`--shares-on-content`). |
 | `MAX_UPLOAD_MB` | `50` | Multipart upload cap (JSON and MCP bodies stay at 32 MB). |
 | `ARTIFACT_CSP` | none | Extra CSP directives for artifact content (`--artifact-csp`). |
-| `NAME` | `vitrine` | Brand shown in the UI. |
-| `VITRINE_THEME`, `VITRINE_THEME_DIR` (build env) | `default` | Build-time `--theme` and `--theme-dir`. |
+| `NAME` | `glasshelf` | Brand shown in the UI. |
+| `GLASSHELF_THEME`, `GLASSHELF_THEME_DIR` (build env) | `default` | Build-time `--theme` and `--theme-dir`. |
 
 If you rename the Workers, keep the content Worker's name as `<app name>-content`, or set
 `CONTENT_URL` explicitly. Update the `service` field in `wrangler.content.jsonc` to match.
@@ -104,7 +104,7 @@ included. Pass `--log-level warn` if that matters to you.
 | 100,000 requests/day | Every page, API call and artifact file counts. Static `/assets/*` files are served without running the Worker. A content-origin request goes through two Workers. |
 | 10 ms CPU per request | No 600k-iteration PBKDF2, so owner sign-in is passkey-only (see below). Uploads are streamed, and R2/D1 waits don't count as CPU. Very large JSON or base64 uploads can exceed it, so use multipart. |
 | 128 MB memory | Files over 8 MiB go to R2 as multipart uploads in 8 MiB parts, so memory stays bounded. |
-| 100 MB request body | Cloudflare's cap. vitrine caps multipart at `MAX_UPLOAD_MB` (50). |
+| 100 MB request body | Cloudflare's cap. glasshelf caps multipart at `MAX_UPLOAD_MB` (50). |
 | 1,000 D1/R2 operations per request | Up to 500 files per version. Kept and restored files are referenced, never copied. |
 | 3 MB Worker size (compressed) | The app Worker is about 40 KB gzipped. |
 | D1 5 GB, R2 10 GB storage | Free-tier storage. R2 egress is free. |
@@ -124,11 +124,11 @@ included. Pass `--log-level warn` if that matters to you.
   instead of 600,000, in the same encoded format. If the D1 database leaked, they would be much
   easier to brute-force offline. Online guesses are rate-limited as before.
 - **The upload cap is 50 MB by default**, instead of 100 MB.
-- **There is no `vitrine token`, `vitrine passwd` or `vitrine status`.** Those talk to the Go
+- **There is no `glasshelf token`, `glasshelf passwd` or `glasshelf status`.** Those talk to the Go
   server's admin socket. Create tokens in Settings instead.
 - **Cloudflare Access JWT checks (`--cf-access-*`) are not ported.** You can still put Access in
   front of the workers.dev URL. If you do, bypass `/mcp`, `/api` and the content host for agents.
-- **Themes are chosen at build time** (`VITRINE_THEME`, `VITRINE_THEME_DIR`), not at runtime.
+- **Themes are chosen at build time** (`GLASSHELF_THEME`, `GLASSHELF_THEME_DIR`), not at runtime.
 - **State is shared through D1.** Lockouts, passkey challenges, OAuth authorization codes and
   the hourly visit dedupe live in D1, because Worker isolates share no memory. An hourly cron
   removes expired rows.
@@ -138,7 +138,7 @@ included. Pass `--log-level warn` if that matters to you.
 - **New version numbers are reserved before upload.** A failed upload usually releases its
   number. If two agents publish at once, both versions are kept, where Go would return 409 for
   one of them.
-- **Logging differs.** vitrine's own log line redacts share, view and grant tokens, as in Go.
+- **Logging differs.** glasshelf's own log line redacts share, view and grant tokens, as in Go.
   Cloudflare's tooling records full URLs (`wrangler tail`, Workers Logs, `wrangler dev`'s request
   log). `observability` is off in `wrangler.jsonc` for that reason.
 - **`/api/me` has two extra fields**, `edition: "cloudflare"` and `passkeyOnly: true`.

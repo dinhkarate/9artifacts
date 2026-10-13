@@ -49,7 +49,7 @@ func TestMCPOAuthFlow(t *testing.T) {
 	// 3. Consent, as the signed-in owner.
 	login := e.do("POST", "/api/auth/login", strings.NewReader(`{"password":"correct horse battery"}`), with(map[string]string{"Content-Type": "application/json"}))
 	ck := login.Result().Cookies()[0]
-	owner := with(map[string]string{"Cookie": ck.Name + "=" + ck.Value, "X-Vitrine": "1", "Content-Type": "application/json"})
+	owner := with(map[string]string{"Cookie": ck.Name + "=" + ck.Value, "X-Glasshelf": "1", "Content-Type": "application/json"})
 	verifier := "a-long-random-pkce-verifier-string-0123456789abcdef"
 	sum := sha256.Sum256([]byte(verifier))
 	decide := func(approve bool, redirectURI string) *httptestResult {

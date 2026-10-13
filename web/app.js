@@ -1,4 +1,4 @@
-// Vitrine web app — no build step, no dependencies.
+// Glasshelf web app — no build step, no dependencies.
 'use strict';
 
 const $ = (s, root = document) => root.querySelector(s);
@@ -61,7 +61,7 @@ const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(
 const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
 
 async function api(method, path, body, raw) {
-  const headers = { 'X-Vitrine': '1' };
+  const headers = { 'X-Glasshelf': '1' };
   let payload;
   if (raw) payload = raw;
   else if (body !== undefined) { headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
@@ -135,7 +135,7 @@ const VIEW_LIMITS = [[0, 'Unlimited'], [1, '1 viewer'], [5, '5'], [25, '25']];
 
 /* ---------- state & routing ---------- */
 const state = { me: null, artifacts: [], tags: {}, tag: '', q: '', layout: 'grid' };
-try { if (localStorage.getItem('vitrine.layout') === 'rows') state.layout = 'rows'; } catch { /* private mode */ }
+try { if (localStorage.getItem('glasshelf.layout') === 'rows') state.layout = 'rows'; } catch { /* private mode */ }
 let viewer = null;
 let pollTimer = null;
 const SCREENS = ['setup', 'login', 'gallery', 'detail', 'settings', 'consent'];
@@ -383,7 +383,7 @@ $('#view-rows').addEventListener('click', () => setLayout('rows'));
 $('#view-grid').addEventListener('click', () => setLayout('grid'));
 function setLayout(v) {
   state.layout = v;
-  try { localStorage.setItem('vitrine.layout', v); } catch { /* private mode */ }
+  try { localStorage.setItem('glasshelf.layout', v); } catch { /* private mode */ }
   renderGallery();
 }
 let searchTimer;
@@ -663,7 +663,7 @@ function commentRow(c) {
 // The artifact iframe reports selected text (see pickScript on the server).
 // Sandboxed frames have an opaque origin, so check the sender's window.
 window.addEventListener('message', (e) => {
-  if (!viewer || !e.data || e.data.vitrine !== 'selection') return;
+  if (!viewer || !e.data || e.data.glasshelf !== 'selection') return;
   const f = $('#stage iframe');
   if (!f || e.source !== f.contentWindow) return;
   viewer.selection = String(e.data.text || '').slice(0, 500);
@@ -896,16 +896,16 @@ async function openSettings() {
         h('div', { class: 'form-row wrap' }, user, cur, next, changePw)),
       h('section', { class: 'panel' },
         h('h2', {}, icon('note'), 'Look & feel'),
-        h('p', { class: 'muted' }, 'Agents read ', h('a', { href: '/design.md', target: '_blank', text: '/design.md' }), ' before writing artifacts, so everything they publish matches your style. Export the theme with ', h('code', { text: 'vitrine theme init ./my-theme' }), ', ask your AI to restyle it, then run with ', h('code', { text: '--theme-dir ./my-theme' }), '.'),
+        h('p', { class: 'muted' }, 'Agents read ', h('a', { href: '/design.md', target: '_blank', text: '/design.md' }), ' before writing artifacts, so everything they publish matches your style. Export the theme with ', h('code', { text: 'glasshelf theme init ./my-theme' }), ', ask your AI to restyle it, then run with ', h('code', { text: '--theme-dir ./my-theme' }), '.'),
         h('p', { class: 'muted' }, me.separateContentOrigin ? 'Artifacts are served from a separate origin (' : 'Artifacts are sandboxed on ', h('code', { text: me.contentOrigin }), me.separateContentOrigin ? ') — best isolation.' : '. For the strongest isolation, add --content-url with a second domain.'))));
 }
 
 function showToken(box, token) {
   const base = state.me.publicUrl;
   const snippets = [
-    ['Claude Code (MCP)', `claude mcp add --transport http vitrine ${base}/mcp --header "Authorization: Bearer ${token}"`],
-    ['Agent skill (any agent)', `npx skills add dinhkarate/vitrine\nexport VITRINE_URL=${base}\nexport VITRINE_TOKEN=${token}`],
-    ['CLI', `VITRINE_URL=${base} VITRINE_TOKEN=${token} vitrine publish report.html`],
+    ['Claude Code (MCP)', `claude mcp add --transport http glasshelf ${base}/mcp --header "Authorization: Bearer ${token}"`],
+    ['Agent skill (any agent)', `npx skills add dinhkarate/glasshelf\nexport GLASSHELF_URL=${base}\nexport GLASSHELF_TOKEN=${token}`],
+    ['CLI', `GLASSHELF_URL=${base} GLASSHELF_TOKEN=${token} glasshelf publish report.html`],
   ];
   box.hidden = false;
   box.textContent = '';

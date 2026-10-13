@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dinhkarate/vitrine/internal/webauthn"
+	"github.com/dinhkarate/glasshelf/internal/webauthn"
 )
 
 // File is one uploaded file inside an artifact version.
@@ -135,7 +135,7 @@ type OAuthClient struct {
 	CreatedAt    time.Time `json:"createdAt"`
 }
 
-// State is everything vitrine persists apart from the file bytes.
+// State is everything glasshelf persists apart from the file bytes.
 type State struct {
 	PasswordHash string                  `json:"passwordHash,omitempty"`
 	SigningKey   []byte                  `json:"signingKey"`
@@ -146,7 +146,7 @@ type State struct {
 	OAuthClients map[string]*OAuthClient `json:"oauthClients,omitempty"`
 }
 
-// Store guards State and writes it atomically to <dir>/vitrine.json.
+// Store guards State and writes it atomically to <dir>/glasshelf.json.
 type Store struct {
 	mu   sync.RWMutex
 	dir  string
@@ -159,7 +159,13 @@ func OpenStore(dir string) (*Store, error) {
 	if err := os.MkdirAll(filepath.Join(dir, "artifacts"), 0o700); err != nil {
 		return nil, err
 	}
-	st := &Store{dir: dir, path: filepath.Join(dir, "vitrine.json")}
+	st := &Store{dir: dir, path: filepath.Join(dir, "glasshelf.json")}
+	// Data directories from before the rename keep their state file.
+	if old := filepath.Join(dir, "vitrine.json"); !exists(st.path) && exists(old) {
+		if err := os.Rename(old, st.path); err != nil {
+			return nil, err
+		}
+	}
 	raw, err := os.ReadFile(st.path)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
@@ -287,4 +293,9 @@ func normTags(in []string) []string {
 		out = []string{}
 	}
 	return out
+}
+
+func exists(p string) bool {
+	_, err := os.Stat(p)
+	return err == nil
 }

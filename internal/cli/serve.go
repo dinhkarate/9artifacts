@@ -1,4 +1,4 @@
-// Package cli implements the vitrine subcommands.
+// Package cli implements the glasshelf subcommands.
 package cli
 
 import (
@@ -26,48 +26,57 @@ import (
 
 	"golang.org/x/crypto/acme/autocert"
 
-	"github.com/dinhkarate/vitrine/internal/app"
-	"github.com/dinhkarate/vitrine/web"
+	"github.com/dinhkarate/glasshelf/internal/app"
+	"github.com/dinhkarate/glasshelf/web"
 )
 
+// env reads GLASSHELF_* settings, falling back to the VITRINE_* names the
+// project used before it was renamed.
 func env(key, def string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
+	}
+	if old, ok := strings.CutPrefix(key, "GLASSHELF_"); ok {
+		if v := os.Getenv("VITRINE_" + old); v != "" {
+			return v
+		}
 	}
 	return def
 }
 
 func defaultDataDir() string {
-	if v := os.Getenv("VITRINE_DATA"); v != "" {
+	if v := env("GLASSHELF_DATA", ""); v != "" {
 		return v
 	}
-	if st, err := os.Stat("/var/lib/vitrine"); err == nil && st.IsDir() {
-		return "/var/lib/vitrine"
+	for _, d := range []string{"/var/lib/glasshelf", "/var/lib/vitrine"} { // pre-rename installs
+		if st, err := os.Stat(d); err == nil && st.IsDir() {
+			return d
+		}
 	}
-	return "./vitrine-data"
+	return "./glasshelf-data"
 }
 
 // Serve runs the HTTP server.
 func Serve(args []string, version string) error {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
-	addr := fs.String("addr", env("VITRINE_ADDR", ":8080"), "listen address (ignored with --domain)")
+	addr := fs.String("addr", env("GLASSHELF_ADDR", ":8080"), "listen address (ignored with --domain)")
 	data := fs.String("data", defaultDataDir(), "data directory")
-	public := fs.String("url", env("VITRINE_URL", ""), "public URL users browse, e.g. https://art.example.com")
-	content := fs.String("content-url", env("VITRINE_CONTENT_URL", ""), "separate origin for artifact content, e.g. https://art-usercontent.example.com (recommended)")
-	domain := fs.String("domain", env("VITRINE_DOMAIN", ""), "serve HTTPS on :443 with automatic Let's Encrypt certificates for this domain")
-	contentDomain := fs.String("content-domain", env("VITRINE_CONTENT_DOMAIN", ""), "with --domain: also get a certificate for this content domain")
-	email := fs.String("email", env("VITRINE_EMAIL", ""), "with --domain: contact email for Let's Encrypt")
-	name := fs.String("name", env("VITRINE_NAME", "vitrine"), "name shown in the UI")
-	theme := fs.String("theme", env("VITRINE_THEME", "default"), "built-in theme: "+strings.Join(builtinThemes(), ", "))
-	themeDir := fs.String("theme-dir", env("VITRINE_THEME_DIR", ""), "directory overriding theme files (see vitrine theme init)")
-	trust := proxyMode(env("VITRINE_TRUST_PROXY", ""))
+	public := fs.String("url", env("GLASSHELF_URL", ""), "public URL users browse, e.g. https://art.example.com")
+	content := fs.String("content-url", env("GLASSHELF_CONTENT_URL", ""), "separate origin for artifact content, e.g. https://art-usercontent.example.com (recommended)")
+	domain := fs.String("domain", env("GLASSHELF_DOMAIN", ""), "serve HTTPS on :443 with automatic Let's Encrypt certificates for this domain")
+	contentDomain := fs.String("content-domain", env("GLASSHELF_CONTENT_DOMAIN", ""), "with --domain: also get a certificate for this content domain")
+	email := fs.String("email", env("GLASSHELF_EMAIL", ""), "with --domain: contact email for Let's Encrypt")
+	name := fs.String("name", env("GLASSHELF_NAME", "glasshelf"), "name shown in the UI")
+	theme := fs.String("theme", env("GLASSHELF_THEME", "default"), "built-in theme: "+strings.Join(builtinThemes(), ", "))
+	themeDir := fs.String("theme-dir", env("GLASSHELF_THEME_DIR", ""), "directory overriding theme files (see glasshelf theme init)")
+	trust := proxyMode(env("GLASSHELF_TRUST_PROXY", ""))
 	fs.Var(&trust, "trust-proxy", "behind a proxy: take the client IP from X-Forwarded-For (bare flag or xff), CF-Connecting-IP (cloudflare) or Tailscale Serve/Funnel (tailscale)")
-	maxMB := fs.Int("max-upload-mb", atoiDef(env("VITRINE_MAX_UPLOAD_MB", "100"), 100), "maximum upload size in MB")
-	sharesOnContent := fs.Bool("shares-on-content", env("VITRINE_SHARES_ON_CONTENT", "") == "1", "serve public share pages from --content-url, so the app host can stay private (Tailscale, Cloudflare Access)")
-	cfTeam := fs.String("cf-access-team", env("VITRINE_CF_ACCESS_TEAM", ""), "Cloudflare Access team URL, e.g. https://myteam.cloudflareaccess.com (with --cf-access-aud)")
-	cfAUD := fs.String("cf-access-aud", env("VITRINE_CF_ACCESS_AUD", ""), "Cloudflare Access application AUD tag: browser requests to the app host must carry a valid Access JWT")
-	webhook := fs.String("webhook", env("VITRINE_WEBHOOK", ""), "comma-separated URLs to notify on publishes, shares and share visits (Slack, Discord, any JSON endpoint; prefix ntfy+ for ntfy)")
-	artifactCSP := fs.String("artifact-csp", env("VITRINE_ARTIFACT_CSP", ""), "extra CSP directives for artifact pages, e.g. \"connect-src 'none'\"")
+	maxMB := fs.Int("max-upload-mb", atoiDef(env("GLASSHELF_MAX_UPLOAD_MB", "100"), 100), "maximum upload size in MB")
+	sharesOnContent := fs.Bool("shares-on-content", env("GLASSHELF_SHARES_ON_CONTENT", "") == "1", "serve public share pages from --content-url, so the app host can stay private (Tailscale, Cloudflare Access)")
+	cfTeam := fs.String("cf-access-team", env("GLASSHELF_CF_ACCESS_TEAM", ""), "Cloudflare Access team URL, e.g. https://myteam.cloudflareaccess.com (with --cf-access-aud)")
+	cfAUD := fs.String("cf-access-aud", env("GLASSHELF_CF_ACCESS_AUD", ""), "Cloudflare Access application AUD tag: browser requests to the app host must carry a valid Access JWT")
+	webhook := fs.String("webhook", env("GLASSHELF_WEBHOOK", ""), "comma-separated URLs to notify on publishes, shares and share visits (Slack, Discord, any JSON endpoint; prefix ntfy+ for ntfy)")
+	artifactCSP := fs.String("artifact-csp", env("GLASSHELF_ARTIFACT_CSP", ""), "extra CSP directives for artifact pages, e.g. \"connect-src 'none'\"")
 	_ = fs.Parse(args)
 
 	if *domain != "" {
@@ -96,7 +105,7 @@ func Serve(args []string, version string) error {
 	}()
 	defer os.Remove(app.AdminSocketPath(*data))
 
-	log.Printf("vitrine %s — data %s", version, *data)
+	log.Printf("glasshelf %s — data %s", version, *data)
 	if u := srv.SetupURL(); u != "" {
 		log.Printf("first run: open %s to set the owner password", u)
 	}
@@ -175,7 +184,7 @@ func builtinThemes() []string {
 func adminClient(data string) (*http.Client, error) {
 	sock := app.AdminSocketPath(data)
 	if _, err := os.Stat(sock); err != nil {
-		return nil, fmt.Errorf("no running server found at %s (is vitrine serve running with --data %s? are you the right user?)", sock, data)
+		return nil, fmt.Errorf("no running server found at %s (is glasshelf serve running with --data %s? are you the right user?)", sock, data)
 	}
 	return &http.Client{Timeout: 30 * time.Second, Transport: &http.Transport{
 		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
@@ -265,7 +274,7 @@ func Status(args []string) error {
 // Theme exports theme files for customisation.
 func Theme(args []string) error {
 	if len(args) < 1 || args[0] != "init" {
-		return errors.New("usage: vitrine theme init DIR [--from default] [--full]")
+		return errors.New("usage: glasshelf theme init DIR [--from default] [--full]")
 	}
 	fs := flag.NewFlagSet("theme init", flag.ExitOnError)
 	from := fs.String("from", "default", "built-in theme to start from: "+strings.Join(builtinThemes(), ", "))
@@ -280,7 +289,7 @@ func Theme(args []string) error {
 		dir = fs.Arg(0)
 	}
 	if dir == "" {
-		return errors.New("usage: vitrine theme init DIR")
+		return errors.New("usage: glasshelf theme init DIR")
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
@@ -322,7 +331,7 @@ func Theme(args []string) error {
 			}
 		}
 	}
-	fmt.Fprintf(os.Stderr, "\nRestart with: vitrine serve --theme-dir %s\nThen ask your AI: \"Restyle %s/theme.css to look like <brand>, and update design.md to match.\"\n", dir, dir)
+	fmt.Fprintf(os.Stderr, "\nRestart with: glasshelf serve --theme-dir %s\nThen ask your AI: \"Restyle %s/theme.css to look like <brand>, and update design.md to match.\"\n", dir, dir)
 	return nil
 }
 

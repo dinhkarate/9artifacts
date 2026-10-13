@@ -1,4 +1,4 @@
-// Command vitrine-ts is vitrine with Tailscale built in: no domain, no open
+// Command glasshelf-ts is glasshelf with Tailscale built in: no domain, no open
 // ports, no separate tailscaled. One tsnet node serves the gallery, API and
 // MCP to your tailnet only (https://NAME.TAILNET.ts.net), and, with Funnel,
 // share links and artifact files to the Internet on port 8443 (a separate
@@ -22,23 +22,29 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dinhkarate/vitrine/internal/app"
+	"github.com/dinhkarate/glasshelf/internal/app"
 	"tailscale.com/ipn"
 	"tailscale.com/tsnet"
 )
 
 var version = "dev"
 
+// env reads GLASSHELF_* settings, falling back to the pre-rename VITRINE_*.
 func env(key, def string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
+	}
+	if old, ok := strings.CutPrefix(key, "GLASSHELF_"); ok {
+		if v := os.Getenv("VITRINE_" + old); v != "" {
+			return v
+		}
 	}
 	return def
 }
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "version" {
-		fmt.Println("vitrine-ts", version)
+		fmt.Println("glasshelf-ts", version)
 		return
 	}
 	args := os.Args[1:]
@@ -51,17 +57,17 @@ func main() {
 }
 
 func serve(args []string) error {
-	fs := flag.NewFlagSet("vitrine-ts", flag.ExitOnError)
-	data := fs.String("data", env("VITRINE_DATA", "./vitrine-data"), "data directory (tailnet state lives in DATA/tsnet)")
-	hostname := fs.String("hostname", env("VITRINE_TS_HOSTNAME", "vitrine"), "machine name on your tailnet (part of the URL; renaming breaks passkeys)")
-	funnel := fs.Bool("funnel", env("VITRINE_TS_FUNNEL", "1") != "0", "publish share links and artifact files to the Internet on :8443 with Funnel (needs Funnel enabled in the tailnet policy)")
-	name := fs.String("name", env("VITRINE_NAME", "vitrine"), "name shown in the UI")
-	theme := fs.String("theme", env("VITRINE_THEME", "default"), "built-in theme")
-	themeDir := fs.String("theme-dir", env("VITRINE_THEME_DIR", ""), "directory overriding theme files")
+	fs := flag.NewFlagSet("glasshelf-ts", flag.ExitOnError)
+	data := fs.String("data", env("GLASSHELF_DATA", "./glasshelf-data"), "data directory (tailnet state lives in DATA/tsnet)")
+	hostname := fs.String("hostname", env("GLASSHELF_TS_HOSTNAME", "glasshelf"), "machine name on your tailnet (part of the URL; renaming breaks passkeys)")
+	funnel := fs.Bool("funnel", env("GLASSHELF_TS_FUNNEL", "1") != "0", "publish share links and artifact files to the Internet on :8443 with Funnel (needs Funnel enabled in the tailnet policy)")
+	name := fs.String("name", env("GLASSHELF_NAME", "glasshelf"), "name shown in the UI")
+	theme := fs.String("theme", env("GLASSHELF_THEME", "default"), "built-in theme")
+	themeDir := fs.String("theme-dir", env("GLASSHELF_THEME_DIR", ""), "directory overriding theme files")
 	maxMB := fs.Int("max-upload-mb", 100, "maximum upload size in MB")
-	webhook := fs.String("webhook", env("VITRINE_WEBHOOK", ""), "comma-separated webhook URLs")
+	webhook := fs.String("webhook", env("GLASSHELF_WEBHOOK", ""), "comma-separated webhook URLs")
 	_ = fs.Parse(args)
-	if v, err := strconv.Atoi(env("VITRINE_MAX_UPLOAD_MB", "")); err == nil {
+	if v, err := strconv.Atoi(env("GLASSHELF_MAX_UPLOAD_MB", "")); err == nil {
 		*maxMB = v
 	}
 
@@ -112,7 +118,7 @@ func serve(args []string) error {
 	}()
 	defer os.Remove(app.AdminSocketPath(*data))
 
-	log.Printf("vitrine-ts %s — data %s", version, *data)
+	log.Printf("glasshelf-ts %s — data %s", version, *data)
 	if u := srv.SetupURL(); u != "" {
 		log.Printf("first run: open %s (from a device on your tailnet) to set the owner password", u)
 	}
@@ -158,7 +164,7 @@ func serve(args []string) error {
 }
 
 // funnelListener reports the visitor's address (not the Funnel relay's) as
-// the connection's remote address, so vitrine's rate limits and view counts
+// the connection's remote address, so glasshelf's rate limits and view counts
 // see real clients.
 type funnelListener struct{ net.Listener }
 

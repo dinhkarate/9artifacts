@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build release archives into dist/: vitrine_<os>_<arch>.tar.gz (+ .zip for
+# Build release archives into dist/: glasshelf_<os>_<arch>.tar.gz (+ .zip for
 # Windows) and checksums.txt.  Usage: scripts/build-release.sh v0.1.0
 set -eu
 VERSION="${1:?usage: build-release.sh VERSION}"
@@ -7,34 +7,34 @@ rm -rf dist && mkdir -p dist
 for target in linux/amd64 linux/arm64 linux/armv7 darwin/amd64 darwin/arm64 windows/amd64 freebsd/amd64; do
   os=${target%/*}; arch=${target#*/}; goarch=$arch; goarm=""
   if [ "$arch" = armv7 ]; then goarch=arm; goarm=7; fi
-  out="dist/vitrine_${os}_${arch}"
+  out="dist/glasshelf_${os}_${arch}"
   mkdir -p "$out"
-  bin=vitrine; [ "$os" = windows ] && bin=vitrine.exe
+  bin=glasshelf; [ "$os" = windows ] && bin=glasshelf.exe
   CGO_ENABLED=0 GOOS=$os GOARCH=$goarch GOARM=$goarm go build -trimpath \
-    -ldflags "-s -w -X main.version=$VERSION" -o "$out/$bin" ./cmd/vitrine
+    -ldflags "-s -w -X main.version=$VERSION" -o "$out/$bin" ./cmd/glasshelf
   cp README.md LICENSE "$out/"
   if [ "$os" = windows ]; then
-    (cd "$out" && zip -q "../vitrine_${os}_${arch}.zip" $bin README.md LICENSE)
+    (cd "$out" && zip -q "../glasshelf_${os}_${arch}.zip" $bin README.md LICENSE)
   else
     tar -czf "$out.tar.gz" -C "$out" $bin README.md LICENSE
   fi
   rm -rf "$out"
 done
-# vitrine-ts: Tailscale built in (separate module, ~16 MB larger).
+# glasshelf-ts: Tailscale built in (separate module, ~16 MB larger).
 for target in linux/amd64 linux/arm64 darwin/arm64 darwin/amd64 windows/amd64; do
   os=${target%/*}; arch=${target#*/}
-  out="dist/vitrine-ts_${os}_${arch}"
+  out="dist/glasshelf-ts_${os}_${arch}"
   mkdir -p "$out"
-  bin=vitrine-ts; [ "$os" = windows ] && bin=vitrine-ts.exe
+  bin=glasshelf-ts; [ "$os" = windows ] && bin=glasshelf-ts.exe
   (cd tailscale && CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath \
     -ldflags "-s -w -X main.version=$VERSION" -o "../$out/$bin" .)
   cp README.md LICENSE "$out/"
   if [ "$os" = windows ]; then
-    (cd "$out" && zip -q "../vitrine-ts_${os}_${arch}.zip" $bin README.md LICENSE)
+    (cd "$out" && zip -q "../glasshelf-ts_${os}_${arch}.zip" $bin README.md LICENSE)
   else
     tar -czf "$out.tar.gz" -C "$out" $bin README.md LICENSE
   fi
   rm -rf "$out"
 done
-(cd dist && (command -v sha256sum >/dev/null && sha256sum vitrine_* vitrine-ts_* || shasum -a 256 vitrine_* vitrine-ts_*) > checksums.txt)
+(cd dist && (command -v sha256sum >/dev/null && sha256sum glasshelf_* glasshelf-ts_* || shasum -a 256 glasshelf_* glasshelf-ts_*) > checksums.txt)
 ls -lh dist
