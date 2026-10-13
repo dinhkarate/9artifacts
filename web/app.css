@@ -156,6 +156,9 @@ label{display:block;font-size:13px;font-weight:600;color:var(--text-2);margin:14
 .file-list .size{color:var(--muted);font-size:12px;padding-right:8px}
 .version-list li button{width:100%;text-align:left;border:0;background:transparent;color:inherit;font:inherit;font-size:13.5px;padding:7px 8px;border-radius:var(--radius-sm);cursor:pointer}
 .version-list li.current button,.version-list li button:hover{background:var(--surface-2)}
+.version-list li{display:flex;align-items:center;gap:4px}
+.version-list li button.btn{width:auto;flex:none;font-size:12.5px;padding:4px 9px}
+.version-list li.current button.btn{background:transparent}
 .facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;margin:24px 0 0}
 .facts dt{color:var(--muted)}
 .facts dd{margin:0}

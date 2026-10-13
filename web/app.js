@@ -604,7 +604,16 @@ function infoPanel() {
       h('h3', { text: `History (${a.versions.length})` }),
       h('ul', { class: 'version-list' }, a.versions.map((x) => h('li', { class: x.n === v.n ? 'current' : '' },
         h('button', { type: 'button', onclick: () => { viewer.version = x.n === a.version ? 0 : x.n; viewer.file = null; renderViewer(); viewer.drawer = 'info'; paintDrawer(); } },
-          h('strong', { text: `v${x.n}` }), h('span', { class: 'muted', text: ` ${x.message ? `${x.message} · ` : ''}${ago(x.createdAt)}` }))))),
+          h('strong', { text: `v${x.n}` }), h('span', { class: 'muted', text: ` ${x.message ? `${x.message} · ` : ''}${ago(x.createdAt)}` })),
+        x.n === a.version ? null : confirmButton('Restore', 'Click again', async () => {
+          viewer.artifact = await api('POST', `/api/artifacts/${a.id}/versions/${x.n}/restore`);
+          viewer.version = 0;
+          viewer.file = null;
+          renderViewer();
+          viewer.drawer = 'info';
+          paintDrawer();
+          toast(`Restored v${x.n} as v${viewer.artifact.version}`);
+        }, 'btn ghost sm')))),
     ] : null,
     h('dl', { class: 'facts' },
       h('dt', { text: 'Created' }), h('dd', { text: fmtDate(a.createdAt) }),

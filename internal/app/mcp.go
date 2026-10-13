@@ -172,6 +172,8 @@ var (
 				"note": map[string]any{"type": "string", "description": "Public note shown on the share page"}}, "id", "ttl")},
 		{"name": "revoke_share", "description": "Revoke a public share link immediately.",
 			"inputSchema": schema(map[string]any{"id": strProp, "token": strProp}, "id", "token")},
+		{"name": "restore_version", "description": "Publish an earlier version again as the new latest version (history is kept). Use when the user wants to undo changes.",
+			"inputSchema": schema(map[string]any{"id": strProp, "version": map[string]any{"type": "integer", "description": "Version number to restore"}}, "id", "version")},
 		{"name": "delete_artifact", "description": "Permanently delete an artifact and all its versions. Only when the user explicitly asks.",
 			"inputSchema": schema(map[string]any{"id": strProp}, "id")},
 	}
@@ -324,6 +326,18 @@ func (s *Server) mcpCall(name string, raw json.RawMessage) (string, error) {
 			return "", err
 		}
 		return "Share revoked.", nil
+
+	case "restore_version":
+		var a struct {
+			ID      string
+			Version int
+		}
+		_ = json.Unmarshal(raw, &a)
+		out, _, err := s.RestoreVersion(a.ID, a.Version)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("Restored v%d as v%d: %s", a.Version, out.Version, out.URL), nil
 
 	case "delete_artifact":
 		var a struct{ ID string }

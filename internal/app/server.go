@@ -196,6 +196,7 @@ func (s *Server) routes() {
 	m.HandleFunc("PATCH /api/artifacts/{id}", s.auth(s.handlePatch))
 	m.HandleFunc("DELETE /api/artifacts/{id}", s.auth(s.handleDelete))
 	m.HandleFunc("POST /api/artifacts/{id}/versions", s.auth(s.handleNewVersion))
+	m.HandleFunc("POST /api/artifacts/{id}/versions/{n}/restore", s.auth(s.handleRestore))
 	m.HandleFunc("POST /api/artifacts/{id}/shares", s.auth(s.handleShareCreate))
 	m.HandleFunc("DELETE /api/artifacts/{id}/shares/{token}", s.auth(s.handleShareRevoke))
 	m.HandleFunc("GET /api/artifacts/{id}/download/{path...}", s.auth(s.handleDownload))

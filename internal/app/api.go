@@ -546,6 +546,46 @@ func (s *Server) AddVersion(id string, m meta, files []upload) (artifactView, in
 	return out, 201, nil
 }
 
+// RestoreVersion publishes a copy of version n as the new latest version,
+// so history stays append-only.
+func (s *Server) RestoreVersion(id string, n int) (artifactView, int, error) {
+	var old *Version
+	s.store.Read(func(st *State) {
+		if a := st.Artifacts[id]; a != nil {
+			for i := range a.Versions {
+				if a.Versions[i].N == n {
+					v := a.Versions[i]
+					old = &v
+				}
+			}
+		}
+	})
+	if old == nil {
+		return artifactView{}, 404, errors.New("version not found")
+	}
+	dir := s.store.VersionDir(id, n)
+	files := make([]upload, 0, len(old.Files))
+	for _, f := range old.Files {
+		p := filepath.Join(dir, filepath.FromSlash(f.Name))
+		files = append(files, upload{name: f.Name, open: func() (io.ReadCloser, error) { return os.Open(p) }})
+	}
+	return s.AddVersion(id, meta{Entry: old.Entry, Message: fmt.Sprintf("Restored from v%d", n)}, files)
+}
+
+func (s *Server) handleRestore(w http.ResponseWriter, r *http.Request) {
+	n, err := strconv.Atoi(r.PathValue("n"))
+	if err != nil {
+		writeError(w, 400, "invalid version")
+		return
+	}
+	out, status, err := s.RestoreVersion(r.PathValue("id"), n)
+	if err != nil {
+		writeError(w, status, err.Error())
+		return
+	}
+	writeJSON(w, status, out)
+}
+
 func applyMeta(a *Artifact, m meta) {
 	if m.Title != nil && strings.TrimSpace(*m.Title) != "" {
 		a.Title = truncate(*m.Title, 160)

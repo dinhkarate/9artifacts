@@ -14,6 +14,7 @@ Errors are JSON: `{"error": "..."}`.
 | `PATCH` | `/api/artifacts/{id}` | `{title?, tags?, note?, pinned?}` | artifact |
 | `DELETE` | `/api/artifacts/{id}` | — | `{ok: true}` |
 | `POST` | `/api/artifacts/{id}/versions` | multipart or JSON, plus `keep` | `201` artifact (new version) |
+| `POST` | `/api/artifacts/{id}/versions/{n}/restore` | — | `201` artifact: a copy of version `n` becomes the new latest |
 | `GET` | `/api/artifacts/{id}/download/{file}?v=N` | — | file as attachment |
 | `POST` | `/api/artifacts/{id}/shares` | `{ttl: "1h"\|"24h"\|"7d"\|"30d", note?, version?}` | `201` share, pinned to `version` (default: the current latest) |
 | `DELETE` | `/api/artifacts/{id}/shares/{token}` | — | revoke |
@@ -80,6 +81,7 @@ bearer token.
 | `read_artifact` | read a text file of an artifact, to edit and republish |
 | `share_artifact` | expiring public link; only when the user asks |
 | `revoke_share` | revoke a link |
+| `restore_version` | publish an earlier version again as the latest |
 | `delete_artifact` | delete; only when the user asks |
 
 ## Misc

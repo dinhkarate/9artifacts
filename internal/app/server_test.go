@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"net/textproto"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -522,5 +523,23 @@ func TestUploadOverLimitIs413(t *testing.T) {
 	rec := e.do("POST", "/api/artifacts", &buf, hdr)
 	if rec.Code != 413 || !strings.Contains(rec.Body.String(), "max-upload-mb") {
 		t.Fatalf("oversized upload: %d %s", rec.Code, rec.Body)
+	}
+}
+
+func TestRestoreVersion(t *testing.T) {
+	e := newEnv(t, Config{})
+	a := decode[artifactView](t, e.upload("/api/artifacts", nil, map[string]string{"index.html": "<h1>one</h1>", "data.json": "{}"}))
+	e.upload("/api/artifacts/"+a.ID+"/versions", nil, map[string]string{"index.html": "<h1>two</h1>"})
+	rec := e.api("POST", "/api/artifacts/"+a.ID+"/versions/1/restore", nil)
+	got := decode[artifactView](t, rec)
+	if rec.Code != 201 || got.Version != 3 || len(got.Files) != 2 {
+		t.Fatalf("restore: %d v%d files=%d", rec.Code, got.Version, len(got.Files))
+	}
+	b, err := os.ReadFile(filepath.Join(e.srv.store.VersionDir(a.ID, 3), "index.html"))
+	if err != nil || string(b) != "<h1>one</h1>" {
+		t.Fatalf("restored content: %q %v", b, err)
+	}
+	if rec := e.api("POST", "/api/artifacts/"+a.ID+"/versions/9/restore", nil); rec.Code != 404 {
+		t.Fatalf("missing version: %d", rec.Code)
 	}
 }
