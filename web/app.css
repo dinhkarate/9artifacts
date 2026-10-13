@@ -50,7 +50,7 @@ label{display:block;font-size:13px;font-weight:600;color:var(--text-2);margin:14
 .flag.shared{color:var(--accent)}
 .pill{display:inline-flex;height:20px;align-items:center;padding:0 8px;border-radius:999px;font-size:12px;font-weight:700}
 .pill.active{background:var(--accent-soft);color:var(--accent)}
-.pill.revoked,.pill.expired{background:var(--surface-2);color:var(--muted)}
+.pill.revoked,.pill.expired,.pill.used{background:var(--surface-2);color:var(--muted)}
 
 /* toasts */
 .toasts{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:100;width:min(440px,calc(100vw - 32px))}
@@ -166,7 +166,8 @@ label{display:block;font-size:13px;font-weight:600;color:var(--text-2);margin:14
 .share-link{border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px}
 .share-link-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px}
 .share-url{display:block;font-size:12px;margin-top:8px;word-break:break-all;color:var(--text-2)}
-.share-link.revoked,.share-link.expired{opacity:.7}
+.share-link.revoked,.share-link.expired,.share-link.used{opacity:.7}
+.share-views{margin:6px 0 0}
 .share-history summary{cursor:pointer;color:var(--muted);font-size:13px;margin:16px 0 8px}
 
 /* settings */

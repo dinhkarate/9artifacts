@@ -56,6 +56,7 @@ type Server struct {
 	failures   map[string]*failure
 	global     failure // password failures from all addresses
 	begins     map[string]*failure
+	viewers    map[string]time.Time // share token|client IP → last counted view
 }
 
 type challenge struct {
@@ -112,6 +113,7 @@ func New(cfg Config, st *Store) (*Server, error) {
 		challenges: map[string]challenge{},
 		failures:   map[string]*failure{},
 		begins:     map[string]*failure{},
+		viewers:    map[string]time.Time{},
 	}
 	if cfg.ContentURL != "" {
 		cu, err := url.Parse(cfg.ContentURL)

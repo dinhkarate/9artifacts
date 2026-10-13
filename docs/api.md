@@ -16,7 +16,7 @@ Errors are JSON: `{"error": "..."}`.
 | `POST` | `/api/artifacts/{id}/versions` | multipart or JSON, plus `keep` | `201` artifact (new version) |
 | `POST` | `/api/artifacts/{id}/versions/{n}/restore` | — | `201` artifact: a copy of version `n` becomes the new latest |
 | `GET` | `/api/artifacts/{id}/download/{file}?v=N` | — | file as attachment |
-| `POST` | `/api/artifacts/{id}/shares` | `{ttl: "1h"\|"24h"\|"7d"\|"30d", note?, version?}` | `201` share, pinned to `version` (default: the current latest) |
+| `POST` | `/api/artifacts/{id}/shares` | `{ttl: "1h"\|"24h"\|"7d"\|"30d", note?, version?, maxViews?}` | `201` share, pinned to `version` (default: the current latest); `maxViews` stops the link after that many distinct visitors |
 | `DELETE` | `/api/artifacts/{id}/shares/{token}` | — | revoke |
 
 ### Uploading
@@ -65,7 +65,9 @@ the HTML `<title>` or the first Markdown `# heading`.
 
 | Path | |
 |---|---|
-| `GET /s/{token}` | share page (`410` when expired or revoked) |
+| `GET /s/{token}` | share page (`410` when expired, revoked or out of views) |
+
+Shares report `views` (distinct visitors, counted once per address per hour), `maxViews` and `lastViewedAt`.
 | `GET /s/{token}/f/{file}` | raw file (on the content origin); `?view=1` renders Markdown, `?download=1` downloads |
 
 ## MCP

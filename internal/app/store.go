@@ -40,10 +40,20 @@ type Share struct {
 	CreatedAt time.Time  `json:"createdAt"`
 	ExpiresAt time.Time  `json:"expiresAt"`
 	RevokedAt *time.Time `json:"revokedAt,omitempty"`
+	// Views counts distinct visitors (one per address per hour).
+	Views        int        `json:"views,omitempty"`
+	MaxViews     int        `json:"maxViews,omitempty"` // 0 means unlimited
+	LastViewedAt *time.Time `json:"lastViewedAt,omitempty"`
 }
 
 // Active reports whether the share link still works.
-func (s Share) Active(now time.Time) bool { return s.RevokedAt == nil && now.Before(s.ExpiresAt) }
+// Live reports whether the link is neither revoked nor expired.
+func (s Share) Live(now time.Time) bool { return s.RevokedAt == nil && now.Before(s.ExpiresAt) }
+
+// Active reports whether new visitors can still open the link.
+func (s Share) Active(now time.Time) bool {
+	return s.Live(now) && (s.MaxViews == 0 || s.Views < s.MaxViews)
+}
 
 // Artifact is a titled, tagged, versioned bundle of files.
 type Artifact struct {

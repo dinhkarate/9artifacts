@@ -130,6 +130,7 @@ const fileUrl = (base, name) => base + name.split('/').map(encodeURIComponent).j
 const viewSrc = (base, name) => fileUrl(base, name) + (fileKind(name) === 'markdown' ? '?view=1' : '');
 const SANDBOX = 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads';
 const TTLS = [['1h', '1 hour'], ['24h', '24 hours'], ['7d', '7 days'], ['30d', '30 days']];
+const VIEW_LIMITS = [[0, 'Unlimited'], [1, '1 viewer'], [5, '5'], [25, '25']];
 
 /* ---------- state & routing ---------- */
 const state = { me: null, artifacts: [], tags: {}, tag: '', q: '', layout: 'grid' };
@@ -628,13 +629,16 @@ function infoPanel() {
 }
 
 function shareRow(s) {
-  const st = s.active ? 'active' : s.revokedAt ? 'revoked' : 'expired';
-  const label = { active: 'Live', revoked: 'Revoked', expired: 'Expired' }[st];
+  const usedUp = s.maxViews > 0 && s.views >= s.maxViews;
+  const st = s.active ? 'active' : s.revokedAt ? 'revoked' : usedUp && Date.parse(s.expiresAt) > Date.now() ? 'used' : 'expired';
+  const label = { active: 'Live', revoked: 'Revoked', expired: 'Expired', used: 'Used up' }[st];
+  const views = `${s.views} ${s.views === 1 ? 'view' : 'views'}${s.maxViews ? ` of ${s.maxViews}` : ''}${s.lastViewedAt ? ` · last ${ago(s.lastViewedAt)}` : ''}`;
   const li = h('li', { class: `share-link ${st}` },
     h('div', { class: 'share-link-top' },
       h('span', { class: `pill ${st}`, text: label }),
       h('span', { class: 'muted', text: `${s.version ? `v${s.version}` : 'latest'} · ${s.active ? `expires ${ago(s.expiresAt)}` : fmtDate(s.revokedAt || s.expiresAt)}` })),
-    h('code', { class: 'share-url', text: s.url }));
+    h('code', { class: 'share-url', text: s.url }),
+    h('p', { class: 'muted small share-views', text: views }));
   if (s.active) {
     li.append(h('div', { class: 'form-row' },
       h('button', { class: 'btn ghost sm', type: 'button', onclick: async () => toast(await copyText(s.url) ? 'Public link copied' : 'Copy failed') }, icon('copy'), 'Copy'),
@@ -659,11 +663,18 @@ function sharePanel() {
     for (const [val, label] of TTLS) group.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(val === ttl), class: val === ttl ? 'active' : '', text: label, onclick: () => { ttl = viewer.ttl = val; paint(); } }));
   };
   paint();
+  let maxViews = viewer.maxViews || 0;
+  const limits = h('div', { class: 'segmented wide', role: 'radiogroup', 'aria-label': 'View limit' });
+  const paintLimits = () => {
+    limits.textContent = '';
+    for (const [val, label] of VIEW_LIMITS) limits.append(h('button', { type: 'button', role: 'radio', 'aria-checked': String(val === maxViews), class: val === maxViews ? 'active' : '', text: label, onclick: () => { maxViews = viewer.maxViews = val; paintLimits(); } }));
+  };
+  paintLimits();
   const note = h('textarea', { maxLength: 1000, rows: 2, placeholder: 'Optional note shown to viewers…' });
   const create = h('button', { class: 'btn primary block', type: 'button', onclick: async () => {
     create.disabled = true;
     try {
-      const s = await api('POST', `/api/artifacts/${a.id}/shares`, { ttl, note: note.value });
+      const s = await api('POST', `/api/artifacts/${a.id}/shares`, { ttl, note: note.value, maxViews });
       const copied = await copyText(s.url);
       viewer.artifact = await api('GET', `/api/artifacts/${a.id}`);
       toast(copied ? 'Public link created and copied' : 'Public link created');
@@ -675,6 +686,7 @@ function sharePanel() {
   return [
     h('p', { class: 'hint' }, 'Anyone with a public link can view this artifact until it ', h('strong', { text: 'expires or you revoke it' }), '. Your private link always requires sign-in.'),
     h('label', { text: 'Expires after' }), group,
+    h('label', { text: 'View limit' }), limits,
     h('label', { text: 'Note for viewers' }), note,
     create,
     h('h3', { text: `Live links (${active.length})` }),

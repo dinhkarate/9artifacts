@@ -43,8 +43,8 @@
 <main class="gone">
   <div>
     <img src="/assets/logo.svg" alt="" width="48" height="48">
-    <h1>{{if eq .Status 410}}This link has expired{{else}}Link not found{{end}}</h1>
-    <p class="muted">{{if eq .Status 410}}The owner set this link to expire, or revoked it.{{else}}Check the address, or ask the owner for a new link.{{end}}</p>
+    <h1>{{if eq .Status 410}}This link is no longer available{{else}}Link not found{{end}}</h1>
+    <p class="muted">{{if eq .Status 410}}It expired, reached its view limit, or the owner revoked it.{{else}}Check the address, or ask the owner for a new link.{{end}}</p>
   </div>
 </main>
 {{end}}

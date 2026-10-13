@@ -82,7 +82,7 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleShareContent(w http.ResponseWriter, r *http.Request) {
-	id, v, _, _, status := s.resolveShare(r.PathValue("token"))
+	id, v, _, _, status := s.resolveShare(r, r.PathValue("token"))
 	if status != 200 {
 		http.Error(w, http.StatusText(status), status)
 		return
@@ -90,9 +90,9 @@ func (s *Server) handleShareContent(w http.ResponseWriter, r *http.Request) {
 	s.serveVersionFile(w, r, id, v, r.PathValue("path"), r.URL.Query().Has("download"), r.URL.Query().Has("view"))
 }
 
-// resolveShare returns the artifact id, version and title for an active
-// share token, or 404/410.
-func (s *Server) resolveShare(token string) (id string, v *Version, sh Share, title string, status int) {
+// resolveShare returns the artifact id, version and title for a live share
+// token and counts the visit, or 404/410.
+func (s *Server) resolveShare(r *http.Request, token string) (id string, v *Version, sh Share, title string, status int) {
 	status = 404
 	s.store.Read(func(st *State) {
 		a, share := st.FindShare(token)
@@ -100,7 +100,7 @@ func (s *Server) resolveShare(token string) (id string, v *Version, sh Share, ti
 			return
 		}
 		sh = *share
-		if !share.Active(time.Now()) {
+		if !share.Live(time.Now()) {
 			status = 410
 			return
 		}
@@ -109,8 +109,56 @@ func (s *Server) resolveShare(token string) (id string, v *Version, sh Share, ti
 			id, v, title, status = a.ID, &c, a.Title, 200
 		}
 	})
+	if status == 200 && !s.countView(token, s.clientIP(r)) {
+		return "", nil, sh, "", 410
+	}
 	return id, v, sh, title, status
 }
+
+const maxViewers = 10000
+
+// countView records at most one view per visitor address per hour, so page
+// reloads and the files a page loads count once. It reports false when the
+// link has used up its views and this visitor was not already counted.
+func (s *Server) countView(token, ip string) bool {
+	key := token + "|" + ip
+	now := time.Now()
+	s.mu.Lock()
+	seen, ok := s.viewers[key]
+	s.mu.Unlock()
+	if ok && now.Sub(seen) < time.Hour {
+		return true
+	}
+	err := s.store.Update(func(st *State) error {
+		_, sh := st.FindShare(token)
+		if sh == nil || !sh.Active(now) {
+			return errViewLimit
+		}
+		sh.Views++
+		t := now.UTC()
+		sh.LastViewedAt = &t
+		return nil
+	})
+	if err != nil {
+		return false
+	}
+	s.mu.Lock()
+	if len(s.viewers) >= maxViewers {
+		for k, t := range s.viewers {
+			if now.Sub(t) >= time.Hour {
+				delete(s.viewers, k)
+			}
+		}
+		if len(s.viewers) >= maxViewers {
+			clear(s.viewers)
+		}
+	}
+	s.viewers[key] = now
+	s.mu.Unlock()
+	return true
+}
+
+var errViewLimit = errors.New("share link is no longer available")
 
 // needsSandbox: every artifact response is sandboxed except PDFs, which
 // browsers refuse to render in a sandboxed document. Sandboxing images, CSS
@@ -227,7 +275,7 @@ func fileKind(name string) string {
 
 func (s *Server) handleSharePage(w http.ResponseWriter, r *http.Request) {
 	token := r.PathValue("token")
-	_, v, sh, title, status := s.resolveShare(token)
+	_, v, sh, title, status := s.resolveShare(r, token)
 	raw, err := s.shellFile("share.html")
 	if err != nil {
 		http.Error(w, "share.html missing", 500)

@@ -543,3 +543,28 @@ func TestRestoreVersion(t *testing.T) {
 		t.Fatalf("missing version: %d", rec.Code)
 	}
 }
+
+func TestShareViewLimit(t *testing.T) {
+	e := newEnv(t, Config{})
+	a := decode[artifactView](t, e.upload("/api/artifacts", nil, map[string]string{"index.html": "<h1>hi</h1>"}))
+	sh := decode[shareView](t, e.api("POST", "/api/artifacts/"+a.ID+"/shares", map[string]any{"ttl": "1h", "maxViews": 1}))
+	from := func(path, ip string) int {
+		return e.do("GET", path, nil, map[string]string{remoteAddr: ip + ":4000"}).Code
+	}
+	page, file := "/s/"+sh.Token, "/s/"+sh.Token+"/f/index.html"
+	for _, p := range []string{page, file, page} {
+		if c := from(p, "198.51.100.10"); c != 200 {
+			t.Fatalf("first visitor %s: %d", p, c)
+		}
+	}
+	if c := from(file, "198.51.100.11"); c != 410 {
+		t.Fatalf("second visitor got %d, want 410", c)
+	}
+	got := decode[artifactView](t, e.api("GET", "/api/artifacts/"+a.ID, nil))
+	if s := got.Shares[0]; s.Views != 1 || s.Active || s.LastView == nil {
+		t.Fatalf("share after limit: views=%d active=%v last=%v", s.Views, s.Active, s.LastView)
+	}
+	if rec := e.api("POST", "/api/artifacts/"+a.ID+"/shares", map[string]any{"ttl": "1h", "maxViews": -1}); rec.Code != 400 {
+		t.Fatalf("negative maxViews: %d", rec.Code)
+	}
+}
