@@ -28,16 +28,22 @@ link on someone else's servers.
 If you already rent a VPS, Glasshelf gives those artifacts a home you own:
 
 - **Private by default.** Everything needs your passkey. Nothing is public until you create a
-  link, and every public link **expires** (1 hour to 30 days) and can be revoked.
+  link, and every public link **expires** (1 hour to 30 days), can be revoked, and can have a
+  **password** and a **view limit**. Link previews in Slack or Discord never use up a view.
 - **Made for agents.** A built-in **MCP server**, a CLI and an installable **agent skill** let
   Claude Code, Codex, Cursor or any MCP client publish and update artifacts. They get back a
-  private URL to give you.
+  private URL to give you. claude.ai and ChatGPT connect as remote connectors over **OAuth**.
+- **Review loop.** Select text in an artifact, leave a comment, tell your agent to "fix the
+  comments": it reads them over MCP, publishes v2 and resolves them. Restore any old version.
 - **Feels like Claude's artifact viewer.** Full-bleed sandboxed viewer, version history, and
   **live reload**: when the agent publishes v2, your open tab updates by itself.
 - **Your style, everywhere.** Agents read your `design.md` before writing, so everything they
   publish matches your look. The app UI is themeable too, and your AI can restyle it for you.
-- **Tiny.** A single static binary with automatic HTTPS. It is happy on a 1 vCPU / 512 MB box,
-  a Raspberry Pi, or a free-tier VM.
+- **Tiny, and free to run.** A single static binary with automatic HTTPS. It is happy on a
+  1 vCPU / 512 MB box or a Raspberry Pi. No server at all? Deploy the **Cloudflare Workers
+  edition** on the free plan, or run `glasshelf-ts` at home with Tailscale built in.
+- **Tells you.** Webhooks to Slack, Discord or ntfy when an agent publishes or someone opens
+  your link.
 
 ## Screenshots
 
@@ -171,7 +177,8 @@ Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 |---|---|---|---|
 | Runs on your server | ✅ | ❌ | ✅ |
 | Private by default | ✅ passkey | ❌ (publish = public) | ❌ |
-| Expiring, revocable links | ✅ | ❌ | DIY |
+| Expiring, revocable links | ✅ + password, view limit | ❌ | DIY |
+| Review comments the agent fixes | ✅ | ✅ (Claude Code) | ❌ |
 | Any agent can publish (MCP / CLI / skill) | ✅ | Claude only | DIY |
 | Versions + live reload | ✅ | ✅ | ❌ |
 | Sandboxed, separate content origin | ✅ | ✅ | ❌ |
@@ -193,10 +200,13 @@ Free or a Google Cloud `e2-micro`. See [docs/deploy.md](docs/deploy.md#free-host
 
 ## Roadmap
 
+- [x] Review comments that go back to the agent
+- [x] Remote MCP over OAuth (claude.ai, ChatGPT connectors)
+- [x] Password-protected and view-limited share links
+- [x] Cloudflare Workers edition and a Tailscale build
 - [ ] Zip upload and folder upload from the browser
 - [ ] Full-text search inside artifacts
 - [ ] Optional client-side encryption for share links
-- [ ] Per-artifact comments
 - [ ] Read-only collaborators
 
 ## Contributing
