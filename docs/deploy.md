@@ -120,6 +120,10 @@ of the gallery while share links keep working. Create these Access applications:
 | `art.example.com/mcp`, `art.example.com/api/*` | Bypass (vitrine's API tokens still apply), or Service Auth if your agents can send `CF-Access-Client-Id`/`-Secret` headers |
 | `art-content.example.com` | **None.** Sandboxed artifacts can't send the Access cookie; the content host is already protected by signed view and share tokens |
 
+Simpler: start vitrine with `--shares-on-content`. Share links then live on the content host,
+so the app host needs no bypass rules for `/s/*` and `/assets/*`; protect it whole and only
+decide what to do with `/mcp` and `/api/*`.
+
 ## 5. Home server with Tailscale
 
 Free, and no domain needed: Tailscale gives each machine `name.your-tailnet.ts.net` with HTTPS.
@@ -132,10 +136,25 @@ vitrine serve --addr 127.0.0.1:8080 --url https://box.your-tailnet.ts.net --trus
 tailscale serve --bg 8080
 ```
 
-**Public share links with Funnel.** To let other people open share links, publish the same
-port to the Internet with Funnel instead (`tailscale funnel --bg 8080`, after enabling Funnel
-in the tailnet policy). Then the whole app is public, protected by your passkey or password
-like any other deployment.
+**Private app, public share links (recommended).** Keep the gallery, API and MCP on your
+tailnet and put only share links and artifact files on the Internet with Funnel, on a second
+port. A different port is a different origin, so you also get a separate content origin for free.
+Enable Funnel in the tailnet policy first.
+
+```bash
+vitrine serve --addr 127.0.0.1:8080 --url https://box.your-tailnet.ts.net \
+  --content-url https://box.your-tailnet.ts.net:8443 --shares-on-content --trust-proxy=tailscale
+tailscale serve  --bg --https=443  http://127.0.0.1:8080   # gallery, API, MCP: your devices only
+tailscale funnel --bg --https=8443 http://127.0.0.1:8080   # share links + artifact files: public
+```
+
+`--shares-on-content` makes share links use the content origin. On that port vitrine answers
+only share pages, their styles and artifact files; the gallery, login, API and MCP return 404
+there, so nothing private is reachable from the Internet. Agents on your devices use
+`https://box.your-tailnet.ts.net/mcp` as usual.
+
+**Everything public.** Alternatively funnel the single port (`tailscale funnel --bg 8080`): the
+whole app is then public, protected by your passkey or password like any other deployment.
 
 Things to know:
 
@@ -180,6 +199,7 @@ Every flag has an environment variable.
 | `--theme-dir` | `VITRINE_THEME_DIR` | — | directory overriding theme or shell files |
 | `--trust-proxy[=MODE]` | `VITRINE_TRUST_PROXY=1\|cloudflare\|tailscale` | off | behind a proxy, take the client IP for rate limiting from `X-Forwarded-For` (bare flag, `xff`), `CF-Connecting-IP` (`cloudflare`) or Tailscale Serve/Funnel (`tailscale`); only trusted on loopback or private-network connections |
 | `--max-upload-mb` | `VITRINE_MAX_UPLOAD_MB` | `100` | request size limit |
+| `--shares-on-content` | `VITRINE_SHARES_ON_CONTENT=1` | off | serve public share pages from `--content-url`, so everything public is on one host and the app host can stay private; old app-host share links redirect |
 | `--webhook` | `VITRINE_WEBHOOK` | — | comma-separated URLs notified on publishes, new versions, new share links and new share visitors; Slack and Discord incoming-webhook URLs work as-is, prefix `ntfy+` for ntfy (e.g. `ntfy+https://ntfy.sh/my-topic`) |
 | `--artifact-csp` | `VITRINE_ARTIFACT_CSP` | — | extra CSP for artifacts, e.g. `connect-src 'none'` to block network access |
 

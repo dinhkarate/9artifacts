@@ -373,7 +373,7 @@ func (s *Server) view(a *Artifact, full bool) artifactView {
 			out.Active++
 		}
 		if full {
-			out.Shares = append(out.Shares, shareView{Token: sh.Token, URL: s.cfg.PublicURL + "/s/" + sh.Token,
+			out.Shares = append(out.Shares, shareView{Token: sh.Token, URL: s.shareURL(sh.Token),
 				Version: sh.Version, Note: sh.Note, CreatedAt: sh.CreatedAt, ExpiresAt: sh.ExpiresAt,
 				RevokedAt: sh.RevokedAt, Active: sh.Active(now), Views: sh.Views, MaxViews: sh.MaxViews, LastView: sh.LastViewedAt,
 				Protected: sh.PasswordHash != ""})
@@ -741,7 +741,7 @@ func (s *Server) CreateShare(id string, o shareOpts) (shareView, int, error) {
 		detail += ", password"
 	}
 	s.notify(EventShared, eventItem{ID: id, Title: title, URL: s.cfg.PublicURL + "/a/" + id, Version: sh.Version}, detail)
-	return shareView{Token: sh.Token, URL: s.cfg.PublicURL + "/s/" + sh.Token, Version: sh.Version, Note: sh.Note,
+	return shareView{Token: sh.Token, URL: s.shareURL(sh.Token), Version: sh.Version, Note: sh.Note,
 		CreatedAt: now, ExpiresAt: sh.ExpiresAt, Active: true, MaxViews: maxViews, Protected: pwHash != ""}, 201, nil
 }
 

@@ -48,11 +48,18 @@ func newEnv(t *testing.T, cfg Config) *env {
 // remoteAddr in a header map sets the connecting address instead of a header.
 const remoteAddr = ":remote"
 
+// hostHeader in a header map sets the request's Host.
+const hostHeader = ":host"
+
 func (e *env) do(method, target string, body io.Reader, hdr map[string]string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(method, target, body)
 	for k, v := range hdr {
 		if k == remoteAddr {
 			req.RemoteAddr = v
+			continue
+		}
+		if k == hostHeader {
+			req.Host = v
 			continue
 		}
 		req.Header.Set(k, v)
@@ -694,5 +701,47 @@ func TestPasswordProtectedShare(t *testing.T) {
 	}
 	if c := e.api("POST", "/api/artifacts/"+a.ID+"/shares", map[string]any{"ttl": "1h", "password": "abc"}).Code; c != 400 {
 		t.Fatalf("short share password: %d", c)
+	}
+}
+
+// Tailscale split exposure: the app on https://box.ts.net (tailnet only) and
+// everything public on https://box.ts.net:8443 (Funnel). Tailscale Serve
+// rewrites Host to the backend and sends the original in X-Forwarded-Host.
+func TestSharesOnContentBehindTailscale(t *testing.T) {
+	st, _ := OpenStore(t.TempDir())
+	if _, err := New(Config{SharesOnContent: true}, st); err == nil {
+		t.Fatal("shares-on-content without a content URL accepted")
+	}
+	e := newEnv(t, Config{PublicURL: "https://box.ts.net", ContentURL: "https://box.ts.net:8443", SharesOnContent: true, TrustProxy: "tailscale"})
+	a := decode[artifactView](t, e.upload("/api/artifacts", nil, map[string]string{"index.html": "x"}))
+	sh := decode[shareView](t, e.api("POST", "/api/artifacts/"+a.ID+"/shares", map[string]any{"ttl": "1h"}))
+	if !strings.HasPrefix(sh.URL, "https://box.ts.net:8443/s/") {
+		t.Fatalf("share URL %s not on the public origin", sh.URL)
+	}
+	via := func(path, origHost string) *httptest.ResponseRecorder {
+		return e.do("GET", path, nil, map[string]string{hostHeader: "127.0.0.1:8080", "X-Forwarded-Host": origHost, remoteAddr: "127.0.0.1:9"})
+	}
+	if c := via("/s/"+sh.Token, "box.ts.net:8443").Code; c != 200 {
+		t.Fatalf("share page on public origin: %d", c)
+	}
+	if c := via("/assets/app.css", "box.ts.net:8443").Code; c != 200 {
+		t.Fatalf("share assets on public origin: %d", c)
+	}
+	if c := via("/s/"+sh.Token+"/f/index.html", "box.ts.net:8443").Code; c != 200 {
+		t.Fatalf("share file on public origin: %d", c)
+	}
+	for _, p := range []string{"/api/artifacts", "/", "/a/" + a.ID, "/mcp"} {
+		if c := via(p, "box.ts.net:8443").Code; c != 404 {
+			t.Errorf("app path %s reachable on the public origin: %d", p, c)
+		}
+	}
+	if rec := via("/s/"+sh.Token, "box.ts.net"); rec.Code != 308 || rec.Header().Get("Location") != sh.URL {
+		t.Fatalf("old share link on app host: %d %s", rec.Code, rec.Header().Get("Location"))
+	}
+	// X-Forwarded-Host from an untrusted peer is ignored.
+	rec := e.do("GET", "/api/artifacts", nil, map[string]string{hostHeader: "box.ts.net", "X-Forwarded-Host": "box.ts.net:8443",
+		remoteAddr: "203.0.113.4:9", "Authorization": "Bearer " + e.token})
+	if rec.Code != 200 {
+		t.Fatalf("spoofed X-Forwarded-Host changed routing: %d", rec.Code)
 	}
 }

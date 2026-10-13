@@ -39,6 +39,10 @@ type Config struct {
 	Version     string
 	ArtifactCSP string   // extra CSP directives appended for artifact content
 	Webhooks    []string // URLs notified of publishes, shares and share visits ("ntfy+https://…" for ntfy)
+	// SharesOnContent serves public share pages from the content origin, so
+	// everything public lives on one host and the app host can stay private
+	// (Tailscale tailnet-only, Cloudflare Access) without exceptions.
+	SharesOnContent bool
 }
 
 // Server is the vitrine HTTP handler.
@@ -131,6 +135,9 @@ func New(cfg Config, st *Store) (*Server, error) {
 			return nil, errors.New("content URL must use a different host than the public URL")
 		}
 		s.contHost = strings.ToLower(cu.Host)
+	}
+	if cfg.SharesOnContent && cfg.ContentURL == "" {
+		return nil, errors.New("--shares-on-content needs --content-url")
 	}
 	if _, err := s.themeFile("theme.css"); err != nil {
 		return nil, fmt.Errorf("theme %q: %w", cfg.Theme, err)
@@ -225,7 +232,36 @@ func (s *Server) routes() {
 	s.mux = m
 }
 
-var contentPath = regexp.MustCompile(`^/(?:c/|s/[^/]+/[fg]/)`)
+var (
+	contentPath   = regexp.MustCompile(`^/(?:c/|s/[^/]+/[fg]/)`)
+	sharePagePath = regexp.MustCompile(`^/s/[^/]+$`)
+)
+
+// requestHost is the host the browser asked for. Proxies that rewrite Host
+// (Tailscale Serve, some tunnels) pass the original in X-Forwarded-Host,
+// which is only believed from a trusted proxy.
+func (s *Server) requestHost(r *http.Request) string {
+	if s.cfg.TrustProxy != "" {
+		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			host = r.RemoteAddr
+		}
+		if xfh := r.Header.Values("X-Forwarded-Host"); len(xfh) > 0 && privatePeer(host) {
+			parts := strings.Split(xfh[len(xfh)-1], ",")
+			if h := strings.TrimSpace(parts[len(parts)-1]); h != "" {
+				return strings.ToLower(h)
+			}
+		}
+	}
+	return strings.ToLower(r.Host)
+}
+
+func (s *Server) shareURL(token string) string {
+	if s.cfg.SharesOnContent {
+		return s.cfg.ContentURL + "/s/" + token
+	}
+	return s.cfg.PublicURL + "/s/" + token
+}
 
 // ServeHTTP applies host separation, security headers and access logging.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -237,14 +273,22 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.Set("X-Robots-Tag", "noindex, nofollow")
 	isContent := contentPath.MatchString(r.URL.Path)
 	if s.contHost != "" {
-		host := strings.ToLower(r.Host)
+		onContent := s.requestHost(r) == s.contHost
+		sharePage := sharePagePath.MatchString(r.URL.Path)
+		// With SharesOnContent the content host also serves share pages and
+		// the static assets they use; the app host forwards old share links.
+		public := s.cfg.SharesOnContent && (sharePage || strings.HasPrefix(r.URL.Path, "/assets/"))
 		switch {
-		case host == s.contHost && !isContent && r.URL.Path != "/health":
+		case onContent && !isContent && !public && r.URL.Path != "/health":
 			http.Error(rec, "not found", 404)
 			s.logRequest(r, rec, start)
 			return
-		case host != s.contHost && isContent:
+		case !onContent && isContent:
 			http.Error(rec, "not found", 404)
+			s.logRequest(r, rec, start)
+			return
+		case !onContent && sharePage && s.cfg.SharesOnContent:
+			http.Redirect(rec, r, s.cfg.ContentURL+r.URL.Path, http.StatusPermanentRedirect)
 			s.logRequest(r, rec, start)
 			return
 		}
