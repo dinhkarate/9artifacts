@@ -19,9 +19,9 @@
     {
       "binding": "DB",
       "database_name": "vitrine",
-      // Paste the id printed by `npx wrangler d1 create vitrine` here.
-      // (The Deploy to Cloudflare button provisions it for you.)
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // No database_id: `wrangler deploy` (and the Deploy to Cloudflare
+      // button) creates the database. To use one you created yourself with
+      // `npx wrangler d1 create vitrine`, add "database_id": "<its id>".
       "migrations_dir": "migrations"
     }
   ],

@@ -9,7 +9,7 @@
     "dev": "npm run build && wrangler d1 migrations apply DB --local && wrangler dev",
     "test": "npm run build && vitest run",
     "typecheck": "npm run build && wrangler types --strict-vars=false >/dev/null && tsc --noEmit",
-    "deploy": "npm run build && wrangler d1 migrations apply DB --remote && wrangler deploy && wrangler deploy -c wrangler.content.jsonc"
+    "deploy": "npm run build && wrangler deploy && wrangler d1 migrations apply DB --remote && wrangler deploy -c wrangler.content.jsonc"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.22.0",

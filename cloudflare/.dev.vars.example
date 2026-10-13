@@ -1,0 +1,5 @@
+# Copy to .dev.vars for `npm run dev`. In production use `npx wrangler secret put`.
+# First-run and recovery secret: at least 16 characters, e.g. `openssl rand -base64 32`.
+SETUP_TOKEN=
+# Optional webhook URLs, comma or space separated (https://… or ntfy+https://…).
+WEBHOOKS=
