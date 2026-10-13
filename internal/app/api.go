@@ -335,6 +335,7 @@ type shareView struct {
 	Views     int        `json:"views"`
 	MaxViews  int        `json:"maxViews,omitempty"`
 	LastView  *time.Time `json:"lastViewedAt,omitempty"`
+	Protected bool       `json:"protected,omitempty"`
 }
 
 type artifactView struct {
@@ -374,7 +375,8 @@ func (s *Server) view(a *Artifact, full bool) artifactView {
 		if full {
 			out.Shares = append(out.Shares, shareView{Token: sh.Token, URL: s.cfg.PublicURL + "/s/" + sh.Token,
 				Version: sh.Version, Note: sh.Note, CreatedAt: sh.CreatedAt, ExpiresAt: sh.ExpiresAt,
-				RevokedAt: sh.RevokedAt, Active: sh.Active(now), Views: sh.Views, MaxViews: sh.MaxViews, LastView: sh.LastViewedAt})
+				RevokedAt: sh.RevokedAt, Active: sh.Active(now), Views: sh.Views, MaxViews: sh.MaxViews, LastView: sh.LastViewedAt,
+				Protected: sh.PasswordHash != ""})
 		}
 	}
 	if full {
@@ -661,12 +663,13 @@ func (s *Server) handleShareCreate(w http.ResponseWriter, r *http.Request) {
 		Note     string `json:"note"`
 		Version  int    `json:"version"`
 		MaxViews int    `json:"maxViews"`
+		Password string `json:"password"`
 	}
 	if err := readJSON(r, &body); err != nil {
 		writeError(w, 400, err.Error())
 		return
 	}
-	sh, status, err := s.CreateShare(r.PathValue("id"), body.TTL, body.Note, body.Version, body.MaxViews)
+	sh, status, err := s.CreateShare(r.PathValue("id"), shareOpts{TTL: body.TTL, Note: body.Note, Version: body.Version, MaxViews: body.MaxViews, Password: body.Password})
 	if err != nil {
 		writeError(w, status, err.Error())
 		return
@@ -675,7 +678,16 @@ func (s *Server) handleShareCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreateShare issues an expiring public link. Every link must expire.
-func (s *Server) CreateShare(id, ttl, note string, version, maxViews int) (shareView, int, error) {
+// shareOpts are the owner's choices for a new public link.
+type shareOpts struct {
+	TTL, Note string
+	Version   int // 0 pins the current latest version
+	MaxViews  int // 0 means unlimited
+	Password  string
+}
+
+func (s *Server) CreateShare(id string, o shareOpts) (shareView, int, error) {
+	ttl, note, version, maxViews := o.TTL, o.Note, o.Version, o.MaxViews
 	if ttl == "" {
 		ttl = "7d"
 	}
@@ -686,9 +698,16 @@ func (s *Server) CreateShare(id, ttl, note string, version, maxViews int) (share
 	if maxViews < 0 || maxViews > 10000 {
 		return shareView{}, 400, errors.New("maxViews must be between 0 (unlimited) and 10000")
 	}
+	var pwHash string
+	if o.Password != "" {
+		if len(o.Password) < 4 || len(o.Password) > 200 {
+			return shareView{}, 400, errors.New("share password must be 4 to 200 characters")
+		}
+		pwHash = hashPassword(o.Password)
+	}
 	now := time.Now().UTC()
 	sh := Share{Token: b64.EncodeToString(randomBytes(18)), Version: version, Note: truncate(note, 1000),
-		CreatedAt: now, ExpiresAt: now.Add(d), MaxViews: maxViews}
+		CreatedAt: now, ExpiresAt: now.Add(d), MaxViews: maxViews, PasswordHash: pwHash}
 	var title string
 	err := s.store.Update(func(st *State) error {
 		a := st.Artifacts[id]
@@ -718,9 +737,12 @@ func (s *Server) CreateShare(id, ttl, note string, version, maxViews int) (share
 	if maxViews > 0 {
 		detail += fmt.Sprintf(", max %d viewers", maxViews)
 	}
+	if pwHash != "" {
+		detail += ", password"
+	}
 	s.notify(EventShared, eventItem{ID: id, Title: title, URL: s.cfg.PublicURL + "/a/" + id, Version: sh.Version}, detail)
 	return shareView{Token: sh.Token, URL: s.cfg.PublicURL + "/s/" + sh.Token, Version: sh.Version, Note: sh.Note,
-		CreatedAt: now, ExpiresAt: sh.ExpiresAt, Active: true, MaxViews: maxViews}, 201, nil
+		CreatedAt: now, ExpiresAt: sh.ExpiresAt, Active: true, MaxViews: maxViews, Protected: pwHash != ""}, 201, nil
 }
 
 func (s *Server) handleShareRevoke(w http.ResponseWriter, r *http.Request) {

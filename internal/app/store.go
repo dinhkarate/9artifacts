@@ -44,6 +44,7 @@ type Share struct {
 	Views        int        `json:"views,omitempty"`
 	MaxViews     int        `json:"maxViews,omitempty"` // 0 means unlimited
 	LastViewedAt *time.Time `json:"lastViewedAt,omitempty"`
+	PasswordHash string     `json:"passwordHash,omitempty"` // viewers must enter this password
 }
 
 // Active reports whether the share link still works.

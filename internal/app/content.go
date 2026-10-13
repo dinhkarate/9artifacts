@@ -83,7 +83,15 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleShareContent(w http.ResponseWriter, r *http.Request) {
-	id, v, _, _, status := s.resolveShare(r, r.PathValue("token"), true)
+	token := r.PathValue("token")
+	id, v, sh, title, status := s.resolveShare(token)
+	if status == 200 && sh.PasswordHash != "" {
+		// Protected links serve files only through a grant from the unlock form.
+		status = http.StatusUnauthorized
+	}
+	if status == 200 && !s.recordVisit(r, token, id, title, v, sh) {
+		status = 410
+	}
 	if status != 200 {
 		http.Error(w, http.StatusText(status), status)
 		return
@@ -91,9 +99,41 @@ func (s *Server) handleShareContent(w http.ResponseWriter, r *http.Request) {
 	s.serveVersionFile(w, r, id, v, r.PathValue("path"), r.URL.Query().Has("download"), r.URL.Query().Has("view"))
 }
 
+// handleShareGrant serves the files of a password-protected link to a visitor
+// who unlocked it. The grant is signed for this token and short-lived, and the
+// link is re-checked on every request, so revoking still takes effect at once.
+func (s *Server) handleShareGrant(w http.ResponseWriter, r *http.Request) {
+	token := r.PathValue("token")
+	id, v, _, _, status := s.resolveShare(token)
+	if status == 200 && !s.checkGrant(token, r.PathValue("grant")) {
+		status = http.StatusUnauthorized
+	}
+	if status != 200 {
+		http.Error(w, http.StatusText(status), status)
+		return
+	}
+	s.serveVersionFile(w, r, id, v, r.PathValue("path"), r.URL.Query().Has("download"), r.URL.Query().Has("view"))
+}
+
+const grantTTL = 2 * time.Hour
+
+func (s *Server) grant(token string) string {
+	exp := strconv.FormatInt(time.Now().Add(grantTTL).Unix(), 36)
+	return exp + "." + s.sign("share|"+token+"|"+exp)
+}
+
+func (s *Server) checkGrant(token, g string) bool {
+	exp, sig, ok := strings.Cut(g, ".")
+	if !ok || subtle.ConstantTimeCompare([]byte(s.sign("share|"+token+"|"+exp)), []byte(sig)) != 1 {
+		return false
+	}
+	t, err := strconv.ParseInt(exp, 36, 64)
+	return err == nil && time.Now().Unix() <= t
+}
+
 // resolveShare returns the artifact id, version and title for a live share
-// token and (with count) records the visit, or 404/410.
-func (s *Server) resolveShare(r *http.Request, token string, count bool) (id string, v *Version, sh Share, title string, status int) {
+// token, or 404/410.
+func (s *Server) resolveShare(token string) (id string, v *Version, sh Share, title string, status int) {
 	status = 404
 	s.store.Read(func(st *State) {
 		a, share := st.FindShare(token)
@@ -110,20 +150,21 @@ func (s *Server) resolveShare(r *http.Request, token string, count bool) (id str
 			id, v, title, status = a.ID, &c, a.Title, 200
 		}
 	})
-	if status == 200 && count {
-		ok, first := s.countView(token, s.clientIP(r))
-		if !ok {
-			return "", nil, sh, "", 410
-		}
-		if first {
-			detail := fmt.Sprintf("visitor %d", sh.Views+1)
-			if sh.MaxViews > 0 {
-				detail += fmt.Sprintf(" of %d", sh.MaxViews)
-			}
-			s.notify(EventShareVisit, eventItem{ID: id, Title: title, URL: s.cfg.PublicURL + "/a/" + id, Version: v.N}, detail)
-		}
-	}
 	return id, v, sh, title, status
+}
+
+// recordVisit counts the visitor (see countView) and tells the webhooks about
+// new ones. It returns false when the link has no views left for them.
+func (s *Server) recordVisit(r *http.Request, token, id, title string, v *Version, sh Share) bool {
+	ok, first := s.countView(token, s.clientIP(r))
+	if first {
+		detail := fmt.Sprintf("visitor %d", sh.Views+1)
+		if sh.MaxViews > 0 {
+			detail += fmt.Sprintf(" of %d", sh.MaxViews)
+		}
+		s.notify(EventShareVisit, eventItem{ID: id, Title: title, URL: s.cfg.PublicURL + "/a/" + id, Version: v.N}, detail)
+	}
+	return ok
 }
 
 // isPreviewBot matches the crawlers chat and social apps send to unfurl links.
@@ -299,23 +340,47 @@ func fileKind(name string) string {
 
 func (s *Server) handleSharePage(w http.ResponseWriter, r *http.Request) {
 	token := r.PathValue("token")
-	// Chat apps fetch the page to build a link preview; that must not use up
-	// a view. Only the page shell (title, note, file names) is exempt: the
-	// artifact itself is always counted, so a spoofed User-Agent gains nothing.
-	_, v, sh, title, status := s.resolveShare(r, token, !isPreviewBot(r.UserAgent()))
-	raw, err := s.shellFile("share.html")
-	if err != nil {
-		http.Error(w, "share.html missing", 500)
-		return
+	id, v, sh, title, status := s.resolveShare(token)
+	data := map[string]any{"Name": s.cfg.Name, "Version": s.cfg.Version}
+	base := s.contentOrigin() + "/s/" + token + "/f/"
+	switch {
+	case status != 200:
+	case sh.PasswordHash != "":
+		// Nothing about the artifact (not even its title) is shown until the
+		// password is right; a wrong guess costs a login-style failure.
+		ip := "share|" + s.clientIP(r)
+		status = http.StatusUnauthorized
+		if r.Method != http.MethodPost {
+			break
+		}
+		if d := s.locked(ip); d > 0 {
+			data["Error"] = fmt.Sprintf("Too many attempts. Try again in %d minutes.", int(d.Minutes())+1)
+			status = http.StatusTooManyRequests
+			break
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, 4096)
+		if !checkPassword(r.PostFormValue("password"), sh.PasswordHash) {
+			s.fail(ip)
+			data["Error"] = "Wrong password."
+			break
+		}
+		status = 200
+		base = s.contentOrigin() + "/s/" + token + "/g/" + s.grant(token) + "/"
+		if !s.recordVisit(r, token, id, title, v, sh) {
+			status = 410
+		}
+	case r.Method == http.MethodPost:
+		status = http.StatusMethodNotAllowed
+	case !isPreviewBot(r.UserAgent()):
+		// Chat apps fetch the page to build a link preview; that must not use
+		// up a view. Only the page shell (title, note, file names) is exempt:
+		// files are always counted, so a spoofed User-Agent gains nothing.
+		if !s.recordVisit(r, token, id, title, v, sh) {
+			status = 410
+		}
 	}
-	tpl, err := template.New("share").Funcs(template.FuncMap{"bytes": humanBytes}).Parse(string(raw))
-	if err != nil {
-		http.Error(w, "share.html: "+err.Error(), 500)
-		return
-	}
-	data := map[string]any{"Name": s.cfg.Name, "Status": status, "Version": s.cfg.Version}
+	data["Status"] = status
 	if status == 200 {
-		base := s.contentOrigin() + "/s/" + token + "/f/"
 		src := base + v.Entry
 		if fileKind(v.Entry) == "markdown" {
 			src += "?view=1"
@@ -334,6 +399,16 @@ func (s *Server) handleSharePage(w http.ResponseWriter, r *http.Request) {
 		data["Src"] = src
 		data["Files"] = files
 		data["Expires"] = sh.ExpiresAt.UTC().Format("2006-01-02 15:04 UTC")
+	}
+	raw, err := s.shellFile("share.html")
+	if err != nil {
+		http.Error(w, "share.html missing", 500)
+		return
+	}
+	tpl, err := template.New("share").Funcs(template.FuncMap{"bytes": humanBytes}).Parse(string(raw))
+	if err != nil {
+		http.Error(w, "share.html: "+err.Error(), 500)
+		return
 	}
 	var buf bytes.Buffer
 	if err := tpl.Execute(&buf, data); err != nil {

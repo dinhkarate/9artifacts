@@ -16,7 +16,7 @@ Errors are JSON: `{"error": "..."}`.
 | `POST` | `/api/artifacts/{id}/versions` | multipart or JSON, plus `keep` | `201` artifact (new version) |
 | `POST` | `/api/artifacts/{id}/versions/{n}/restore` | — | `201` artifact: a copy of version `n` becomes the new latest |
 | `GET` | `/api/artifacts/{id}/download/{file}?v=N` | — | file as attachment |
-| `POST` | `/api/artifacts/{id}/shares` | `{ttl: "1h"\|"24h"\|"7d"\|"30d", note?, version?, maxViews?}` | `201` share, pinned to `version` (default: the current latest); `maxViews` stops the link after that many distinct visitors |
+| `POST` | `/api/artifacts/{id}/shares` | `{ttl: "1h"\|"24h"\|"7d"\|"30d", note?, version?, maxViews?, password?}` | `201` share, pinned to `version` (default: the current latest); `maxViews` stops the link after that many distinct visitors |
 | `DELETE` | `/api/artifacts/{id}/shares/{token}` | — | revoke |
 
 ### Uploading
@@ -68,6 +68,9 @@ the HTML `<title>` or the first Markdown `# heading`.
 | `GET /s/{token}` | share page (`410` when expired, revoked or out of views) |
 
 Shares report `views` (distinct visitors, counted once per address per hour), `maxViews` and `lastViewedAt`.
+With a `password`, `/s/{token}` shows a password form (nothing about the artifact, not even its
+title, is shown before) and files are served only through a short-lived signed URL issued after
+unlocking (`/s/{token}/g/{grant}/{file}`); wrong guesses are rate-limited per address like logins.
 | `GET /s/{token}/f/{file}` | raw file (on the content origin); `?view=1` renders Markdown, `?download=1` downloads |
 
 ## MCP

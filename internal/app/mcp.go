@@ -170,7 +170,8 @@ var (
 		{"name": "share_artifact", "description": "Create a PUBLIC expiring link anyone can open. Only call this when the user explicitly asks to share publicly.",
 			"inputSchema": schema(map[string]any{"id": strProp, "ttl": map[string]any{"type": "string", "enum": []string{"1h", "24h", "7d", "30d"}},
 				"note":      map[string]any{"type": "string", "description": "Public note shown on the share page"},
-				"max_views": map[string]any{"type": "integer", "description": "Stop working after this many distinct visitors (omit for unlimited)"}}, "id", "ttl")},
+				"max_views": map[string]any{"type": "integer", "description": "Stop working after this many distinct visitors (omit for unlimited)"},
+				"password":  map[string]any{"type": "string", "description": "Only when the user gives one: viewers must enter it"}}, "id", "ttl")},
 		{"name": "revoke_share", "description": "Revoke a public share link immediately.",
 			"inputSchema": schema(map[string]any{"id": strProp, "token": strProp}, "id", "token")},
 		{"name": "restore_version", "description": "Publish an earlier version again as the new latest version (history is kept). Use when the user wants to undo changes.",
@@ -313,11 +314,11 @@ func (s *Server) mcpCall(name string, raw json.RawMessage) (string, error) {
 
 	case "share_artifact":
 		var a struct {
-			ID, TTL, Note string
-			MaxViews      int `json:"max_views"`
+			ID, TTL, Note, Password string
+			MaxViews                int `json:"max_views"`
 		}
 		_ = json.Unmarshal(raw, &a)
-		sh, _, err := s.CreateShare(a.ID, a.TTL, a.Note, 0, a.MaxViews)
+		sh, _, err := s.CreateShare(a.ID, shareOpts{TTL: a.TTL, Note: a.Note, MaxViews: a.MaxViews, Password: a.Password})
 		if err != nil {
 			return "", err
 		}

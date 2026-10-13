@@ -305,6 +305,7 @@ func Share(args []string) error {
 	ttl := fset.String("ttl", "7d", "link lifetime: 1h, 24h, 7d, 30d")
 	note := fset.String("note", "", "public note shown on the share page")
 	maxViews := fset.Int("max-views", 0, "stop working after this many distinct visitors (0 = unlimited)")
+	askPw := fset.Bool("password", false, "protect the link with a password (asked on the terminal, or read from stdin)")
 	pos := parseInterleaved(fset, args)
 	if len(pos) != 1 {
 		return errors.New("usage: vitrine share ID --ttl 7d")
@@ -313,8 +314,16 @@ func Share(args []string) error {
 	if err != nil {
 		return err
 	}
+	body := map[string]any{"ttl": *ttl, "note": *note, "maxViews": *maxViews}
+	if *askPw {
+		pw, err := readSecret("Password for viewers: ")
+		if err != nil {
+			return err
+		}
+		body["password"] = strings.TrimSpace(pw)
+	}
 	var sh share
-	if err := c.json("POST", "/api/artifacts/"+pos[0]+"/shares", map[string]any{"ttl": *ttl, "note": *note, "maxViews": *maxViews}, &sh); err != nil {
+	if err := c.json("POST", "/api/artifacts/"+pos[0]+"/shares", body, &sh); err != nil {
 		return err
 	}
 	fmt.Fprintf(os.Stderr, "Public link, expires %s (revoke: vitrine revoke %s %s)\n", sh.ExpiresAt.Local().Format("2006-01-02 15:04"), pos[0], sh.Token)

@@ -217,13 +217,15 @@ func (s *Server) routes() {
 	})
 	// Public share page.
 	m.HandleFunc("GET /s/{token}", s.handleSharePage)
+	m.HandleFunc("POST /s/{token}", s.handleSharePage) // password-protected links
+	m.HandleFunc("GET /s/{token}/g/{grant}/{path...}", s.handleShareGrant)
 	// Artifact bytes (content origin).
 	m.HandleFunc("GET /c/{vt}/{path...}", s.handleContent)
 	m.HandleFunc("GET /s/{token}/f/{path...}", s.handleShareContent)
 	s.mux = m
 }
 
-var contentPath = regexp.MustCompile(`^/(?:c/|s/[^/]+/f/)`)
+var contentPath = regexp.MustCompile(`^/(?:c/|s/[^/]+/[fg]/)`)
 
 // ServeHTTP applies host separation, security headers and access logging.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -265,13 +267,16 @@ type statusRecorder struct {
 
 func (r *statusRecorder) WriteHeader(code int) { r.status = code; r.ResponseWriter.WriteHeader(code) }
 
-var secretPath = regexp.MustCompile(`^/(c|s)/[^/]+|/shares/[^/]+`)
+var secretPath = regexp.MustCompile(`^/(c|s)/[^/]+|/shares/[^/]+|/g/[^/]+`)
 
 // logRequest never records share or view tokens.
 func (s *Server) logRequest(r *http.Request, rec *statusRecorder, start time.Time) {
 	p := secretPath.ReplaceAllStringFunc(path.Clean("/"+r.URL.Path), func(m string) string {
 		if strings.HasPrefix(m, "/shares/") {
 			return "/shares/…"
+		}
+		if strings.HasPrefix(m, "/g/") {
+			return "/g/…"
 		}
 		return m[:3] + "…"
 	})

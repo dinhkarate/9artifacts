@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<title>{{if eq .Status 200}}{{.Title}}{{else}}Link unavailable{{end}}</title>
+<title>{{if eq .Status 200}}{{.Title}}{{else if or (eq .Status 401) (eq .Status 429)}}Password required{{else}}Link unavailable{{end}}</title>
 {{if eq .Status 200}}<meta property="og:type" content="website">
 <meta property="og:site_name" content="{{.Name}}">
 <meta property="og:title" content="{{.Title}}">
@@ -44,6 +44,17 @@
     </main>
   </div>
 </div>
+{{else if or (eq .Status 401) (eq .Status 429)}}
+<main class="auth-screen">
+  <form class="auth-card" method="post" autocomplete="off">
+    <img class="auth-logo" src="/assets/logo.svg" alt="">
+    <h1>Password required</h1>
+    <p class="muted">The owner protected this link. Enter the password they gave you.</p>
+    <input type="password" name="password" placeholder="Password" aria-label="Password" autocomplete="off" required autofocus>
+    <button class="btn primary block" type="submit">Open</button>
+    {{if .Error}}<p class="auth-error" role="alert">{{.Error}}</p>{{end}}
+  </form>
+</main>
 {{else}}
 <main class="gone">
   <div>

@@ -11,6 +11,7 @@ import (
 	"net/textproto"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -365,7 +366,9 @@ func TestLogRedaction(t *testing.T) {
 	logTo(&buf, func() { e.srv.logRequest(r, rec, time.Now()) })
 	r2 := httptest.NewRequest("GET", "/s/SECRETTOKEN/f/index.html", nil)
 	logTo(&buf, func() { e.srv.logRequest(r2, rec, time.Now()) })
-	if strings.Contains(buf.String(), "SECRETTOKEN") {
+	r3 := httptest.NewRequest("GET", "/s/SECRETTOKEN/g/SECRETGRANT/index.html", nil)
+	logTo(&buf, func() { e.srv.logRequest(r3, rec, time.Now()) })
+	if strings.Contains(buf.String(), "SECRETTOKEN") || strings.Contains(buf.String(), "SECRETGRANT") {
 		t.Fatalf("token leaked to log: %s", buf.String())
 	}
 }
@@ -640,5 +643,44 @@ func TestPreviewBotDoesNotUseAView(t *testing.T) {
 	}
 	if c := e.do("GET", "/s/"+sh.Token+"/f/index.html", nil, bot).Code; c != 410 {
 		t.Fatalf("spoofed bot reading content past the limit: %d", c)
+	}
+}
+
+func TestPasswordProtectedShare(t *testing.T) {
+	e := newEnv(t, Config{})
+	a := decode[artifactView](t, e.upload("/api/artifacts", map[string]string{"title": "Board pack"}, map[string]string{"index.html": "<h1>secret</h1>"}))
+	rec := e.api("POST", "/api/artifacts/"+a.ID+"/shares", map[string]any{"ttl": "1h", "password": "hunter22"})
+	sh := decode[shareView](t, rec)
+	if rec.Code != 201 || !sh.Protected {
+		t.Fatalf("create protected share: %d %+v", rec.Code, sh)
+	}
+	page := "/s/" + sh.Token
+	if rec := e.do("GET", page, nil, nil); rec.Code != 401 || strings.Contains(rec.Body.String(), "Board pack") {
+		t.Fatalf("locked page: %d, leaks title: %v", rec.Code, strings.Contains(rec.Body.String(), "Board pack"))
+	}
+	if c := e.do("GET", page+"/f/index.html", nil, nil).Code; c != 401 {
+		t.Fatalf("file without password: %d", c)
+	}
+	form := map[string]string{"Content-Type": "application/x-www-form-urlencoded"}
+	if rec := e.do("POST", page, strings.NewReader("password=nope"), form); rec.Code != 401 || !strings.Contains(rec.Body.String(), "Wrong password") {
+		t.Fatalf("wrong password: %d", rec.Code)
+	}
+	rec = e.do("POST", page, strings.NewReader("password=hunter22"), form)
+	m := regexp.MustCompile(`/s/[^/"]+/g/[^/"]+/index\.html`).FindString(rec.Body.String())
+	if rec.Code != 200 || m == "" {
+		t.Fatalf("unlock: %d, grant src found: %v", rec.Code, m != "")
+	}
+	if c := e.do("GET", m, nil, nil).Code; c != 200 {
+		t.Fatalf("granted file: %d", c)
+	}
+	if c := e.do("GET", strings.Replace(m, "/g/", "/g/x", 1), nil, nil).Code; c != 401 {
+		t.Fatalf("forged grant: %d", c)
+	}
+	e.api("DELETE", "/api/artifacts/"+a.ID+"/shares/"+sh.Token, nil)
+	if c := e.do("GET", m, nil, nil).Code; c != 410 {
+		t.Fatalf("grant after revoke: %d", c)
+	}
+	if c := e.api("POST", "/api/artifacts/"+a.ID+"/shares", map[string]any{"ttl": "1h", "password": "abc"}).Code; c != 400 {
+		t.Fatalf("short share password: %d", c)
 	}
 }

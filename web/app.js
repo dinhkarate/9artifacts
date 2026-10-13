@@ -632,7 +632,7 @@ function shareRow(s) {
   const usedUp = s.maxViews > 0 && s.views >= s.maxViews;
   const st = s.active ? 'active' : s.revokedAt ? 'revoked' : usedUp && Date.parse(s.expiresAt) > Date.now() ? 'used' : 'expired';
   const label = { active: 'Live', revoked: 'Revoked', expired: 'Expired', used: 'Used up' }[st];
-  const views = `${s.views} ${s.views === 1 ? 'view' : 'views'}${s.maxViews ? ` of ${s.maxViews}` : ''}${s.lastViewedAt ? ` · last ${ago(s.lastViewedAt)}` : ''}`;
+  const views = `${s.protected ? 'Password · ' : ''}${s.views} ${s.views === 1 ? 'view' : 'views'}${s.maxViews ? ` of ${s.maxViews}` : ''}${s.lastViewedAt ? ` · last ${ago(s.lastViewedAt)}` : ''}`;
   const li = h('li', { class: `share-link ${st}` },
     h('div', { class: 'share-link-top' },
       h('span', { class: `pill ${st}`, text: label }),
@@ -671,10 +671,11 @@ function sharePanel() {
   };
   paintLimits();
   const note = h('textarea', { maxLength: 1000, rows: 2, placeholder: 'Optional note shown to viewers…' });
+  const pw = h('input', { type: 'password', autocomplete: 'new-password', maxLength: 200, placeholder: 'Optional, 4+ characters', 'aria-label': 'Password for viewers' });
   const create = h('button', { class: 'btn primary block', type: 'button', onclick: async () => {
     create.disabled = true;
     try {
-      const s = await api('POST', `/api/artifacts/${a.id}/shares`, { ttl, note: note.value, maxViews });
+      const s = await api('POST', `/api/artifacts/${a.id}/shares`, { ttl, note: note.value, maxViews, password: pw.value });
       const copied = await copyText(s.url);
       viewer.artifact = await api('GET', `/api/artifacts/${a.id}`);
       toast(copied ? 'Public link created and copied' : 'Public link created');
@@ -688,6 +689,7 @@ function sharePanel() {
     h('label', { text: 'Expires after' }), group,
     h('label', { text: 'View limit' }), limits,
     h('label', { text: 'Note for viewers' }), note,
+    h('label', { text: 'Password' }), pw,
     create,
     h('h3', { text: `Live links (${active.length})` }),
     active.length ? h('ul', { class: 'share-list' }, active.map(shareRow)) : h('p', { class: 'muted', text: 'No public links. This artifact is private.' }),

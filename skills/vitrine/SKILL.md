@@ -66,7 +66,7 @@ Create a public link only when the user explicitly asks to share publicly.
 Every link expires (`1h`, `24h`, `7d`, `30d`).
 
 ```bash
-vitrine share ID --ttl 7d [--max-views 5]
+vitrine share ID --ttl 7d [--max-views 5] [--password]
 vitrine revoke ID SHARE_TOKEN
 ```
 
