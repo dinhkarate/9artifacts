@@ -120,6 +120,17 @@ of the gallery while share links keep working. Create these Access applications:
 | `art.example.com/mcp`, `art.example.com/api/*` | Bypass (vitrine's API tokens still apply), or Service Auth if your agents can send `CF-Access-Client-Id`/`-Secret` headers |
 | `art-content.example.com` | **None.** Sandboxed artifacts can't send the Access cookie; the content host is already protected by signed view and share tokens |
 
+Then let vitrine check Access too, so a missing policy or a request that reaches the origin
+around Cloudflare can't open the gallery:
+
+```bash
+vitrine serve ... --cf-access-team https://myteam.cloudflareaccess.com --cf-access-aud <AUD tag>
+```
+
+Browser requests to the app host must then carry a valid `Cf-Access-Jwt-Assertion` (RS256,
+signed by your team's rotating keys, for this application's AUD tag). Requests with a valid
+vitrine API token, share pages, `/assets/*`, `/health` and the content host are not checked.
+
 Simpler: start vitrine with `--shares-on-content`. Share links then live on the content host,
 so the app host needs no bypass rules for `/s/*` and `/assets/*`; protect it whole and only
 decide what to do with `/mcp` and `/api/*`.
@@ -200,6 +211,7 @@ Every flag has an environment variable.
 | `--trust-proxy[=MODE]` | `VITRINE_TRUST_PROXY=1\|cloudflare\|tailscale` | off | behind a proxy, take the client IP for rate limiting from `X-Forwarded-For` (bare flag, `xff`), `CF-Connecting-IP` (`cloudflare`) or Tailscale Serve/Funnel (`tailscale`); only trusted on loopback or private-network connections |
 | `--max-upload-mb` | `VITRINE_MAX_UPLOAD_MB` | `100` | request size limit |
 | `--shares-on-content` | `VITRINE_SHARES_ON_CONTENT=1` | off | serve public share pages from `--content-url`, so everything public is on one host and the app host can stay private; old app-host share links redirect |
+| `--cf-access-team`, `--cf-access-aud` | `VITRINE_CF_ACCESS_TEAM`, `VITRINE_CF_ACCESS_AUD` | — | require a valid Cloudflare Access JWT on browser requests to the app host |
 | `--webhook` | `VITRINE_WEBHOOK` | — | comma-separated URLs notified on publishes, new versions, new share links and new share visitors; Slack and Discord incoming-webhook URLs work as-is, prefix `ntfy+` for ntfy (e.g. `ntfy+https://ntfy.sh/my-topic`) |
 | `--artifact-csp` | `VITRINE_ARTIFACT_CSP` | — | extra CSP for artifacts, e.g. `connect-src 'none'` to block network access |
 

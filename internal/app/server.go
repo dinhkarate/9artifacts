@@ -43,6 +43,9 @@ type Config struct {
 	// everything public lives on one host and the app host can stay private
 	// (Tailscale tailnet-only, Cloudflare Access) without exceptions.
 	SharesOnContent bool
+	// CFAccessTeam and CFAccessAUD turn on Cloudflare Access JWT checks for
+	// browser requests to the app host.
+	CFAccessTeam, CFAccessAUD string
 }
 
 // Server is the vitrine HTTP handler.
@@ -62,6 +65,7 @@ type Server struct {
 	global     failure // password failures from all addresses
 	begins     map[string]*failure
 	viewers    map[string]time.Time // share token|client IP → last counted view
+	access     *cfAccess            // nil unless Cloudflare Access checks are on
 }
 
 type challenge struct {
@@ -138,6 +142,13 @@ func New(cfg Config, st *Store) (*Server, error) {
 	}
 	if cfg.SharesOnContent && cfg.ContentURL == "" {
 		return nil, errors.New("--shares-on-content needs --content-url")
+	}
+	if cfg.CFAccessTeam != "" || cfg.CFAccessAUD != "" {
+		a, err := newCFAccess(cfg.CFAccessTeam, cfg.CFAccessAUD)
+		if err != nil {
+			return nil, err
+		}
+		s.access = a
 	}
 	if _, err := s.themeFile("theme.css"); err != nil {
 		return nil, fmt.Errorf("theme %q: %w", cfg.Theme, err)
@@ -272,9 +283,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.Set("Referrer-Policy", "no-referrer")
 	h.Set("X-Robots-Tag", "noindex, nofollow")
 	isContent := contentPath.MatchString(r.URL.Path)
+	sharePage := sharePagePath.MatchString(r.URL.Path)
+	onContent := s.contHost != "" && s.requestHost(r) == s.contHost
 	if s.contHost != "" {
-		onContent := s.requestHost(r) == s.contHost
-		sharePage := sharePagePath.MatchString(r.URL.Path)
 		// With SharesOnContent the content host also serves share pages and
 		// the static assets they use; the app host forwards old share links.
 		public := s.cfg.SharesOnContent && (sharePage || strings.HasPrefix(r.URL.Path, "/assets/"))
@@ -289,6 +300,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		case !onContent && sharePage && s.cfg.SharesOnContent:
 			http.Redirect(rec, r, s.cfg.ContentURL+r.URL.Path, http.StatusPermanentRedirect)
+			s.logRequest(r, rec, start)
+			return
+		}
+	}
+	if s.access != nil && !onContent && !isContent && !sharePage && !strings.HasPrefix(r.URL.Path, "/assets/") &&
+		r.URL.Path != "/health" && !(r.Header.Get("Authorization") != "" && s.tokenAuth(r)) {
+		// Agents with a valid API token skip Access (bypass /mcp and /api in
+		// Access); browsers must come through Access.
+		if err := s.access.verify(r.Header.Get("Cf-Access-Jwt-Assertion")); err != nil {
+			http.Error(rec, "Cloudflare Access: "+err.Error(), http.StatusForbidden)
 			s.logRequest(r, rec, start)
 			return
 		}

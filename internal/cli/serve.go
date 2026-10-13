@@ -64,6 +64,8 @@ func Serve(args []string, version string) error {
 	fs.Var(&trust, "trust-proxy", "behind a proxy: take the client IP from X-Forwarded-For (bare flag or xff), CF-Connecting-IP (cloudflare) or Tailscale Serve/Funnel (tailscale)")
 	maxMB := fs.Int("max-upload-mb", atoiDef(env("VITRINE_MAX_UPLOAD_MB", "100"), 100), "maximum upload size in MB")
 	sharesOnContent := fs.Bool("shares-on-content", env("VITRINE_SHARES_ON_CONTENT", "") == "1", "serve public share pages from --content-url, so the app host can stay private (Tailscale, Cloudflare Access)")
+	cfTeam := fs.String("cf-access-team", env("VITRINE_CF_ACCESS_TEAM", ""), "Cloudflare Access team URL, e.g. https://myteam.cloudflareaccess.com (with --cf-access-aud)")
+	cfAUD := fs.String("cf-access-aud", env("VITRINE_CF_ACCESS_AUD", ""), "Cloudflare Access application AUD tag: browser requests to the app host must carry a valid Access JWT")
 	webhook := fs.String("webhook", env("VITRINE_WEBHOOK", ""), "comma-separated URLs to notify on publishes, shares and share visits (Slack, Discord, any JSON endpoint; prefix ntfy+ for ntfy)")
 	artifactCSP := fs.String("artifact-csp", env("VITRINE_ARTIFACT_CSP", ""), "extra CSP directives for artifact pages, e.g. \"connect-src 'none'\"")
 	_ = fs.Parse(args)
@@ -82,6 +84,7 @@ func Serve(args []string, version string) error {
 		DataDir: *data, PublicURL: *public, ContentURL: *content, Name: *name, Theme: *theme, ThemeDir: *themeDir,
 		TrustProxy: string(trust), MaxUpload: int64(*maxMB) << 20, Version: version, ArtifactCSP: *artifactCSP,
 		Webhooks: splitList(*webhook), SharesOnContent: *sharesOnContent,
+		CFAccessTeam: *cfTeam, CFAccessAUD: *cfAUD,
 	}, st)
 	if err != nil {
 		return err
