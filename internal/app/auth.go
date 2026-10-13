@@ -138,7 +138,6 @@ func (st *Store) CreateToken(name string) (string, Token, error) {
 	return secret, t, err
 }
 
-// tokenAuth validates an "Authorization: Bearer vt_..." header.
 // tokenName returns the name of the API token on the request, or "".
 func (s *Server) tokenName(r *http.Request) string {
 	secret, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
@@ -149,7 +148,7 @@ func (s *Server) tokenName(r *http.Request) string {
 	name := ""
 	s.store.Read(func(st *State) {
 		for _, t := range st.Tokens {
-			if subtle.ConstantTimeCompare([]byte(t.Hash), []byte(want)) == 1 {
+			if subtle.ConstantTimeCompare([]byte(t.Hash), []byte(want)) == 1 && (t.ExpiresAt == nil || time.Now().Before(*t.ExpiresAt)) {
 				name = t.Name
 			}
 		}
@@ -157,6 +156,7 @@ func (s *Server) tokenName(r *http.Request) string {
 	return name
 }
 
+// tokenAuth validates an "Authorization: Bearer vt_..." header.
 func (s *Server) tokenAuth(r *http.Request) bool {
 	h := r.Header.Get("Authorization")
 	secret, ok := strings.CutPrefix(h, "Bearer ")
@@ -168,7 +168,7 @@ func (s *Server) tokenAuth(r *http.Request) bool {
 	now := time.Now().UTC()
 	s.store.Read(func(st *State) {
 		for _, t := range st.Tokens {
-			if subtle.ConstantTimeCompare([]byte(t.Hash), []byte(want)) == 1 {
+			if subtle.ConstantTimeCompare([]byte(t.Hash), []byte(want)) == 1 && (t.ExpiresAt == nil || now.Before(*t.ExpiresAt)) {
 				found = true
 				stale = t.LastUsedAt == nil || now.Sub(*t.LastUsedAt) > time.Minute
 			}
@@ -659,7 +659,8 @@ func (s *Server) handleTokenList(w http.ResponseWriter, r *http.Request) {
 	out := []map[string]any{}
 	s.store.Read(func(st *State) {
 		for _, t := range st.Tokens {
-			out = append(out, map[string]any{"id": t.ID, "name": t.Name, "prefix": t.Prefix, "createdAt": t.CreatedAt, "lastUsedAt": t.LastUsedAt})
+			out = append(out, map[string]any{"id": t.ID, "name": t.Name, "prefix": t.Prefix, "createdAt": t.CreatedAt, "lastUsedAt": t.LastUsedAt,
+				"oauth": t.ClientID != ""})
 		}
 	})
 	writeJSON(w, 200, out)

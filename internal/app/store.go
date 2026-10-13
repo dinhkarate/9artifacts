@@ -119,16 +119,31 @@ type Token struct {
 	Prefix     string     `json:"prefix"`
 	CreatedAt  time.Time  `json:"createdAt"`
 	LastUsedAt *time.Time `json:"lastUsedAt,omitempty"`
+	// OAuth access tokens (MCP connectors) expire and are renewed with a
+	// rotating refresh token; tokens made in Settings never expire.
+	ExpiresAt        *time.Time `json:"expiresAt,omitempty"`
+	ClientID         string     `json:"clientId,omitempty"`
+	RefreshHash      string     `json:"refreshHash,omitempty"`
+	RefreshExpiresAt *time.Time `json:"refreshExpiresAt,omitempty"`
+}
+
+// OAuthClient is an MCP client that registered itself (RFC 7591).
+type OAuthClient struct {
+	ID           string    `json:"id"`
+	Name         string    `json:"name"`
+	RedirectURIs []string  `json:"redirectUris"`
+	CreatedAt    time.Time `json:"createdAt"`
 }
 
 // State is everything vitrine persists apart from the file bytes.
 type State struct {
-	PasswordHash string               `json:"passwordHash,omitempty"`
-	SigningKey   []byte               `json:"signingKey"`
-	Passkeys     []Passkey            `json:"passkeys"`
-	Tokens       []Token              `json:"tokens"`
-	Sessions     map[string]time.Time `json:"sessions"` // sha256(session id) → expiry
-	Artifacts    map[string]*Artifact `json:"artifacts"`
+	PasswordHash string                  `json:"passwordHash,omitempty"`
+	SigningKey   []byte                  `json:"signingKey"`
+	Passkeys     []Passkey               `json:"passkeys"`
+	Tokens       []Token                 `json:"tokens"`
+	Sessions     map[string]time.Time    `json:"sessions"` // sha256(session id) → expiry
+	Artifacts    map[string]*Artifact    `json:"artifacts"`
+	OAuthClients map[string]*OAuthClient `json:"oauthClients,omitempty"`
 }
 
 // Store guards State and writes it atomically to <dir>/vitrine.json.

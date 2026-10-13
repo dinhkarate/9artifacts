@@ -91,6 +91,25 @@ bearer token.
 | `resolve_comment` | mark a comment done, with a note on what changed |
 | `delete_artifact` | delete; only when the user asks |
 
+## Remote MCP with OAuth (claude.ai, ChatGPT connectors)
+
+Clients that support MCP authorization need no token. Add a custom connector with the URL
+`https://art.example.com/mcp`; the client discovers the rest:
+
+| Path | |
+|---|---|
+| `POST /mcp` without a token | `401` with `WWW-Authenticate: Bearer resource_metadata="…/.well-known/oauth-protected-resource"` |
+| `GET /.well-known/oauth-protected-resource` | RFC 9728 resource metadata |
+| `GET /.well-known/oauth-authorization-server` | RFC 8414 server metadata |
+| `POST /oauth/register` | RFC 7591 dynamic registration (public clients; redirect URIs must be https, or http on localhost) |
+| `GET /oauth/authorize` | consent page: the owner signs in (passkey or password) and allows or cancels |
+| `POST /oauth/token` | `authorization_code` with PKCE S256 (required), or `refresh_token` |
+
+Access tokens last 1 hour; refresh tokens last 90 days and rotate on every use (a reused
+refresh token is rejected). Each connector appears in Settings → tokens as "<name> (OAuth)"
+and can be revoked there. CORS is open on these endpoints and `/mcp` for browser-based clients;
+no cookies are involved.
+
 ## Comments
 
 | Method | Path | Body | Result |

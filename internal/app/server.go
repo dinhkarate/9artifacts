@@ -66,6 +66,7 @@ type Server struct {
 	begins     map[string]*failure
 	viewers    map[string]time.Time // share token|client IP → last counted view
 	access     *cfAccess            // nil unless Cloudflare Access checks are on
+	codes      map[string]oauthCode // sha256(authorization code) → pending grant
 }
 
 type challenge struct {
@@ -129,6 +130,7 @@ func New(cfg Config, st *Store) (*Server, error) {
 		failures:   map[string]*failure{},
 		begins:     map[string]*failure{},
 		viewers:    map[string]time.Time{},
+		codes:      map[string]oauthCode{},
 	}
 	if cfg.ContentURL != "" {
 		cu, err := url.Parse(cfg.ContentURL)
@@ -192,7 +194,7 @@ func hostOnly(h string) string {
 func (s *Server) routes() {
 	m := http.NewServeMux()
 	// App shell and theme.
-	for _, p := range []string{"GET /{$}", "GET /a/{id}", "GET /settings", "GET /setup", "GET /login"} {
+	for _, p := range []string{"GET /{$}", "GET /a/{id}", "GET /settings", "GET /setup", "GET /login", "GET /oauth/authorize"} {
 		m.HandleFunc(p, s.handleIndex)
 	}
 	m.HandleFunc("GET /assets/{name}", s.handleAsset)
@@ -231,11 +233,22 @@ func (s *Server) routes() {
 	m.HandleFunc("DELETE /api/artifacts/{id}/shares/{token}", s.auth(s.handleShareRevoke))
 	m.HandleFunc("GET /api/artifacts/{id}/download/{path...}", s.auth(s.handleDownload))
 	// MCP for agents.
-	m.HandleFunc("POST /mcp", s.handleMCP)
-	m.HandleFunc("GET /mcp", func(w http.ResponseWriter, r *http.Request) {
+	m.HandleFunc("POST /mcp", cors(s.handleMCP))
+	m.HandleFunc("OPTIONS /mcp", cors(nil))
+	m.HandleFunc("GET /mcp", cors(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Allow", "POST")
 		writeError(w, 405, "use POST (MCP streamable HTTP, JSON responses)")
-	})
+	}))
+	// OAuth for MCP connectors (see oauth.go).
+	m.HandleFunc("GET /.well-known/oauth-protected-resource", cors(s.handleResourceMetadata))
+	m.HandleFunc("GET /.well-known/oauth-protected-resource/mcp", cors(s.handleResourceMetadata))
+	m.HandleFunc("GET /.well-known/oauth-authorization-server", cors(s.handleAuthServerMetadata))
+	m.HandleFunc("POST /oauth/register", cors(s.handleOAuthRegister))
+	m.HandleFunc("OPTIONS /oauth/register", cors(nil))
+	m.HandleFunc("POST /oauth/token", cors(s.handleOAuthToken))
+	m.HandleFunc("OPTIONS /oauth/token", cors(nil))
+	m.HandleFunc("GET /api/oauth/client", s.session(s.handleOAuthClientInfo))
+	m.HandleFunc("POST /api/oauth/authorize", s.session(s.handleOAuthDecision))
 	// Public share page.
 	m.HandleFunc("GET /s/{token}", s.handleSharePage)
 	m.HandleFunc("POST /s/{token}", s.handleSharePage) // password-protected links
@@ -308,7 +321,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if s.access != nil && !onContent && !isContent && !sharePage && !strings.HasPrefix(r.URL.Path, "/assets/") &&
-		r.URL.Path != "/health" && !(r.Header.Get("Authorization") != "" && s.tokenAuth(r)) {
+		r.URL.Path != "/health" && !strings.HasPrefix(r.URL.Path, "/.well-known/") && r.URL.Path != "/oauth/token" &&
+		r.URL.Path != "/oauth/register" && !(r.Header.Get("Authorization") != "" && s.tokenAuth(r)) {
 		// Agents with a valid API token skip Access (bypass /mcp and /api in
 		// Access); browsers must come through Access.
 		if err := s.access.verify(r.Header.Get("Cf-Access-Jwt-Assertion")); err != nil {

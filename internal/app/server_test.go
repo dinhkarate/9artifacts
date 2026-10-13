@@ -787,7 +787,9 @@ func TestSelectionScriptOnlyInOwnerViewer(t *testing.T) {
 	e := newEnv(t, Config{})
 	a := decode[artifactView](t, e.upload("/api/artifacts", nil, map[string]string{"index.html": "<p>hi</p>", "n.md": "# x"}))
 	base := pathOf(a.ViewBase)
-	has := func(path string) bool { return strings.Contains(e.do("GET", path, nil, nil).Body.String(), `vitrine:"selection"`) }
+	has := func(path string) bool {
+		return strings.Contains(e.do("GET", path, nil, nil).Body.String(), `vitrine:"selection"`)
+	}
 	if !has(base+"index.html?vc=1") || !has(base+"n.md?view=1&vc=1") {
 		t.Fatal("viewer HTML/Markdown without selection script")
 	}

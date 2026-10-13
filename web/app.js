@@ -138,7 +138,7 @@ const state = { me: null, artifacts: [], tags: {}, tag: '', q: '', layout: 'grid
 try { if (localStorage.getItem('vitrine.layout') === 'rows') state.layout = 'rows'; } catch { /* private mode */ }
 let viewer = null;
 let pollTimer = null;
-const SCREENS = ['setup', 'login', 'gallery', 'detail', 'settings'];
+const SCREENS = ['setup', 'login', 'gallery', 'detail', 'settings', 'consent'];
 
 function show(name) {
   for (const s of SCREENS) $(`#view-${s}`).hidden = s !== name;
@@ -169,7 +169,7 @@ async function route() {
     return;
   }
   if (!state.me.authenticated) {
-    if (p !== '/login') history.replaceState({ next: p }, '', '/login');
+    if (p !== '/login') history.replaceState({ next: p + location.search }, '', '/login');
     show('login');
     setTimeout(() => $('#pw').focus(), 0);
     return;
@@ -177,6 +177,7 @@ async function route() {
   const m = p.match(/^\/a\/([a-z0-9]+)$/);
   if (m) return openViewer(m[1]);
   if (p === '/settings') return openSettings();
+  if (p === '/oauth/authorize') return openConsent();
   if (p !== '/') history.replaceState(null, '', '/');
   show('gallery');
   loadGallery();
@@ -224,6 +225,39 @@ $('#pk-login').addEventListener('click', async () => {
     formError('#login-error', e && e.name === 'NotAllowedError' ? 'Passkey sign-in was cancelled.' : (e.message || String(e)));
   }
 });
+
+/* OAuth consent for MCP connectors (claude.ai, ChatGPT…). The server checks
+   the client and redirect URI again before issuing a code. */
+async function openConsent() {
+  show('consent');
+  const q = new URLSearchParams(location.search);
+  const card = $('#consent');
+  card.textContent = '';
+  const params = Object.fromEntries(['client_id', 'redirect_uri', 'state', 'code_challenge', 'code_challenge_method', 'response_type', 'resource'].map((k) => [k, q.get(k) || '']));
+  let client;
+  try {
+    client = await api('GET', `/api/oauth/client?client_id=${encodeURIComponent(params.client_id)}&redirect_uri=${encodeURIComponent(params.redirect_uri)}`);
+  } catch (e) {
+    card.append(h('img', { class: 'auth-logo', src: '/assets/logo.svg', alt: '' }), h('h1', { text: 'Can’t connect this app' }),
+      h('p', { class: 'muted', text: e.message }));
+    return;
+  }
+  const decide = async (approve) => {
+    for (const b of card.querySelectorAll('button')) b.disabled = true;
+    try {
+      const r = await api('POST', '/api/oauth/authorize', { ...params, approve });
+      location.assign(r.redirect);
+    } catch (e) { apiError(e); for (const b of card.querySelectorAll('button')) b.disabled = false; }
+  };
+  card.append(
+    h('img', { class: 'auth-logo', src: '/assets/logo.svg', alt: '' }),
+    h('h1', { text: `Connect ${client.name}?` }),
+    h('p', { class: 'muted' }, h('strong', { text: client.name }), ` wants to use ${state.me.name} as an MCP connector. It will be able to publish, list, read, comment on, share and delete your artifacts, like an API token. You can revoke it any time in Settings.`),
+    h('p', { class: 'muted small', text: `You’ll be sent back to ${client.redirectHost}.` }),
+    h('button', { class: 'btn primary block', type: 'button', text: 'Allow', onclick: () => decide(true) }),
+    h('button', { class: 'btn block', type: 'button', text: 'Cancel', onclick: () => decide(false) }));
+  document.title = `Connect ${client.name} · ${state.me.name}`;
+}
 
 function afterLogin() {
   const next = (history.state && history.state.next) || '/';
@@ -848,6 +882,8 @@ async function openSettings() {
       h('section', { class: 'panel' },
         h('h2', {}, icon('bot'), 'Connect an AI agent'),
         h('p', { class: 'muted', text: 'Create a token, then give it to Claude Code, Codex, Cursor or any MCP client. Agents can publish, update and list artifacts; they only create public links when you ask.' }),
+        h('p', { class: 'muted small' }, 'claude.ai, ChatGPT and other apps with remote connectors need no token: add a custom connector with the URL ',
+          h('code', { text: `${me.publicUrl}/mcp` }), ' and approve it here when asked.'),
         h('div', { class: 'form-row' }, tokenName, createToken),
         tokenOut,
         tokenList),

@@ -45,7 +45,7 @@ Never create public share links unless the user explicitly asks for one.`
 
 func (s *Server) handleMCP(w http.ResponseWriter, r *http.Request) {
 	if !s.tokenAuth(r) {
-		w.Header().Set("WWW-Authenticate", `Bearer realm="vitrine"`)
+		w.Header().Set("WWW-Authenticate", `Bearer realm="vitrine", resource_metadata="`+s.resourceMetadataURL()+`"`)
 		writeError(w, 401, "send Authorization: Bearer <vitrine API token>")
 		return
 	}
