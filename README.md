@@ -191,6 +191,10 @@ Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 (free `*.ts.net` HTTPS, no domain needed) or a Cloudflare Tunnel, or use Oracle Cloud Always
 Free or a Google Cloud `e2-micro`. See [docs/deploy.md](docs/deploy.md#free-hosting).
 
+**Is this related to 9Router?** No. The name is a friendly nod to
+[9Router](https://github.com/decolua/9router), which many of us use with the same agents, but
+9artifacts is an independent project with no affiliation.
+
 **Multiple users?** Not yet. 9artifacts is single-owner by design; share with others through expiring links.
 
 **Where is my data?** Everything lives in one directory: a `9artifacts.json` index plus your files under
