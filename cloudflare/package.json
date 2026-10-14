@@ -1,8 +1,8 @@
 {
-  "name": "vitryn-cf",
+  "name": "9artifacts-cf",
   "version": "0.1.0",
   "private": true,
-  "description": "vitryn on Cloudflare Workers (D1 + R2), same API, MCP and web UI as the Go server",
+  "description": "9artifacts on Cloudflare Workers (D1 + R2), same API, MCP and web UI as the Go server",
   "type": "module",
   "scripts": {
     "build": "node scripts/build-web.mjs",

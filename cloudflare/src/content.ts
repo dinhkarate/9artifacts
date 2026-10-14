@@ -279,7 +279,7 @@ export async function serveVersionFile(
  */
 function pickScript(c: Ctx): string {
   const origin = JSON.stringify(c.publicURL).replace(/[<>&]/g, (x) => '\\u' + x.charCodeAt(0).toString(16).padStart(4, '0'));
-  return `<script>(()=>{let t,last="";document.addEventListener("selectionchange",()=>{clearTimeout(t);t=setTimeout(()=>{const s=String(getSelection()||"").trim().slice(0,500);if(s!==last){last=s;parent.postMessage({${BRAND}:"selection",text:s},${origin})}},300)})})()</script>`;
+  return `<script>(()=>{let t,last="";document.addEventListener("selectionchange",()=>{clearTimeout(t);t=setTimeout(()=>{const s=String(getSelection()||"").trim().slice(0,500);if(s!==last){last=s;parent.postMessage({artifacts:"selection",text:s},${origin})}},300)})})()</script>`;
 }
 
 function markdownPage(title: string, src: string): string {

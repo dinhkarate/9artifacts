@@ -1,9 +1,9 @@
-module github.com/dinhkarate/vitryn/tailscale
+module github.com/dinhkarate/9artifacts/tailscale
 
 go 1.27.1
 
 require (
-	github.com/dinhkarate/vitryn v0.0.0
+	github.com/dinhkarate/9artifacts v0.0.0
 	tailscale.com v1.104.1
 )
 
@@ -53,4 +53,4 @@ require (
 	gvisor.dev/gvisor v0.0.0-20260915211658-a6f909f08a72 // indirect
 )
 
-replace github.com/dinhkarate/vitryn => ../
+replace github.com/dinhkarate/9artifacts => ../

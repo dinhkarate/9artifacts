@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dinhkarate/vitryn/internal/markdown"
+	"github.com/dinhkarate/9artifacts/internal/markdown"
 )
 
 const (

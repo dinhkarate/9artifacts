@@ -94,10 +94,10 @@ export async function tokenName(c: Ctx): Promise<string> {
   return (await bearerToken(c))?.name ?? '';
 }
 
-/** Cookie-authenticated writes must come from our own JavaScript, which sends X-Vitryn: 1. */
+/** Cookie-authenticated writes must come from our own JavaScript, which sends X-9artifacts: 1. */
 export function csrfOK(c: Ctx): boolean {
   const m = c.req.method;
-  return m === 'GET' || m === 'HEAD' || c.req.headers.get('X-Vitryn') === '1';
+  return m === 'GET' || m === 'HEAD' || c.req.headers.get('X-9artifacts') === '1';
 }
 
 /** auth accepts an API token or a browser session. */

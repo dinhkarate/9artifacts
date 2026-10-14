@@ -1,4 +1,4 @@
-/* Styles for Markdown artifacts rendered by vitryn (a standalone page). */
+/* Styles for Markdown artifacts rendered by 9artifacts (a standalone page). */
 :root{--bg:#fffefb;--text:#22211f;--muted:#6d6a63;--border:#e6e3dc;--code-bg:#f3f1ec;--accent:#1f6f5c;color-scheme:light dark}
 @media (prefers-color-scheme:dark){:root{--bg:#1a1a18;--text:#e9e7e2;--muted:#9a978f;--border:#34332f;--code-bg:#24231f;--accent:#5cc2a3}}
 *{box-sizing:border-box}

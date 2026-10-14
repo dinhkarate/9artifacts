@@ -1,4 +1,4 @@
-// Package cli implements the vitryn subcommands.
+// Package cli implements the 9artifacts subcommands.
 package cli
 
 import (
@@ -26,18 +26,18 @@ import (
 
 	"golang.org/x/crypto/acme/autocert"
 
-	"github.com/dinhkarate/vitryn/internal/app"
-	"github.com/dinhkarate/vitryn/web"
+	"github.com/dinhkarate/9artifacts/internal/app"
+	"github.com/dinhkarate/9artifacts/web"
 )
 
-// env reads VITRYN_* settings, falling back to GLASSHELF_* and VITRINE_*,
+// env reads NINEARTIFACTS_* settings, falling back to VITRYN_*, GLASSHELF_* and VITRINE_*,
 // the names the project used before.
 func env(key, def string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
 	}
-	if rest, ok := strings.CutPrefix(key, "VITRYN_"); ok {
-		for _, prefix := range []string{"GLASSHELF_", "VITRINE_"} { // earlier names
+	if rest, ok := strings.CutPrefix(key, "NINEARTIFACTS_"); ok {
+		for _, prefix := range []string{"VITRYN_", "GLASSHELF_", "VITRINE_"} { // earlier names
 			if v := os.Getenv(prefix + rest); v != "" {
 				return v
 			}
@@ -47,38 +47,38 @@ func env(key, def string) string {
 }
 
 func defaultDataDir() string {
-	if v := env("VITRYN_DATA", ""); v != "" {
+	if v := env("NINEARTIFACTS_DATA", ""); v != "" {
 		return v
 	}
-	for _, d := range []string{"/var/lib/vitryn", "/var/lib/glasshelf", "/var/lib/vitrine"} { // earlier names
+	for _, d := range []string{"/var/lib/9artifacts", "/var/lib/vitryn", "/var/lib/glasshelf", "/var/lib/vitrine"} { // earlier names
 		if st, err := os.Stat(d); err == nil && st.IsDir() {
 			return d
 		}
 	}
-	return "./vitryn-data"
+	return "./9artifacts-data"
 }
 
 // Serve runs the HTTP server.
 func Serve(args []string, version string) error {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
-	addr := fs.String("addr", env("VITRYN_ADDR", ":8080"), "listen address (ignored with --domain)")
+	addr := fs.String("addr", env("NINEARTIFACTS_ADDR", ":8080"), "listen address (ignored with --domain)")
 	data := fs.String("data", defaultDataDir(), "data directory")
-	public := fs.String("url", env("VITRYN_URL", ""), "public URL users browse, e.g. https://art.example.com")
-	content := fs.String("content-url", env("VITRYN_CONTENT_URL", ""), "separate origin for artifact content, e.g. https://art-usercontent.example.com (recommended)")
-	domain := fs.String("domain", env("VITRYN_DOMAIN", ""), "serve HTTPS on :443 with automatic Let's Encrypt certificates for this domain")
-	contentDomain := fs.String("content-domain", env("VITRYN_CONTENT_DOMAIN", ""), "with --domain: also get a certificate for this content domain")
-	email := fs.String("email", env("VITRYN_EMAIL", ""), "with --domain: contact email for Let's Encrypt")
-	name := fs.String("name", env("VITRYN_NAME", "vitryn"), "name shown in the UI")
-	theme := fs.String("theme", env("VITRYN_THEME", "default"), "built-in theme: "+strings.Join(builtinThemes(), ", "))
-	themeDir := fs.String("theme-dir", env("VITRYN_THEME_DIR", ""), "directory overriding theme files (see vitryn theme init)")
-	trust := proxyMode(env("VITRYN_TRUST_PROXY", ""))
+	public := fs.String("url", env("NINEARTIFACTS_URL", ""), "public URL users browse, e.g. https://art.example.com")
+	content := fs.String("content-url", env("NINEARTIFACTS_CONTENT_URL", ""), "separate origin for artifact content, e.g. https://art-usercontent.example.com (recommended)")
+	domain := fs.String("domain", env("NINEARTIFACTS_DOMAIN", ""), "serve HTTPS on :443 with automatic Let's Encrypt certificates for this domain")
+	contentDomain := fs.String("content-domain", env("NINEARTIFACTS_CONTENT_DOMAIN", ""), "with --domain: also get a certificate for this content domain")
+	email := fs.String("email", env("NINEARTIFACTS_EMAIL", ""), "with --domain: contact email for Let's Encrypt")
+	name := fs.String("name", env("NINEARTIFACTS_NAME", "9artifacts"), "name shown in the UI")
+	theme := fs.String("theme", env("NINEARTIFACTS_THEME", "default"), "built-in theme: "+strings.Join(builtinThemes(), ", "))
+	themeDir := fs.String("theme-dir", env("NINEARTIFACTS_THEME_DIR", ""), "directory overriding theme files (see 9artifacts theme init)")
+	trust := proxyMode(env("NINEARTIFACTS_TRUST_PROXY", ""))
 	fs.Var(&trust, "trust-proxy", "behind a proxy: take the client IP from X-Forwarded-For (bare flag or xff), CF-Connecting-IP (cloudflare) or Tailscale Serve/Funnel (tailscale)")
-	maxMB := fs.Int("max-upload-mb", atoiDef(env("VITRYN_MAX_UPLOAD_MB", "100"), 100), "maximum upload size in MB")
-	sharesOnContent := fs.Bool("shares-on-content", env("VITRYN_SHARES_ON_CONTENT", "") == "1", "serve public share pages from --content-url, so the app host can stay private (Tailscale, Cloudflare Access)")
-	cfTeam := fs.String("cf-access-team", env("VITRYN_CF_ACCESS_TEAM", ""), "Cloudflare Access team URL, e.g. https://myteam.cloudflareaccess.com (with --cf-access-aud)")
-	cfAUD := fs.String("cf-access-aud", env("VITRYN_CF_ACCESS_AUD", ""), "Cloudflare Access application AUD tag: browser requests to the app host must carry a valid Access JWT")
-	webhook := fs.String("webhook", env("VITRYN_WEBHOOK", ""), "comma-separated URLs to notify on publishes, shares and share visits (Slack, Discord, any JSON endpoint; prefix ntfy+ for ntfy)")
-	artifactCSP := fs.String("artifact-csp", env("VITRYN_ARTIFACT_CSP", ""), "extra CSP directives for artifact pages, e.g. \"connect-src 'none'\"")
+	maxMB := fs.Int("max-upload-mb", atoiDef(env("NINEARTIFACTS_MAX_UPLOAD_MB", "100"), 100), "maximum upload size in MB")
+	sharesOnContent := fs.Bool("shares-on-content", env("NINEARTIFACTS_SHARES_ON_CONTENT", "") == "1", "serve public share pages from --content-url, so the app host can stay private (Tailscale, Cloudflare Access)")
+	cfTeam := fs.String("cf-access-team", env("NINEARTIFACTS_CF_ACCESS_TEAM", ""), "Cloudflare Access team URL, e.g. https://myteam.cloudflareaccess.com (with --cf-access-aud)")
+	cfAUD := fs.String("cf-access-aud", env("NINEARTIFACTS_CF_ACCESS_AUD", ""), "Cloudflare Access application AUD tag: browser requests to the app host must carry a valid Access JWT")
+	webhook := fs.String("webhook", env("NINEARTIFACTS_WEBHOOK", ""), "comma-separated URLs to notify on publishes, shares and share visits (Slack, Discord, any JSON endpoint; prefix ntfy+ for ntfy)")
+	artifactCSP := fs.String("artifact-csp", env("NINEARTIFACTS_ARTIFACT_CSP", ""), "extra CSP directives for artifact pages, e.g. \"connect-src 'none'\"")
 	_ = fs.Parse(args)
 
 	if *domain != "" {
@@ -107,7 +107,7 @@ func Serve(args []string, version string) error {
 	}()
 	defer os.Remove(app.AdminSocketPath(*data))
 
-	log.Printf("vitryn %s — data %s", version, *data)
+	log.Printf("9artifacts %s — data %s", version, *data)
 	if u := srv.SetupURL(); u != "" {
 		log.Printf("first run: open %s to set the owner password", u)
 	}
@@ -186,7 +186,7 @@ func builtinThemes() []string {
 func adminClient(data string) (*http.Client, error) {
 	sock := app.AdminSocketPath(data)
 	if _, err := os.Stat(sock); err != nil {
-		return nil, fmt.Errorf("no running server found at %s (is vitryn serve running with --data %s? are you the right user?)", sock, data)
+		return nil, fmt.Errorf("no running server found at %s (is 9artifacts serve running with --data %s? are you the right user?)", sock, data)
 	}
 	return &http.Client{Timeout: 30 * time.Second, Transport: &http.Transport{
 		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
@@ -276,7 +276,7 @@ func Status(args []string) error {
 // Theme exports theme files for customisation.
 func Theme(args []string) error {
 	if len(args) < 1 || args[0] != "init" {
-		return errors.New("usage: vitryn theme init DIR [--from default] [--full]")
+		return errors.New("usage: 9artifacts theme init DIR [--from default] [--full]")
 	}
 	fs := flag.NewFlagSet("theme init", flag.ExitOnError)
 	from := fs.String("from", "default", "built-in theme to start from: "+strings.Join(builtinThemes(), ", "))
@@ -291,7 +291,7 @@ func Theme(args []string) error {
 		dir = fs.Arg(0)
 	}
 	if dir == "" {
-		return errors.New("usage: vitryn theme init DIR")
+		return errors.New("usage: 9artifacts theme init DIR")
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
@@ -333,7 +333,7 @@ func Theme(args []string) error {
 			}
 		}
 	}
-	fmt.Fprintf(os.Stderr, "\nRestart with: vitryn serve --theme-dir %s\nThen ask your AI: \"Restyle %s/theme.css to look like <brand>, and update design.md to match.\"\n", dir, dir)
+	fmt.Fprintf(os.Stderr, "\nRestart with: 9artifacts serve --theme-dir %s\nThen ask your AI: \"Restyle %s/theme.css to look like <brand>, and update design.md to match.\"\n", dir, dir)
 	return nil
 }
 

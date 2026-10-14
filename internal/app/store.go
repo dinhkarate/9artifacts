@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dinhkarate/vitryn/internal/webauthn"
+	"github.com/dinhkarate/9artifacts/internal/webauthn"
 )
 
 // File is one uploaded file inside an artifact version.
@@ -135,7 +135,7 @@ type OAuthClient struct {
 	CreatedAt    time.Time `json:"createdAt"`
 }
 
-// State is everything vitryn persists apart from the file bytes.
+// State is everything 9artifacts persists apart from the file bytes.
 type State struct {
 	PasswordHash string                  `json:"passwordHash,omitempty"`
 	SigningKey   []byte                  `json:"signingKey"`
@@ -146,7 +146,7 @@ type State struct {
 	OAuthClients map[string]*OAuthClient `json:"oauthClients,omitempty"`
 }
 
-// Store guards State and writes it atomically to <dir>/vitryn.json.
+// Store guards State and writes it atomically to <dir>/9artifacts.json.
 type Store struct {
 	mu   sync.RWMutex
 	dir  string
@@ -159,9 +159,9 @@ func OpenStore(dir string) (*Store, error) {
 	if err := os.MkdirAll(filepath.Join(dir, "artifacts"), 0o700); err != nil {
 		return nil, err
 	}
-	st := &Store{dir: dir, path: filepath.Join(dir, "vitryn.json")}
+	st := &Store{dir: dir, path: filepath.Join(dir, "9artifacts.json")}
 	// Data directories from before the renames keep their state file.
-	for _, name := range []string{"glasshelf.json", "vitrine.json"} {
+	for _, name := range []string{"vitryn.json", "glasshelf.json", "vitrine.json"} {
 		if old := filepath.Join(dir, name); !exists(st.path) && exists(old) {
 			if err := os.Rename(old, st.path); err != nil {
 				return nil, err

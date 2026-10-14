@@ -5,16 +5,16 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 ARG VERSION=dev
-RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /vitryn ./cmd/vitryn \
+RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /9artifacts ./cmd/9artifacts \
  && mkdir -p /data
 
 FROM scratch
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=build /vitryn /vitryn
+COPY --from=build /9artifacts /9artifacts
 COPY --from=build --chown=65532:65532 /data /data
 USER 65532:65532
-ENV VITRYN_DATA=/data VITRYN_ADDR=:8080
+ENV NINEARTIFACTS_DATA=/data NINEARTIFACTS_ADDR=:8080
 VOLUME /data
 EXPOSE 8080
-ENTRYPOINT ["/vitryn"]
+ENTRYPOINT ["/9artifacts"]
 CMD ["serve"]

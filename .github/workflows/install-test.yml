@@ -16,18 +16,18 @@ jobs:
         run: sudo sh install.sh --url http://localhost:8080 --content-url http://127.0.0.1:8080
       - name: service is healthy and hardened
         run: |
-          systemctl is-active vitryn
+          systemctl is-active 9artifacts
           curl -fsS http://127.0.0.1:8080/health
-          systemctl show vitryn -p DynamicUser -p NoNewPrivileges -p ProtectSystem
+          systemctl show 9artifacts -p DynamicUser -p NoNewPrivileges -p ProtectSystem
       - name: admin socket, token, publish, share
         run: |
-          sudo vitryn status --data /var/lib/vitryn
-          export VITRYN_URL=http://localhost:8080   # app origin; 127.0.0.1 is the content origin here
-          export VITRYN_TOKEN=$(sudo vitryn token --data /var/lib/vitryn --name ci)
+          sudo 9artifacts status --data /var/lib/9artifacts
+          export NINEARTIFACTS_URL=http://localhost:8080   # app origin; 127.0.0.1 is the content origin here
+          export NINEARTIFACTS_TOKEN=$(sudo 9artifacts token --data /var/lib/9artifacts --name ci)
           printf '<!doctype html><title>CI report</title><h1>ok</h1>' > report.html
-          vitryn publish report.html --tags ci --share 1h
-          vitryn list
-          ! curl -fsS -H "Authorization: Bearer $VITRYN_TOKEN" http://127.0.0.1:8080/api/artifacts  # API must not answer on the content origin
+          9artifacts publish report.html --tags ci --share 1h
+          9artifacts list
+          ! curl -fsS -H "Authorization: Bearer $NINEARTIFACTS_TOKEN" http://127.0.0.1:8080/api/artifacts  # API must not answer on the content origin
       - name: logs
         if: always()
-        run: sudo journalctl -u vitryn -n 50 --no-pager | sed -E 's/code=[a-z0-9]+/code=<redacted>/'
+        run: sudo journalctl -u 9artifacts -n 50 --no-pager | sed -E 's/code=[a-z0-9]+/code=<redacted>/'

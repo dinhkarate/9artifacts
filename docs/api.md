@@ -1,7 +1,7 @@
 # API
 
-Authenticate with `Authorization: Bearer vt_...` (an API token from Settings or `vitryn token`).
-Browser sessions also work, but cookie-authenticated writes must send `X-Vitryn: 1`.
+Authenticate with `Authorization: Bearer vt_...` (an API token from Settings or `9artifacts token`).
+Browser sessions also work, but cookie-authenticated writes must send `X-9artifacts: 1`.
 Errors are JSON: `{"error": "..."}`.
 
 ## Artifacts
@@ -43,7 +43,7 @@ JSON, which is easier from code (up to 32 MB; use multipart for anything bigger)
 ```
 
 The **entry** file is the one opened by default: `entry` if given, else `index.html`, else
-the first top-level `.html`, `.md`, `.pdf`, `.svg` or image. Without a `title`, Vitryn uses
+the first top-level `.html`, `.md`, `.pdf`, `.svg` or image. Without a `title`, 9artifacts uses
 the HTML `<title>` or the first Markdown `# heading`.
 
 ### Artifact object

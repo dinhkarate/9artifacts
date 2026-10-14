@@ -1,37 +1,37 @@
-# vitryn on Cloudflare Workers
+# 9artifacts on Cloudflare Workers
 
-The same vitryn, with no server, no domain and no bill: it runs on the Cloudflare Workers free
+The same 9artifacts, with no server, no domain and no bill: it runs on the Cloudflare Workers free
 plan, with **D1** holding metadata and **R2** holding file bytes. It speaks the Go server's HTTP API,
-MCP endpoint and web UI, so the `web/` app, the `vitryn` CLI, the agent skill and
+MCP endpoint and web UI, so the `web/` app, the `9artifacts` CLI, the agent skill and
 `claude mcp add` all work against it unchanged.
 
 ```
-vitryn.<you>.workers.dev          app: gallery, REST API, /mcp, share pages
-vitryn-content.<you>.workers.dev  sandboxed artifact bytes (/c/…, /s/…/f/…)
+9artifacts.<you>.workers.dev          app: gallery, REST API, /mcp, share pages
+9artifacts-content.<you>.workers.dev  sandboxed artifact bytes (/c/…, /s/…/f/…)
 ```
 
 It includes review comments (the owner comments in the viewer, and agents read them with
 `list_comments` and resolve them with `resolve_comment`). It also includes **remote MCP with
-OAuth**, so you can add `https://vitryn.<you>.workers.dev/mcp` as a connector in claude.ai or
+OAuth**, so you can add `https://9artifacts.<you>.workers.dev/mcp` as a connector in claude.ai or
 ChatGPT. They register themselves and you approve them on a consent page.
 
-The content Worker owns no data. It forwards every request to `vitryn` over a service binding,
-and `vitryn` serves only sandboxed content on that host, the same host separation the Go server
+The content Worker owns no data. It forwards every request to `9artifacts` over a service binding,
+and `9artifacts` serves only sandboxed content on that host, the same host separation the Go server
 does with `--content-url`.
 
 ## Deploy with one click
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dinhkarate/vitryn/tree/main/cloudflare)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dinhkarate/9artifacts/tree/main/cloudflare)
 
 ```markdown
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dinhkarate/vitryn/tree/main/cloudflare)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/dinhkarate/9artifacts/tree/main/cloudflare)
 ```
 
 The button URL is `https://deploy.workers.cloudflare.com/?url=<public GitHub URL of this
 directory>`, in the form `…/tree/<branch>/cloudflare`. **The repository must be public.**
 Cloudflare clones it into your account, creates the D1 database and the R2 bucket named in
-`wrangler.jsonc`, and runs `npm run deploy`, which builds, deploys `vitryn`, applies the D1
-migrations and deploys `vitryn-content`. When it asks for secrets (listed in
+`wrangler.jsonc`, and runs `npm run deploy`, which builds, deploys `9artifacts`, applies the D1
+migrations and deploys `9artifacts-content`. When it asks for secrets (listed in
 `.dev.vars.example`), set `SETUP_TOKEN`. If you skip that step, run
 `npx wrangler secret put SETUP_TOKEN` afterwards.
 
@@ -41,30 +41,30 @@ migrations and deploys `vitryn-content`. When it asks for secrets (listed in
 cd cloudflare
 npm ci
 npx wrangler login
-npx wrangler r2 bucket create vitryn-files
-npx wrangler d1 create vitryn          # optional: `wrangler deploy` creates it otherwise;
+npx wrangler r2 bucket create 9artifacts-files
+npx wrangler d1 create 9artifacts          # optional: `wrangler deploy` creates it otherwise;
                                         # if you run it, add "database_id" to wrangler.jsonc
 openssl rand -base64 32 | npx wrangler secret put SETUP_TOKEN
-npm run deploy                          # deploy vitryn, migrate D1, deploy vitryn-content
+npm run deploy                          # deploy 9artifacts, migrate D1, deploy 9artifacts-content
 ```
 
-Then open `https://vitryn.<you>.workers.dev`, enter the setup token, and add a passkey on the
-Settings page. To connect claude.ai or ChatGPT, add `https://vitryn.<you>.workers.dev/mcp` as a
+Then open `https://9artifacts.<you>.workers.dev`, enter the setup token, and add a passkey on the
+Settings page. To connect claude.ai or ChatGPT, add `https://9artifacts.<you>.workers.dev/mcp` as a
 custom connector and approve it while signed in. Create an API token on the same page for your agents:
 
 ```bash
-claude mcp add --transport http vitryn https://vitryn.<you>.workers.dev/mcp \
+claude mcp add --transport http 9artifacts https://9artifacts.<you>.workers.dev/mcp \
   --header "Authorization: Bearer vt_..."
-VITRYN_URL=https://vitryn.<you>.workers.dev VITRYN_TOKEN=vt_... vitryn publish report.html
+NINEARTIFACTS_URL=https://9artifacts.<you>.workers.dev NINEARTIFACTS_TOKEN=vt_... 9artifacts publish report.html
 ```
 
 `npm run deploy` runs these steps:
 
 1. `npm run build`: copies `../web` (shell plus theme) into `dist/public/assets` and `src/generated/`.
-2. `wrangler deploy`: deploys the `vitryn` Worker and provisions D1 and R2 if needed.
+2. `wrangler deploy`: deploys the `9artifacts` Worker and provisions D1 and R2 if needed.
 3. `wrangler d1 migrations apply DB --remote`: creates or updates the tables.
-4. `wrangler deploy -c wrangler.content.jsonc`: deploys `vitryn-content`. It has to come after
-   `vitryn`, because it binds to that Worker.
+4. `wrangler deploy -c wrangler.content.jsonc`: deploys `9artifacts-content`. It has to come after
+   `9artifacts`, because it binds to that Worker.
 
 ### Settings (`vars` in `wrangler.jsonc`, secrets with `wrangler secret put`)
 
@@ -77,8 +77,8 @@ VITRYN_URL=https://vitryn.<you>.workers.dev VITRYN_TOKEN=vt_... vitryn publish r
 | `SHARES_ON_CONTENT` | off | `1`: public share pages live on the content origin (`--shares-on-content`). |
 | `MAX_UPLOAD_MB` | `50` | Multipart upload cap (JSON and MCP bodies stay at 32 MB). |
 | `ARTIFACT_CSP` | none | Extra CSP directives for artifact content (`--artifact-csp`). |
-| `NAME` | `vitryn` | Brand shown in the UI. |
-| `VITRYN_THEME`, `VITRYN_THEME_DIR` (build env) | `default` | Build-time `--theme` and `--theme-dir`. |
+| `NAME` | `9artifacts` | Brand shown in the UI. |
+| `NINEARTIFACTS_THEME`, `NINEARTIFACTS_THEME_DIR` (build env) | `default` | Build-time `--theme` and `--theme-dir`. |
 
 If you rename the Workers, keep the content Worker's name as `<app name>-content`, or set
 `CONTENT_URL` explicitly. Update the `service` field in `wrangler.content.jsonc` to match.
@@ -104,7 +104,7 @@ included. Pass `--log-level warn` if that matters to you.
 | 100,000 requests/day | Every page, API call and artifact file counts. Static `/assets/*` files are served without running the Worker. A content-origin request goes through two Workers. |
 | 10 ms CPU per request | No 600k-iteration PBKDF2, so owner sign-in is passkey-only (see below). Uploads are streamed, and R2/D1 waits don't count as CPU. Very large JSON or base64 uploads can exceed it, so use multipart. |
 | 128 MB memory | Files over 8 MiB go to R2 as multipart uploads in 8 MiB parts, so memory stays bounded. |
-| 100 MB request body | Cloudflare's cap. vitryn caps multipart at `MAX_UPLOAD_MB` (50). |
+| 100 MB request body | Cloudflare's cap. 9artifacts caps multipart at `MAX_UPLOAD_MB` (50). |
 | 1,000 D1/R2 operations per request | Up to 500 files per version. Kept and restored files are referenced, never copied. |
 | 3 MB Worker size (compressed) | The app Worker is about 40 KB gzipped. |
 | D1 5 GB, R2 10 GB storage | Free-tier storage. R2 egress is free. |
@@ -124,11 +124,11 @@ included. Pass `--log-level warn` if that matters to you.
   instead of 600,000, in the same encoded format. If the D1 database leaked, they would be much
   easier to brute-force offline. Online guesses are rate-limited as before.
 - **The upload cap is 50 MB by default**, instead of 100 MB.
-- **There is no `vitryn token`, `vitryn passwd` or `vitryn status`.** Those talk to the Go
+- **There is no `9artifacts token`, `9artifacts passwd` or `9artifacts status`.** Those talk to the Go
   server's admin socket. Create tokens in Settings instead.
 - **Cloudflare Access JWT checks (`--cf-access-*`) are not ported.** You can still put Access in
   front of the workers.dev URL. If you do, bypass `/mcp`, `/api` and the content host for agents.
-- **Themes are chosen at build time** (`VITRYN_THEME`, `VITRYN_THEME_DIR`), not at runtime.
+- **Themes are chosen at build time** (`NINEARTIFACTS_THEME`, `NINEARTIFACTS_THEME_DIR`), not at runtime.
 - **State is shared through D1.** Lockouts, passkey challenges, OAuth authorization codes and
   the hourly visit dedupe live in D1, because Worker isolates share no memory. An hourly cron
   removes expired rows.
@@ -138,7 +138,7 @@ included. Pass `--log-level warn` if that matters to you.
 - **New version numbers are reserved before upload.** A failed upload usually releases its
   number. If two agents publish at once, both versions are kept, where Go would return 409 for
   one of them.
-- **Logging differs.** vitryn's own log line redacts share, view and grant tokens, as in Go.
+- **Logging differs.** 9artifacts's own log line redacts share, view and grant tokens, as in Go.
   Cloudflare's tooling records full URLs (`wrangler tail`, Workers Logs, `wrangler dev`'s request
   log). `observability` is off in `wrangler.jsonc` for that reason.
 - **`/api/me` has two extra fields**, `edition: "cloudflare"` and `passkeyOnly: true`.

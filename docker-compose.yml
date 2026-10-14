@@ -1,15 +1,15 @@
-# docker compose up -d   then open the first-run link from: docker compose logs vitryn
+# docker compose up -d   then open the first-run link from: docker compose logs 9artifacts
 services:
-  vitryn:
-    image: ghcr.io/dinhkarate/vitryn:latest
+  9artifacts:
+    image: ghcr.io/dinhkarate/9artifacts:latest
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:8080"   # put Caddy/nginx/Cloudflare Tunnel in front
     environment:
-      VITRYN_URL: https://art.example.com
-      # VITRYN_CONTENT_URL: https://art-content.example.com   # recommended
-      VITRYN_TRUST_PROXY: "1"
+      NINEARTIFACTS_URL: https://art.example.com
+      # NINEARTIFACTS_CONTENT_URL: https://art-content.example.com   # recommended
+      NINEARTIFACTS_TRUST_PROXY: "1"
     volumes:
-      - vitryn-data:/data
+      - 9artifacts-data:/data
 volumes:
-  vitryn-data:
+  9artifacts-data:

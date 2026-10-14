@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="web/themes/default/logo.svg" width="64" alt="vitryn">
+<img src="web/themes/default/logo.svg" width="64" alt="9artifacts">
 
-# vitryn
+# 9artifacts
 
 **Artifact kiểu Claude, chạy trên VPS của bạn.**
 
@@ -10,12 +10,12 @@
 
 </div>
 
-AI agent (Claude Code, Codex, Cursor…) tạo ra rất nhiều dashboard, báo cáo, sơ đồ. Vitryn là nơi
+AI agent (Claude Code, Codex, Cursor…) tạo ra rất nhiều dashboard, báo cáo, sơ đồ. 9artifacts là nơi
 lưu chúng **trên server của bạn**:
 
 - **Riêng tư mặc định.** Đăng nhập bằng passkey. Link công khai **luôn có hạn** (1 giờ đến 30 ngày)
   và thu hồi được.
-- **Cho agent dùng thẳng.** Có sẵn MCP server, CLI và skill (`npx skills add dinhkarate/vitryn`).
+- **Cho agent dùng thẳng.** Có sẵn MCP server, CLI và skill (`npx skills add dinhkarate/9artifacts`).
   Agent publish xong trả về link riêng tư cho bạn.
 - **Trải nghiệm giống Claude.** Viewer full màn hình chạy trong sandbox, có lịch sử phiên bản.
   Agent sửa xong thì tab đang mở **tự cập nhật**.
@@ -27,7 +27,7 @@ lưu chúng **trên server của bạn**:
 ## Cài nhanh
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/dinhkarate/vitryn/main/install.sh \
+curl -fsSL https://raw.githubusercontent.com/dinhkarate/9artifacts/main/install.sh \
   | sudo sh -s -- --domain art.example.com --content-domain art-content.example.com --email ban@example.com
 ```
 
@@ -35,7 +35,7 @@ Mở link "first run" in ra trong log, đặt mật khẩu, thêm passkey, rồi
 agent** để lấy lệnh kết nối Claude Code:
 
 ```bash
-claude mcp add --transport http vitryn https://art.example.com/mcp --header "Authorization: Bearer vt_..."
+claude mcp add --transport http 9artifacts https://art.example.com/mcp --header "Authorization: Bearer vt_..."
 ```
 
 Muốn chạy **miễn phí**: máy của bạn + Tailscale (HTTPS `*.ts.net` free, không cần domain)

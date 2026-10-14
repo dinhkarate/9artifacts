@@ -1,4 +1,4 @@
-// The content origin Worker: forwards every request, unchanged, to the vitryn
+// The content origin Worker: forwards every request, unchanged, to the 9artifacts
 // Worker, which recognises this host and serves only sandboxed content on it.
 interface ProxyEnv {
   APP: Fetcher;

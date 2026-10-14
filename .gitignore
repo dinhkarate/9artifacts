@@ -1,5 +1,5 @@
-/vitryn
+/9artifacts
 /dist/
-/vitryn-data/
+/9artifacts-data/
 *.test
 .DS_Store

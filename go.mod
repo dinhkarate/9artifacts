@@ -1,4 +1,4 @@
-module github.com/dinhkarate/vitryn
+module github.com/dinhkarate/9artifacts
 
 go 1.26.0
 

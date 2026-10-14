@@ -18,7 +18,7 @@ func AdminSocketPath(dataDir string) string { return filepath.Join(dataDir, "adm
 func (s *Server) ServeAdmin() error {
 	sock := AdminSocketPath(s.store.dir)
 	if len(sock) > 100 {
-		return errors.New("data directory path too long for the admin socket (" + sock + "); use a shorter --data path to enable vitryn token/passwd/status")
+		return errors.New("data directory path too long for the admin socket (" + sock + "); use a shorter --data path to enable 9artifacts token/passwd/status")
 	}
 	_ = os.Remove(sock)
 	ln, err := net.Listen("unix", sock)

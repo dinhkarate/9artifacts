@@ -139,7 +139,7 @@ export function cleanName(name: string): string {
   return parts.join('/');
 }
 
-/** Approximates Go's %q for the strings vitryn prints. */
+/** Approximates Go's %q for the strings 9artifacts prints. */
 export function goQuote(s: string): string {
   return JSON.stringify(s).replace(/\\u([0-9a-f]{4})/g, (_, h: string) => '\\x' + h.slice(2)).replaceAll('\\/', '/');
 }

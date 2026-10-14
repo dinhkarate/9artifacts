@@ -1,8 +1,8 @@
-// vitryn app Worker: SPA, REST API, MCP, share pages, and (behind the
-// vitryn-content Worker, see wrangler.content.jsonc) sandboxed artifact bytes.
+// 9artifacts app Worker: SPA, REST API, MCP, share pages, and (behind the
+// 9artifacts-content Worker, see wrangler.content.jsonc) sandboxed artifact bytes.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "vitryn",
+  "name": "9artifacts",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-15",
   "compatibility_flags": ["nodejs_compat"],
@@ -18,19 +18,19 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "vitryn",
+      "database_name": "9artifacts",
       // No database_id: `wrangler deploy` (and the Deploy to Cloudflare
       // button) creates the database. To use one you created yourself with
-      // `npx wrangler d1 create vitryn`, add "database_id": "<its id>".
+      // `npx wrangler d1 create 9artifacts`, add "database_id": "<its id>".
       "migrations_dir": "migrations"
     }
   ],
   "r2_buckets": [
-    { "binding": "FILES", "bucket_name": "vitryn-files" }
+    { "binding": "FILES", "bucket_name": "9artifacts-files" }
   ],
   "vars": {
     // Brand shown in the UI.
-    "NAME": "vitryn",
+    "NAME": "9artifacts",
     // Origin users browse. Empty: the request's own origin (fine on workers.dev).
     "PUBLIC_URL": "",
     // Separate origin for artifact bytes. "auto": on workers.dev use
@@ -48,6 +48,6 @@
   // Hourly cleanup of expired sessions, challenges and rate-limit rows.
   "triggers": { "crons": ["17 * * * *"] },
   // Workers Logs would record full request URLs, including share and view
-  // tokens that vitryn's own log line redacts. Leave off unless you want that.
+  // tokens that 9artifacts's own log line redacts. Leave off unless you want that.
   "observability": { "enabled": false }
 }

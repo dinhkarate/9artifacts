@@ -1,4 +1,4 @@
-// Package app is the vitryn HTTP server: a private, passkey-protected
+// Package app is the 9artifacts HTTP server: a private, passkey-protected
 // gallery for HTML/Markdown/PDF artifacts with expiring public share links.
 package app
 
@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dinhkarate/vitryn/internal/webauthn"
-	"github.com/dinhkarate/vitryn/web"
+	"github.com/dinhkarate/9artifacts/internal/webauthn"
+	"github.com/dinhkarate/9artifacts/web"
 )
 
 // Config holds the server settings, mostly from flags or environment.
@@ -48,7 +48,7 @@ type Config struct {
 	CFAccessTeam, CFAccessAUD string
 }
 
-// Server is the vitryn HTTP handler.
+// Server is the 9artifacts HTTP handler.
 type Server struct {
 	cfg       Config
 	store     *Store
@@ -80,7 +80,7 @@ type failure struct {
 }
 
 const (
-	sessionCookie = "vitryn_session"
+	sessionCookie = "9artifacts_session"
 	sessionTTL    = 30 * 24 * time.Hour
 	viewTTL       = 12 * time.Hour
 )
@@ -93,7 +93,7 @@ func New(cfg Config, st *Store) (*Server, error) {
 	cfg.PublicURL = strings.TrimRight(cfg.PublicURL, "/")
 	cfg.ContentURL = strings.TrimRight(cfg.ContentURL, "/")
 	if cfg.Name == "" {
-		cfg.Name = "vitryn"
+		cfg.Name = "9artifacts"
 	}
 	if cfg.Theme == "" {
 		cfg.Theme = "default"

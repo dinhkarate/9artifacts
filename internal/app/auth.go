@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dinhkarate/vitryn/internal/webauthn"
+	"github.com/dinhkarate/9artifacts/internal/webauthn"
 )
 
 // pbkdf2Iter is a variable only so tests can lower it; the count is stored
@@ -193,7 +193,7 @@ func csrfOK(r *http.Request) bool {
 	if r.Method == http.MethodGet || r.Method == http.MethodHead {
 		return true
 	}
-	return r.Header.Get("X-Vitryn") == "1"
+	return r.Header.Get("X-9artifacts") == "1"
 }
 
 // auth accepts an API token or a browser session.

@@ -1,6 +1,6 @@
-# Deploying Vitryn
+# Deploying 9artifacts
 
-Vitryn is a single binary that keeps all its state in one data directory.
+9artifacts is a single binary that keeps all its state in one data directory.
 Pick the setup that matches your server.
 
 - [1. Standalone with automatic HTTPS](#1-standalone-with-automatic-https) (simplest)
@@ -14,7 +14,7 @@ Pick the setup that matches your server.
 
 ## Two domains (recommended)
 
-Artifacts are untrusted HTML. Vitryn always sandboxes them, but serving them from a
+Artifacts are untrusted HTML. 9artifacts always sandboxes them, but serving them from a
 **second origin** adds a second wall, and it is the same model Claude.ai uses. Use a sibling
 name such as `art-content.example.com`, or better, a domain you use for nothing else.
 With one domain everything still works; the sandbox alone protects your session.
@@ -24,27 +24,27 @@ With one domain everything still works; the sandbox alone protects your session.
 Requirements: ports 80 and 443 free, plus DNS `A`/`AAAA` records for both names pointing at the server.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/dinhkarate/vitryn/main/install.sh \
+curl -fsSL https://raw.githubusercontent.com/dinhkarate/9artifacts/main/install.sh \
   | sudo sh -s -- --domain art.example.com --content-domain art-content.example.com --email you@example.com
 ```
 
 The service runs as a systemd `DynamicUser` with a read-only filesystem except
-`/var/lib/vitryn`, and with `CAP_NET_BIND_SERVICE` only. Certificates are cached in
-`/var/lib/vitryn/certs`.
+`/var/lib/9artifacts`, and with `CAP_NET_BIND_SERVICE` only. Certificates are cached in
+`/var/lib/9artifacts/certs`.
 
 ```bash
-journalctl -u vitryn -f                               # logs and the first-run link
-sudo vitryn status --data /var/lib/vitryn            # health, counts
-sudo vitryn token  --data /var/lib/vitryn --name ci  # agent token
-sudo vitryn passwd --data /var/lib/vitryn            # reset the owner password
+journalctl -u 9artifacts -f                               # logs and the first-run link
+sudo 9artifacts status --data /var/lib/9artifacts            # health, counts
+sudo 9artifacts token  --data /var/lib/9artifacts --name ci  # agent token
+sudo 9artifacts passwd --data /var/lib/9artifacts            # reset the owner password
 ```
 
 ## 2. Behind nginx, Caddy or Traefik
 
-Let Vitryn listen on localhost and tell it its public URLs:
+Let 9artifacts listen on localhost and tell it its public URLs:
 
 ```bash
-vitryn serve --addr 127.0.0.1:8080 \
+9artifacts serve --addr 127.0.0.1:8080 \
   --url https://art.example.com --content-url https://art-content.example.com \
   --trust-proxy
 ```
@@ -54,20 +54,20 @@ With the installer: `sudo sh install.sh --url https://art.example.com --content-
 Proxy both host names to `127.0.0.1:8080` and keep the `Host` header. Examples:
 [`deploy/Caddyfile`](../deploy/Caddyfile) and [`deploy/nginx.conf`](../deploy/nginx.conf).
 
-> Share-link tokens appear in URLs. Vitryn redacts them from its own log, but your proxy's
+> Share-link tokens appear in URLs. 9artifacts redacts them from its own log, but your proxy's
 > access log will record them unless you disable or filter it (`access_log off;` in nginx).
 
 ## 3. Docker / Compose
 
 ```bash
-docker run -d --name vitryn --restart unless-stopped \
-  -p 127.0.0.1:8080:8080 -v vitryn:/data \
-  -e VITRYN_URL=https://art.example.com \
-  -e VITRYN_CONTENT_URL=https://art-content.example.com \
-  -e VITRYN_TRUST_PROXY=1 \
-  ghcr.io/dinhkarate/vitryn
-docker logs vitryn                                  # first-run link
-docker exec vitryn /vitryn token --name my-agent   # agent token
+docker run -d --name 9artifacts --restart unless-stopped \
+  -p 127.0.0.1:8080:8080 -v 9artifacts:/data \
+  -e NINEARTIFACTS_URL=https://art.example.com \
+  -e NINEARTIFACTS_CONTENT_URL=https://art-content.example.com \
+  -e NINEARTIFACTS_TRUST_PROXY=1 \
+  ghcr.io/dinhkarate/9artifacts
+docker logs 9artifacts                                  # first-run link
+docker exec 9artifacts /9artifacts token --name my-agent   # agent token
 ```
 
 The image is built `FROM scratch` and runs as a non-root user; it is about 5 MB compressed.
@@ -80,9 +80,9 @@ tunnel itself is free). Quick tunnels (`*.trycloudflare.com`) get a new hostname
 restart, which breaks passkeys, so use a named tunnel.
 
 ```bash
-vitryn serve --addr 127.0.0.1:8080 --url https://art.example.com \
+9artifacts serve --addr 127.0.0.1:8080 --url https://art.example.com \
   --content-url https://art-content.example.com --trust-proxy=cloudflare
-cloudflared tunnel create vitryn
+cloudflared tunnel create 9artifacts
 # ~/.cloudflared/config.yml
 #   ingress:
 #     - hostname: art.example.com
@@ -90,14 +90,14 @@ cloudflared tunnel create vitryn
 #     - hostname: art-content.example.com
 #       service: http://127.0.0.1:8080
 #     - service: http_status:404
-cloudflared tunnel route dns vitryn art.example.com
-cloudflared tunnel route dns vitryn art-content.example.com
-cloudflared tunnel run vitryn
+cloudflared tunnel route dns 9artifacts art.example.com
+cloudflared tunnel route dns 9artifacts art-content.example.com
+cloudflared tunnel run 9artifacts
 ```
 
 `--trust-proxy=cloudflare` takes the visitor IP from `CF-Connecting-IP` for login rate
 limiting. Like every proxy mode, it only trusts the header on connections from loopback or a
-private network, so keep vitryn bound to `127.0.0.1` (or a Docker network).
+private network, so keep 9artifacts bound to `127.0.0.1` (or a Docker network).
 
 Things to know on the Cloudflare Free plan:
 
@@ -117,21 +117,21 @@ of the gallery while share links keep working. Create these Access applications:
 | `art.example.com` | Allow: your email |
 | `art.example.com/s/*` | Bypass: everyone (public share pages) |
 | `art.example.com/assets/*` | Bypass: everyone (share-page styles) |
-| `art.example.com/mcp`, `art.example.com/api/*` | Bypass (vitryn's API tokens still apply), or Service Auth if your agents can send `CF-Access-Client-Id`/`-Secret` headers |
+| `art.example.com/mcp`, `art.example.com/api/*` | Bypass (9artifacts's API tokens still apply), or Service Auth if your agents can send `CF-Access-Client-Id`/`-Secret` headers |
 | `art-content.example.com` | **None.** Sandboxed artifacts can't send the Access cookie; the content host is already protected by signed view and share tokens |
 
-Then let vitryn check Access too, so a missing policy or a request that reaches the origin
+Then let 9artifacts check Access too, so a missing policy or a request that reaches the origin
 around Cloudflare can't open the gallery:
 
 ```bash
-vitryn serve ... --cf-access-team https://myteam.cloudflareaccess.com --cf-access-aud <AUD tag>
+9artifacts serve ... --cf-access-team https://myteam.cloudflareaccess.com --cf-access-aud <AUD tag>
 ```
 
 Browser requests to the app host must then carry a valid `Cf-Access-Jwt-Assertion` (RS256,
 signed by your team's rotating keys, for this application's AUD tag). Requests with a valid
-vitryn API token, share pages, `/assets/*`, `/health` and the content host are not checked.
+9artifacts API token, share pages, `/assets/*`, `/health` and the content host are not checked.
 
-Simpler: start vitryn with `--shares-on-content`. Share links then live on the content host,
+Simpler: start 9artifacts with `--shares-on-content`. Share links then live on the content host,
 so the app host needs no bypass rules for `/s/*` and `/assets/*`; protect it whole and only
 decide what to do with `/mcp` and `/api/*`.
 
@@ -139,11 +139,11 @@ decide what to do with `/mcp` and `/api/*`.
 
 Free, and no domain needed: Tailscale gives each machine `name.your-tailnet.ts.net` with HTTPS.
 
-**Private (tailnet only).** Only your own devices can reach vitryn; agents on those devices
+**Private (tailnet only).** Only your own devices can reach 9artifacts; agents on those devices
 use it as usual.
 
 ```bash
-vitryn serve --addr 127.0.0.1:8080 --url https://box.your-tailnet.ts.net --trust-proxy=tailscale
+9artifacts serve --addr 127.0.0.1:8080 --url https://box.your-tailnet.ts.net --trust-proxy=tailscale
 tailscale serve --bg 8080
 ```
 
@@ -153,31 +153,31 @@ port. A different port is a different origin, so you also get a separate content
 Enable Funnel in the tailnet policy first.
 
 ```bash
-vitryn serve --addr 127.0.0.1:8080 --url https://box.your-tailnet.ts.net \
+9artifacts serve --addr 127.0.0.1:8080 --url https://box.your-tailnet.ts.net \
   --content-url https://box.your-tailnet.ts.net:8443 --shares-on-content --trust-proxy=tailscale
 tailscale serve  --bg --https=443  http://127.0.0.1:8080   # gallery, API, MCP: your devices only
 tailscale funnel --bg --https=8443 http://127.0.0.1:8080   # share links + artifact files: public
 ```
 
-`--shares-on-content` makes share links use the content origin. On that port vitryn answers
+`--shares-on-content` makes share links use the content origin. On that port 9artifacts answers
 only share pages, their styles and artifact files; the gallery, login, API and MCP return 404
 there, so nothing private is reachable from the Internet. Agents on your devices use
 `https://box.your-tailnet.ts.net/mcp` as usual.
 
-**No Tailscale install: `vitryn-ts`.** The `vitryn-ts_*` release archives have Tailscale
+**No Tailscale install: `9artifacts-ts`.** The `9artifacts-ts_*` release archives have Tailscale
 built in (about 16 MB larger). It joins your tailnet itself and sets up the same split: the
-gallery, API and MCP on `https://vitryn.your-tailnet.ts.net` for your devices only, share
+gallery, API and MCP on `https://9artifacts.your-tailnet.ts.net` for your devices only, share
 links and artifact files on `:8443` through Funnel.
 
 ```bash
-TS_AUTHKEY=tskey-auth-… ./vitryn-ts serve --data ./vitryn-data --hostname vitryn
+TS_AUTHKEY=tskey-auth-… ./9artifacts-ts serve --data ./9artifacts-data --hostname 9artifacts
 # or run it without TS_AUTHKEY and open the login URL it prints
 ```
 
 Flags: `--hostname` (machine name, part of the URL), `--funnel=false` (tailnet only, no public
 share links), plus `--name`, `--theme`, `--theme-dir`, `--max-upload-mb`, `--webhook`. Its
-tailnet state lives in `DATA/tsnet`; `vitryn-ts` uses the same data directory format as
-`vitryn`, so you can switch between them.
+tailnet state lives in `DATA/tsnet`; `9artifacts-ts` uses the same data directory format as
+`9artifacts`, so you can switch between them.
 
 **Everything public.** Alternatively funnel the single port (`tailscale funnel --bg 8080`): the
 whole app is then public, protected by your passkey or password like any other deployment.
@@ -193,7 +193,7 @@ Things to know:
 
 ## Free hosting
 
-Vitryn needs roughly 10 MB of RAM and almost no CPU, so free options are plenty. Free-tier
+9artifacts needs roughly 10 MB of RAM and almost no CPU, so free options are plenty. Free-tier
 terms change; check the provider's current page before you rely on one.
 
 | Option | Cost | What you get | Notes |
@@ -205,7 +205,7 @@ terms change; check the provider's current page before you rely on one.
 | **Raspberry Pi / old laptop** | your hardware | Use the `linux_arm64` or `linux_armv7` release with §4 or §5 | |
 
 Platforms with ephemeral disks or no free tier (Render free, Koyeb free, Fly.io for new
-accounts, Vercel, Netlify) are **not** suitable: vitryn stores your files on local disk.
+accounts, Vercel, Netlify) are **not** suitable: 9artifacts stores your files on local disk.
 
 ## Configuration reference
 
@@ -213,29 +213,29 @@ Every flag has an environment variable.
 
 | Flag | Env | Default | Meaning |
 |---|---|---|---|
-| `--data` | `VITRYN_DATA` | `/var/lib/vitryn` if it exists, else `./vitryn-data` | data directory |
-| `--addr` | `VITRYN_ADDR` | `:8080` | listen address (ignored with `--domain`) |
-| `--url` | `VITRYN_URL` | `http://localhost:8080` | public URL; must match the browser origin for passkeys |
-| `--content-url` | `VITRYN_CONTENT_URL` | — | separate origin for artifact content |
-| `--domain` | `VITRYN_DOMAIN` | — | built-in HTTPS on :443/:80 with Let's Encrypt |
-| `--content-domain` | `VITRYN_CONTENT_DOMAIN` | — | certificate for the content domain too |
-| `--email` | `VITRYN_EMAIL` | — | Let's Encrypt contact |
-| `--name` | `VITRYN_NAME` | `vitryn` | name shown in the UI |
-| `--theme` | `VITRYN_THEME` | `default` | `default`, `terminal`, `paper` |
-| `--theme-dir` | `VITRYN_THEME_DIR` | — | directory overriding theme or shell files |
-| `--trust-proxy[=MODE]` | `VITRYN_TRUST_PROXY=1\|cloudflare\|tailscale` | off | behind a proxy, take the client IP for rate limiting from `X-Forwarded-For` (bare flag, `xff`), `CF-Connecting-IP` (`cloudflare`) or Tailscale Serve/Funnel (`tailscale`); only trusted on loopback or private-network connections |
-| `--max-upload-mb` | `VITRYN_MAX_UPLOAD_MB` | `100` | request size limit |
-| `--shares-on-content` | `VITRYN_SHARES_ON_CONTENT=1` | off | serve public share pages from `--content-url`, so everything public is on one host and the app host can stay private; old app-host share links redirect |
-| `--cf-access-team`, `--cf-access-aud` | `VITRYN_CF_ACCESS_TEAM`, `VITRYN_CF_ACCESS_AUD` | — | require a valid Cloudflare Access JWT on browser requests to the app host |
-| `--webhook` | `VITRYN_WEBHOOK` | — | comma-separated URLs notified on publishes, new versions, new share links and new share visitors; Slack and Discord incoming-webhook URLs work as-is, prefix `ntfy+` for ntfy (e.g. `ntfy+https://ntfy.sh/my-topic`) |
-| `--artifact-csp` | `VITRYN_ARTIFACT_CSP` | — | extra CSP for artifacts, e.g. `connect-src 'none'` to block network access |
+| `--data` | `NINEARTIFACTS_DATA` | `/var/lib/9artifacts` if it exists, else `./9artifacts-data` | data directory |
+| `--addr` | `NINEARTIFACTS_ADDR` | `:8080` | listen address (ignored with `--domain`) |
+| `--url` | `NINEARTIFACTS_URL` | `http://localhost:8080` | public URL; must match the browser origin for passkeys |
+| `--content-url` | `NINEARTIFACTS_CONTENT_URL` | — | separate origin for artifact content |
+| `--domain` | `NINEARTIFACTS_DOMAIN` | — | built-in HTTPS on :443/:80 with Let's Encrypt |
+| `--content-domain` | `NINEARTIFACTS_CONTENT_DOMAIN` | — | certificate for the content domain too |
+| `--email` | `NINEARTIFACTS_EMAIL` | — | Let's Encrypt contact |
+| `--name` | `NINEARTIFACTS_NAME` | `9artifacts` | name shown in the UI |
+| `--theme` | `NINEARTIFACTS_THEME` | `default` | `default`, `terminal`, `paper` |
+| `--theme-dir` | `NINEARTIFACTS_THEME_DIR` | — | directory overriding theme or shell files |
+| `--trust-proxy[=MODE]` | `NINEARTIFACTS_TRUST_PROXY=1\|cloudflare\|tailscale` | off | behind a proxy, take the client IP for rate limiting from `X-Forwarded-For` (bare flag, `xff`), `CF-Connecting-IP` (`cloudflare`) or Tailscale Serve/Funnel (`tailscale`); only trusted on loopback or private-network connections |
+| `--max-upload-mb` | `NINEARTIFACTS_MAX_UPLOAD_MB` | `100` | request size limit |
+| `--shares-on-content` | `NINEARTIFACTS_SHARES_ON_CONTENT=1` | off | serve public share pages from `--content-url`, so everything public is on one host and the app host can stay private; old app-host share links redirect |
+| `--cf-access-team`, `--cf-access-aud` | `NINEARTIFACTS_CF_ACCESS_TEAM`, `NINEARTIFACTS_CF_ACCESS_AUD` | — | require a valid Cloudflare Access JWT on browser requests to the app host |
+| `--webhook` | `NINEARTIFACTS_WEBHOOK` | — | comma-separated URLs notified on publishes, new versions, new share links and new share visitors; Slack and Discord incoming-webhook URLs work as-is, prefix `ntfy+` for ntfy (e.g. `ntfy+https://ntfy.sh/my-topic`) |
+| `--artifact-csp` | `NINEARTIFACTS_ARTIFACT_CSP` | — | extra CSP for artifacts, e.g. `connect-src 'none'` to block network access |
 
 ## Backups and upgrades
 
 ```bash
-sudo systemctl stop vitryn
-sudo tar -C /var/lib -czf vitryn-$(date +%F).tgz private/vitryn   # DynamicUser stores data under /var/lib/private
-sudo systemctl start vitryn
+sudo systemctl stop 9artifacts
+sudo tar -C /var/lib -czf 9artifacts-$(date +%F).tgz private/9artifacts   # DynamicUser stores data under /var/lib/private
+sudo systemctl start 9artifacts
 ```
 
 To upgrade, re-run the install script; your data and settings stay in place.

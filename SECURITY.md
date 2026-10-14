@@ -1,14 +1,14 @@
 # Security policy
 
-Vitryn stores documents people consider private, so security reports are welcome and taken
+9artifacts stores documents people consider private, so security reports are welcome and taken
 seriously.
 
 ## Reporting
 
 Please **do not open a public issue**. Use GitHub's
-[private vulnerability reporting](https://github.com/dinhkarate/vitryn/security/advisories/new).
+[private vulnerability reporting](https://github.com/dinhkarate/9artifacts/security/advisories/new).
 You should get a reply within a few days. Include steps to reproduce, the affected version
-(`vitryn version`), and your deployment mode (built-in TLS, behind a proxy, Docker).
+(`9artifacts version`), and your deployment mode (built-in TLS, behind a proxy, Docker).
 
 ## Supported versions
 

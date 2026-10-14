@@ -28,13 +28,13 @@ describe('MCP', () => {
   it('requires a bearer token', async () => {
     const r = await c.fetch('/mcp', { method: 'POST', body: '{}' });
     expect(r.status).toBe(401);
-    expect(r.headers.get('WWW-Authenticate')).toBe('Bearer realm="vitryn", resource_metadata="http://localhost:8080/.well-known/oauth-protected-resource"');
+    expect(r.headers.get('WWW-Authenticate')).toBe('Bearer realm="9artifacts", resource_metadata="http://localhost:8080/.well-known/oauth-protected-resource"');
   });
 
   it('initializes and echoes the protocol version', async () => {
     const r = await rpc('initialize', { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'test', version: '1' } });
     expect(r.result.protocolVersion).toBe('2025-03-26');
-    expect(r.result.serverInfo).toEqual({ name: 'vitryn', version: 'cf-0.1.0' });
+    expect(r.result.serverInfo).toEqual({ name: '9artifacts', version: 'cf-0.1.0' });
     expect(r.result.capabilities).toEqual({ tools: {} });
     expect(r.result.instructions).toContain('get_design_guide');
     expect((await rpc('initialize', {})).result.protocolVersion).toBe('2025-06-18');

@@ -145,7 +145,7 @@ func TestPublishViewShareRevoke(t *testing.T) {
 	if rec = e.do("GET", bad, nil, nil); rec.Code != 404 {
 		t.Fatalf("tampered token: %d", rec.Code)
 	}
-	if rec = e.do("GET", base+"..%2fvitryn.json", nil, nil); rec.Code == 200 {
+	if rec = e.do("GET", base+"..%2f9artifacts.json", nil, nil); rec.Code == 200 {
 		t.Fatal("path traversal served a file")
 	}
 	if rec = e.do("GET", base+"missing.html", nil, nil); rec.Code != 404 {
@@ -223,11 +223,11 @@ func TestAuth(t *testing.T) {
 	if rec := e.do("GET", "/api/artifacts", nil, map[string]string{"Cookie": ck}); rec.Code != 200 {
 		t.Fatalf("session list: %d", rec.Code)
 	}
-	// Cookie-authenticated writes need the X-Vitryn header (CSRF).
+	// Cookie-authenticated writes need the X-9artifacts header (CSRF).
 	if rec := e.do("POST", "/api/tokens", strings.NewReader(`{"name":"x"}`), map[string]string{"Cookie": ck, "Content-Type": "application/json"}); rec.Code != 401 {
 		t.Fatalf("csrf: %d", rec.Code)
 	}
-	if rec := e.do("POST", "/api/tokens", strings.NewReader(`{"name":"x"}`), map[string]string{"Cookie": ck, "Content-Type": "application/json", "X-Vitryn": "1"}); rec.Code != 201 {
+	if rec := e.do("POST", "/api/tokens", strings.NewReader(`{"name":"x"}`), map[string]string{"Cookie": ck, "Content-Type": "application/json", "X-9artifacts": "1"}); rec.Code != 201 {
 		t.Fatalf("token create: %d", rec.Code)
 	}
 	// API tokens cannot manage tokens.
@@ -501,7 +501,7 @@ func TestSharesPinVersionAndHTTPSCookie(t *testing.T) {
 		t.Fatalf("share exposed a later version: %q", body)
 	}
 	rec := e.do("POST", "/api/auth/login", strings.NewReader(`{"password":"correct horse battery"}`), map[string]string{"Content-Type": "application/json"})
-	if c := rec.Result().Cookies()[0]; c.Name != "__Host-vitryn_session" || !c.Secure {
+	if c := rec.Result().Cookies()[0]; c.Name != "__Host-9artifacts_session" || !c.Secure {
 		t.Fatalf("cookie: %+v", c)
 	}
 	idx := e.do("GET", "/", nil, nil)
@@ -788,7 +788,7 @@ func TestSelectionScriptOnlyInOwnerViewer(t *testing.T) {
 	a := decode[artifactView](t, e.upload("/api/artifacts", nil, map[string]string{"index.html": "<p>hi</p>", "n.md": "# x"}))
 	base := pathOf(a.ViewBase)
 	has := func(path string) bool {
-		return strings.Contains(e.do("GET", path, nil, nil).Body.String(), `vitryn:"selection"`)
+		return strings.Contains(e.do("GET", path, nil, nil).Body.String(), `artifacts:"selection"`)
 	}
 	if !has(base+"index.html?vc=1") || !has(base+"n.md?view=1&vc=1") {
 		t.Fatal("viewer HTML/Markdown without selection script")
@@ -803,7 +803,7 @@ func TestStateFileFromBeforeRename(t *testing.T) {
 	dir := t.TempDir()
 	st, _ := OpenStore(dir)
 	st.SetPassword("correct horse battery")
-	os.Rename(filepath.Join(dir, "vitryn.json"), filepath.Join(dir, "glasshelf.json"))
+	os.Rename(filepath.Join(dir, "9artifacts.json"), filepath.Join(dir, "glasshelf.json"))
 	st2, err := OpenStore(dir)
 	if err != nil {
 		t.Fatal(err)

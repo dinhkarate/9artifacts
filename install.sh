@@ -1,8 +1,8 @@
 #!/bin/sh
-# vitryn installer — downloads the release binary and (on Linux with
+# 9artifacts installer — downloads the release binary and (on Linux with
 # systemd) installs a hardened service.
 #
-#   curl -fsSL https://raw.githubusercontent.com/dinhkarate/vitryn/main/install.sh | sudo sh -s -- --domain art.example.com
+#   curl -fsSL https://raw.githubusercontent.com/dinhkarate/9artifacts/main/install.sh | sudo sh -s -- --domain art.example.com
 #
 # Options:
 #   --domain D           serve HTTPS for D with automatic Let's Encrypt certificates (ports 80/443)
@@ -14,7 +14,7 @@
 #   --no-service         only install the binary
 set -eu
 
-REPO="dinhkarate/vitryn"
+REPO="dinhkarate/9artifacts"
 VERSION="latest"
 DOMAIN=""
 CONTENT_DOMAIN=""
@@ -44,14 +44,14 @@ case "$(uname -m)" in
   armv7l|armv7) arch=armv7 ;;
   *) echo "unsupported architecture: $(uname -m)" >&2; exit 1 ;;
 esac
-case "$os" in linux|darwin) ;; *) echo "unsupported OS: $os (build from source: go install github.com/$REPO/cmd/vitryn@latest)" >&2; exit 1 ;; esac
+case "$os" in linux|darwin) ;; *) echo "unsupported OS: $os (build from source: go install github.com/$REPO/cmd/9artifacts@latest)" >&2; exit 1 ;; esac
 
 if [ "$VERSION" = "latest" ]; then
   base="https://github.com/$REPO/releases/latest/download"
 else
   base="https://github.com/$REPO/releases/download/$VERSION"
 fi
-asset="vitryn_${os}_${arch}.tar.gz"
+asset="9artifacts_${os}_${arch}.tar.gz"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
@@ -59,17 +59,17 @@ echo "→ downloading $asset"
 curl -fsSL "$base/$asset" -o "$tmp/$asset"
 curl -fsSL "$base/checksums.txt" -o "$tmp/checksums.txt"
 (cd "$tmp" && grep " $asset\$" checksums.txt | { if command -v sha256sum >/dev/null; then sha256sum -c -; else shasum -a 256 -c -; fi; }) >/dev/null
-tar -xzf "$tmp/$asset" -C "$tmp" vitryn
+tar -xzf "$tmp/$asset" -C "$tmp" 9artifacts
 
 bindir=/usr/local/bin
 if [ ! -w "$bindir" ]; then
   if [ "$(id -u)" -ne 0 ]; then bindir="$HOME/.local/bin"; mkdir -p "$bindir"; fi
 fi
-install -m 0755 "$tmp/vitryn" "$bindir/vitryn"
-echo "→ installed $("$bindir/vitryn" version) to $bindir/vitryn"
+install -m 0755 "$tmp/9artifacts" "$bindir/9artifacts"
+echo "→ installed $("$bindir/9artifacts" version) to $bindir/9artifacts"
 
 if [ "$SERVICE" -eq 0 ] || [ "$os" != "linux" ] || ! command -v systemctl >/dev/null 2>&1; then
-  echo "Run it with: vitryn serve --url http://localhost:8080"
+  echo "Run it with: 9artifacts serve --url http://localhost:8080"
   exit 0
 fi
 if [ "$(id -u)" -ne 0 ]; then
@@ -88,16 +88,18 @@ else
   [ -n "$CONTENT_URL" ] && args="$args --content-url $CONTENT_URL"
 fi
 
-cat > /etc/systemd/system/vitryn.service <<EOF
+cat > /etc/systemd/system/9artifacts.service <<EOF
 [Unit]
-Description=vitryn — self-hosted AI artifacts
+Description=9artifacts — self-hosted AI artifacts
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-ExecStart=$bindir/vitryn serve --data /var/lib/vitryn $args
+ExecStart=$bindir/9artifacts serve --data /var/lib/9artifacts $args
 DynamicUser=yes
-StateDirectory=vitryn
+# systemd user names can't start with a digit
+User=nineartifacts
+StateDirectory=9artifacts
 StateDirectoryMode=0700
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
@@ -121,10 +123,10 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
-systemctl enable --now vitryn.service
+systemctl enable --now 9artifacts.service
 sleep 2
 echo
-echo "vitryn is running. Open the first-run link below to set your password:"
-journalctl -u vitryn.service -n 20 --no-pager -o cat | grep -m1 "first run" || echo "(already set up — run: sudo vitryn status --data /var/lib/vitryn)"
+echo "9artifacts is running. Open the first-run link below to set your password:"
+journalctl -u 9artifacts.service -n 20 --no-pager -o cat | grep -m1 "first run" || echo "(already set up — run: sudo 9artifacts status --data /var/lib/9artifacts)"
 echo
-echo "Create an agent token on this server with: sudo vitryn token --data /var/lib/vitryn --name my-agent"
+echo "Create an agent token on this server with: sudo 9artifacts token --data /var/lib/9artifacts --name my-agent"

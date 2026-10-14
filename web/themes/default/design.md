@@ -1,8 +1,8 @@
 # Artifact design guide
 
-This guide is for AI agents that publish to this vitryn. Follow it so
+This guide is for AI agents that publish to this 9artifacts. Follow it so
 every artifact looks like it belongs to the same owner. The owner can edit
-this file (`vitryn theme init`) to change the house style.
+this file (`9artifacts theme init`) to change the house style.
 
 ## Format
 
@@ -14,7 +14,7 @@ this file (`vitryn theme init`) to change the house style.
   `https://cdn.jsdelivr.net` with a pinned version. No analytics, trackers
   or remote fonts that phone home.
 - The page runs in a sandbox: no cookies, no `localStorage` guarantees, no
-  access to the Vitryn API. Keep state in memory.
+  access to the 9artifacts API. Keep state in memory.
 - Always set a meaningful `<title>`; it becomes the artifact title.
 
 ## Look
@@ -49,5 +49,5 @@ this file (`vitryn theme init`) to change the house style.
 ## Updating
 
 To change an artifact, publish again with its id (`publish_artifact` with
-`id`, or `vitryn publish --update ID`). The URL stays the same and the
+`id`, or `9artifacts publish --update ID`). The URL stays the same and the
 owner's open tab refreshes automatically.
