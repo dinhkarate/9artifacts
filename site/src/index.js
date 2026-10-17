@@ -6,8 +6,9 @@ const CSP = "default-src 'self'; img-src 'self' data: https://deploy.workers.clo
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
-    if (url.hostname === 'www.' + APEX) {
+    if (url.hostname === 'www.' + APEX || url.protocol === 'http:') {
       url.hostname = APEX;
+      url.protocol = 'https:';
       return Response.redirect(url.toString(), 301);
     }
     const resp = await env.ASSETS.fetch(req);
