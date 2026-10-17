@@ -1,0 +1,21 @@
+# 9artifacts
+
+> Self-hosted, open-source home for AI-agent artifacts. Agents publish HTML, Markdown, SVG, images and PDFs over MCP, a CLI or an agent skill; the owner reviews them in a private, passkey-protected gallery, leaves comments the agent fixes, and shares expiring links. One ~10 MB Go binary, or free on Cloudflare Workers. MIT license.
+
+## Install and connect
+
+- [Install guide for AI agents](https://9artifacts.com/install.md): step by step, from DNS to a connected agent
+- [README](https://github.com/dinhkarate/9artifacts#readme): quick start, connecting agents, themes, security
+- [Deploy guide](https://github.com/dinhkarate/9artifacts/blob/main/docs/deploy.md): reverse proxies, Tailscale, Cloudflare Tunnel, free hosting
+- [Cloudflare Workers edition](https://github.com/dinhkarate/9artifacts/tree/main/cloudflare#readme)
+
+## Use
+
+- [Agent skill](https://github.com/dinhkarate/9artifacts/blob/main/skills/9artifacts/SKILL.md): how an agent publishes, updates, shares and handles review comments
+- [REST API](https://github.com/dinhkarate/9artifacts/blob/main/docs/api.md)
+- MCP endpoint: `https://<your-host>/mcp` (bearer token, or OAuth for remote connectors). Tools: get_design_guide, publish_artifact, list_artifacts, read_artifact, share_artifact, revoke_share, restore_version, list_comments, resolve_comment, delete_artifact
+
+## Optional
+
+- [Live demo (read-only)](https://demo.9artifacts.com)
+- [Security policy](https://github.com/dinhkarate/9artifacts/blob/main/SECURITY.md)

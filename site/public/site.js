@@ -14,22 +14,24 @@ for (const btn of document.querySelectorAll('.copy')) {
   });
 }
 
-const tabs = [...document.querySelectorAll('[role="tab"]')];
-function select(tab) {
+for (const list of document.querySelectorAll('[role="tablist"]')) {
+  const tabs = [...list.querySelectorAll('[role="tab"]')];
+  const select = (tab) => {
+    for (const t of tabs) {
+      const on = t === tab;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+    }
+  };
   for (const t of tabs) {
-    const on = t === tab;
-    t.setAttribute('aria-selected', String(on));
-    t.tabIndex = on ? 0 : -1;
-    document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+    t.addEventListener('click', () => select(t));
+    t.addEventListener('keydown', (e) => {
+      const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+      if (!step) return;
+      const next = tabs[(tabs.indexOf(t) + step + tabs.length) % tabs.length];
+      select(next);
+      next.focus();
+    });
   }
-}
-for (const t of tabs) {
-  t.addEventListener('click', () => select(t));
-  t.addEventListener('keydown', (e) => {
-    const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
-    if (!step) return;
-    const next = tabs[(tabs.indexOf(t) + step + tabs.length) % tabs.length];
-    select(next);
-    next.focus();
-  });
 }

@@ -26,6 +26,7 @@
   <nav aria-label="Main">
     <a href="#how">How it works</a>
     <a href="#install">Install</a>
+    <a href="#connect">Connect</a>
     <a href="https://github.com/dinhkarate/9artifacts#readme">Docs</a>
     <a class="btn sm" href="https://github.com/dinhkarate/9artifacts">GitHub</a>
   </nav>
@@ -103,11 +104,17 @@
   <section id="install" class="section">
     <h2>Install</h2>
     <div class="tabs" role="tablist" aria-label="Install options">
-      <button type="button" role="tab" aria-selected="true" aria-controls="tab-vps" id="t-vps">VPS</button>
+      <button type="button" role="tab" aria-selected="true" aria-controls="tab-agent" id="t-agent">Ask your agent</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="tab-vps" id="t-vps" tabindex="-1">VPS</button>
       <button type="button" role="tab" aria-selected="false" aria-controls="tab-docker" id="t-docker" tabindex="-1">Docker</button>
       <button type="button" role="tab" aria-selected="false" aria-controls="tab-cf" id="t-cf" tabindex="-1">Cloudflare Workers</button>
     </div>
-    <div class="panel" role="tabpanel" id="tab-vps" aria-labelledby="t-vps">
+    <div class="panel" role="tabpanel" id="tab-agent" aria-labelledby="t-agent">
+      <p>Paste this into Claude Code, Codex, Cursor or any agent that has a shell. It follows <a href="/install.md">install.md</a>: checks your DNS, installs the server, hands you the first-run link for your passkey, then connects itself and publishes a test page.</p>
+      <div class="code"><code>Install 9artifacts for me by following https://9artifacts.com/install.md. Put it on my server my-vps with the domains art.example.com and art-content.example.com, then connect yourself to it.</code><button type="button" class="copy" aria-label="Copy prompt">Copy</button></div>
+      <p class="muted">Change the server and domains to yours. The agent never sees your password or passkey, and pipes its API token straight into its own config.</p>
+    </div>
+    <div class="panel" role="tabpanel" id="tab-vps" aria-labelledby="t-vps" hidden>
       <p>Point two DNS records at your server (one for the app, one for artifact content), then:</p>
       <div class="code"><code>curl -fsSL https://raw.githubusercontent.com/dinhkarate/9artifacts/main/install.sh | sudo sh -s -- --domain art.example.com --content-domain art-content.example.com --email you@example.com</code><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
       <p class="muted">Installs the binary and a hardened systemd service, and fetches Let’s Encrypt certificates itself. Open the first-run link it prints, set a password and add a passkey.</p>
@@ -121,6 +128,58 @@
       <p><a href="https://deploy.workers.cloudflare.com/?url=https://github.com/dinhkarate/9artifacts/tree/main/cloudflare"><img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare" width="166" height="32"></a></p>
       <p class="muted">Set the <code>SETUP_TOKEN</code> secret when asked, open your <code>workers.dev</code> URL and add a passkey. <a href="https://github.com/dinhkarate/9artifacts/tree/main/cloudflare#readme">Details</a>.</p>
     </div>
+  </section>
+
+  <section id="connect" class="section">
+    <h2>Connect your agent</h2>
+    <p class="section-lede">Create a token in <strong>Settings → Connect an AI agent</strong> (or <code>sudo 9artifacts token --name my-agent</code> on the server), then:</p>
+    <div class="tabs" role="tablist" aria-label="Agents">
+      <button type="button" role="tab" aria-selected="true" aria-controls="c-claude" id="tc-claude">Claude Code</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="c-codex" id="tc-codex" tabindex="-1">Codex</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="c-cursor" id="tc-cursor" tabindex="-1">Cursor</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="c-remote" id="tc-remote" tabindex="-1">claude.ai · ChatGPT</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="c-any" id="tc-any" tabindex="-1">Any agent</button>
+    </div>
+    <div class="panel" role="tabpanel" id="c-claude" aria-labelledby="tc-claude">
+      <div class="code"><code>claude mcp add --transport http 9artifacts https://art.example.com/mcp --header "Authorization: Bearer vt_..."</code><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+    </div>
+    <div class="panel" role="tabpanel" id="c-codex" aria-labelledby="tc-codex" hidden>
+      <div class="code"><code>export NINEARTIFACTS_TOKEN=vt_...
+codex mcp add 9artifacts --url https://art.example.com/mcp --bearer-token-env-var NINEARTIFACTS_TOKEN</code><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+      <p class="muted">Keep the export in your shell profile or secret manager so Codex finds the token next time.</p>
+    </div>
+    <div class="panel" role="tabpanel" id="c-cursor" aria-labelledby="tc-cursor" hidden>
+      <p>Add it to <code>~/.cursor/mcp.json</code>, or <code>.cursor/mcp.json</code> in a project:</p>
+      <div class="code"><code>{
+  "mcpServers": {
+    "9artifacts": {
+      "url": "https://art.example.com/mcp",
+      "headers": { "Authorization": "Bearer vt_..." }
+    }
+  }
+}</code><button type="button" class="copy" aria-label="Copy config">Copy</button></div>
+    </div>
+    <div class="panel" role="tabpanel" id="c-remote" aria-labelledby="tc-remote" hidden>
+      <p>No token needed. Add a <strong>custom connector</strong> with this URL, then approve it with your passkey when 9artifacts asks:</p>
+      <div class="code"><code>https://art.example.com/mcp</code><button type="button" class="copy" aria-label="Copy URL">Copy</button></div>
+      <p class="muted">9artifacts speaks MCP OAuth (discovery, dynamic registration, PKCE). Revoke a connector any time in Settings.</p>
+    </div>
+    <div class="panel" role="tabpanel" id="c-any" aria-labelledby="tc-any" hidden>
+      <p>The skill teaches any agent with a shell when and how to publish; the CLI does the work.</p>
+      <div class="code"><code>npx skills add dinhkarate/9artifacts
+export NINEARTIFACTS_URL=https://art.example.com NINEARTIFACTS_TOKEN=vt_...</code><button type="button" class="copy" aria-label="Copy commands">Copy</button></div>
+      <div class="code"><code>9artifacts publish report.html --tags q3        # → private URL
+9artifacts publish --update ID --keep report.html   # same URL, open tabs reload
+9artifacts share ID --ttl 7d                    # expiring public link</code><button type="button" class="copy" aria-label="Copy commands">Copy</button></div>
+    </div>
+
+    <h3 class="ask-title">Then just ask</h3>
+    <ul class="asks">
+      <li>“Make a dashboard of this CSV and publish it to 9artifacts.”</li>
+      <li>“Update that artifact with this week’s numbers.”</li>
+      <li>“Fix the comments on the Q3 report.”</li>
+      <li>“Share it for 7 days with a password.”</li>
+    </ul>
   </section>
 
   <section class="section security">
