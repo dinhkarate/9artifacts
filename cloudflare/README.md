@@ -78,10 +78,26 @@ NINEARTIFACTS_URL=https://9artifacts.<you>.workers.dev NINEARTIFACTS_TOKEN=vt_..
 | `MAX_UPLOAD_MB` | `50` | Multipart upload cap (JSON and MCP bodies stay at 32 MB). |
 | `ARTIFACT_CSP` | none | Extra CSP directives for artifact content (`--artifact-csp`). |
 | `NAME` | `9artifacts` | Brand shown in the UI. |
+| `DEMO` | off | `1`: public read-only demo. Visitors browse the gallery, open artifacts and read comments without signing in; they never see private notes or share links, and every change returns 403. The owner signs in at `/login` with the setup token. |
 | `NINEARTIFACTS_THEME`, `NINEARTIFACTS_THEME_DIR` (build env) | `default` | Build-time `--theme` and `--theme-dir`. |
 
 If you rename the Workers, keep the content Worker's name as `<app name>-content`, or set
 `CONTENT_URL` explicitly. Update the `service` field in `wrangler.content.jsonc` to match.
+
+## The public demo
+
+[demo.9artifacts.com](https://demo.9artifacts.com) is this Worker with `DEMO=1`, configured in
+`demo/wrangler.jsonc` and `demo/wrangler.content.jsonc` (custom domains `demo.9artifacts.com` and
+`demo-content.9artifacts.com`, D1 `9artifacts-demo`, R2 `9artifacts-demo-files`):
+
+```bash
+npx wrangler r2 bucket create 9artifacts-demo-files
+openssl rand -base64 32 | npx wrangler secret put SETUP_TOKEN -c demo/wrangler.jsonc
+npm run deploy:demo
+```
+
+Sign in at `https://demo.9artifacts.com/login` with the setup token, create an API token in
+Settings, and publish the sample artifacts with it.
 
 ## Develop and test locally (no Cloudflare account)
 

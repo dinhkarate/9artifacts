@@ -32,6 +32,8 @@ export interface Ctx {
   maxUpload: number;
   sharesOnContent: boolean;
   artifactCSP: string;
+  /** DEMO=1: anonymous visitors may read (see auth.guest). */
+  demo: boolean;
   webhooks: string[];
   ip: string;
   waitUntil(p: Promise<unknown>): void;
@@ -132,6 +134,7 @@ export function newCtx(req: Request, env: Env, exec: ExecutionContext): Ctx {
     maxUpload: (Number.isFinite(mb) && mb > 0 ? mb : 50) * (1 << 20),
     sharesOnContent,
     artifactCSP: env.ARTIFACT_CSP ?? '',
+    demo: /^(1|true|on|yes)$/i.test(env.DEMO ?? ''),
     webhooks: (env.WEBHOOKS ?? '').split(/[\s,]+/).filter(Boolean),
     ip: req.headers.get('CF-Connecting-IP') ?? 'unknown',
     waitUntil: (p) => exec.waitUntil(p.catch((e) => console.error('background task:', String(e)))),

@@ -138,6 +138,8 @@ const state = { me: null, artifacts: [], tags: {}, tag: '', q: '', layout: 'grid
 try { if (localStorage.getItem('9artifacts.layout') === 'rows') state.layout = 'rows'; } catch { /* private mode */ }
 let viewer = null;
 let pollTimer = null;
+/* A visitor on a public read-only demo (DEMO=1 on the Workers edition). */
+const guest = () => !!(state.me && state.me.demo && !state.me.authenticated);
 const SCREENS = ['setup', 'login', 'gallery', 'detail', 'settings', 'consent'];
 
 function show(name) {
@@ -168,12 +170,13 @@ async function route() {
     setTimeout(() => $(code ? '#setup-pw' : '#setup-code').focus(), 0);
     return;
   }
-  if (!state.me.authenticated) {
+  if (!state.me.authenticated && (!state.me.demo || ['/login', '/settings', '/oauth/authorize'].includes(p))) {
     if (p !== '/login') history.replaceState({ next: p + location.search }, '', '/login');
     show('login');
     setTimeout(() => $('#pw').focus(), 0);
     return;
   }
+  paintGuest();
   const m = p.match(/^\/a\/([a-z0-9]+)$/);
   if (m) return openViewer(m[1]);
   if (p === '/settings') return openSettings();
@@ -181,6 +184,21 @@ async function route() {
   if (p !== '/') history.replaceState(null, '', '/');
   show('gallery');
   loadGallery();
+}
+
+/* Demo visitors browse; everything that writes is left out. */
+function paintGuest() {
+  const g = guest();
+  $('#upload-btn').hidden = g;
+  $('#view-gallery a[href="/settings"]').hidden = g;
+  let banner = $('#demo-banner');
+  if (g && !banner) {
+    banner = h('p', { class: 'hint demo-banner', id: 'demo-banner' }, icon('info'), ' ',
+      h('strong', { text: 'Live demo, read-only.' }), ' AI agents publish these artifacts over MCP; you review, comment and share them. ',
+      h('a', { href: 'https://github.com/dinhkarate/9artifacts', target: '_blank', rel: 'noopener', text: 'Run your own' }), '.');
+    $('#view-gallery .gallery').prepend(banner);
+  }
+  if (banner) banner.hidden = !g;
 }
 
 /* ---------- auth screens ---------- */
@@ -317,7 +335,7 @@ function renderGallery() {
       h('h2', { text: filtered ? 'Nothing matches' : 'No artifacts yet' }),
       filtered
         ? h('button', { class: 'btn', type: 'button', text: 'Clear filters', onclick: () => { state.q = ''; state.tag = ''; $('#search').value = ''; loadGallery(); } })
-        : h('p', { class: 'muted' }, 'Drop an HTML, Markdown or PDF file here, or ', h('a', { href: '/settings', 'data-link': '', text: 'connect your AI agent' }), ' and ask it to publish.')));
+        : guest() ? null : h('p', { class: 'muted' }, 'Drop an HTML, Markdown or PDF file here, or ', h('a', { href: '/settings', 'data-link': '', text: 'connect your AI agent' }), ' and ask it to publish.')));
     return;
   }
   box.append(h('div', { class: `cards ${state.layout}` }, state.artifacts.map(state.layout === 'grid' ? cardEl : rowEl)));
@@ -416,7 +434,7 @@ async function upload(files, id) {
 /* Drag and drop: files or a whole folder. */
 const dropzone = $('#dropzone');
 let dragDepth = 0;
-const dropActive = () => !$('#view-gallery').hidden || (viewer && !$('#view-detail').hidden);
+const dropActive = () => !guest() && !$('#view-gallery').hidden || (viewer && !$('#view-detail').hidden);
 window.addEventListener('dragenter', (e) => {
   if (!dropActive() || !e.dataTransfer.types.includes('Files')) return;
   dragDepth++;
@@ -540,11 +558,11 @@ function renderViewer() {
       h('div', { class: 'bar-actions' },
         versionSelect, fileSelect,
         h('button', { class: 'icon-btn', type: 'button', title: 'Copy private link', 'aria-label': 'Copy private link', icon: 'link',
-          onclick: async () => toast(await copyText(a.url) ? 'Private link copied (login required)' : 'Copy failed') }),
+          onclick: async () => toast(await copyText(a.url) ? (guest() ? 'Link copied' : 'Private link copied (login required)') : 'Copy failed') }),
         viewer.openLink, viewer.downloadLink,
         h('button', { class: 'icon-btn badge-btn', type: 'button', id: 'btn-comments', title: 'Comments (c)', 'aria-label': 'Comments', icon: 'comment', onclick: () => toggleDrawer('comments') }),
         h('button', { class: 'icon-btn', type: 'button', id: 'btn-info', title: 'Details (i)', 'aria-label': 'Details', icon: 'info', onclick: () => toggleDrawer('info') }),
-        h('button', { class: 'btn primary', type: 'button', id: 'btn-share', onclick: () => toggleDrawer('share') }, icon('share'), h('span', { class: 'hide-sm', text: 'Share' })))),
+        guest() ? null : h('button', { class: 'btn primary', type: 'button', id: 'btn-share', onclick: () => toggleDrawer('share') }, icon('share'), h('span', { class: 'hide-sm', text: 'Share' })))),
     h('div', { class: 'viewer-body' },
       h('main', { class: 'stage', id: 'stage' }),
       h('aside', { class: 'drawer', id: 'drawer', hidden: true, 'aria-label': 'Artifact details' })));
@@ -583,14 +601,14 @@ function paintDrawer() {
   drawer.textContent = '';
   drawer.hidden = !viewer.drawer;
   $('#btn-info').classList.toggle('active', viewer.drawer === 'info');
-  $('#btn-share').classList.toggle('active', viewer.drawer === 'share');
+  if ($('#btn-share')) $('#btn-share').classList.toggle('active', viewer.drawer === 'share');
   paintCommentBadge();
   if (!viewer.drawer) return;
   const tab = (id, label) => h('button', { type: 'button', role: 'tab', class: viewer.drawer === id ? 'active' : '',
     'aria-selected': String(viewer.drawer === id), onclick: () => { viewer.drawer = id; paintDrawer(); } }, label);
   drawer.append(
     h('div', { class: 'drawer-head' },
-      h('div', { class: 'drawer-tabs', role: 'tablist' }, tab('info', 'Details'), tab('comments', 'Comments'), tab('share', 'Share')),
+      h('div', { class: 'drawer-tabs', role: 'tablist' }, tab('info', 'Details'), tab('comments', 'Comments'), guest() ? null : tab('share', 'Share')),
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Close', icon: 'close', onclick: () => toggleDrawer(viewer.drawer) })),
     h('div', { class: 'drawer-body' }, { info: infoPanel, comments: commentsPanel, share: sharePanel }[viewer.drawer]()));
 }
@@ -633,8 +651,10 @@ function commentsPanel() {
   const open = all.filter((c) => !c.resolvedAt);
   const done = all.filter((c) => c.resolvedAt);
   return [
-    h('p', { class: 'hint' }, 'Then tell your agent ', h('strong', { text: `“fix the comments on ${a.title}”` }), '. It reads them, publishes a new version and resolves them.'),
-    quote, body, add,
+    guest()
+      ? h('p', { class: 'hint' }, 'The owner selects text and comments, then tells their agent ', h('strong', { text: `“fix the comments on ${a.title}”` }), '. It reads them, publishes a new version and resolves them.')
+      : [h('p', { class: 'hint' }, 'Then tell your agent ', h('strong', { text: `“fix the comments on ${a.title}”` }), '. It reads them, publishes a new version and resolves them.'),
+        quote, body, add],
     h('h3', { text: `Open (${open.length})` }),
     open.length ? h('ul', { class: 'comment-list' }, open.map(commentRow)) : h('p', { class: 'muted', text: 'No open comments.' }),
     done.length ? h('details', { class: 'share-history' }, h('summary', { text: `Resolved (${done.length})` }), h('ul', { class: 'comment-list' }, done.map(commentRow))) : null,
@@ -643,7 +663,7 @@ function commentsPanel() {
 
 function commentRow(c) {
   const a = viewer.artifact;
-  const actions = h('div', { class: 'form-row' }, h('span', { class: 'spacer' }),
+  const actions = guest() ? null : h('div', { class: 'form-row' }, h('span', { class: 'spacer' }),
     c.resolvedAt ? null : h('button', { class: 'btn ghost sm', type: 'button', text: 'Resolve', onclick: async () => {
       try { await api('POST', `/api/artifacts/${a.id}/comments/${c.id}/resolve`, {}); viewer.artifact = await api('GET', `/api/artifacts/${a.id}`); paintDrawer(); } catch (e) { apiError(e); }
     } }),
@@ -711,12 +731,14 @@ function infoPanel() {
   } }, icon('pin'), a.pinned ? 'Unpin' : 'Pin to top');
   const newVersion = h('button', { class: 'btn ghost sm', type: 'button', onclick: () => { uploadTarget = a.id; $('#file-input').click(); } }, icon('upload'), 'Upload new version');
 
+  const ro = guest();
   return [
-    h('label', { text: 'Title' }), title,
-    h('label', { text: 'Tags' }), tags,
-    h('label', { text: 'Private note' }), note,
-    h('div', { class: 'form-row' }, save, status),
-    h('div', { class: 'form-row wrap' }, pin, newVersion),
+    ro ? (a.tags.length ? h('div', { class: 'card-meta' }, a.tags.map((t) => h('span', { class: 'badge', text: t }))) : null) : [
+      h('label', { text: 'Title' }), title,
+      h('label', { text: 'Tags' }), tags,
+      h('label', { text: 'Private note' }), note,
+      h('div', { class: 'form-row' }, save, status),
+      h('div', { class: 'form-row wrap' }, pin, newVersion)],
     h('h3', { text: `Files in v${v.n} (${v.files.length})` }),
     h('ul', { class: 'file-list' }, v.files.map((f) => h('li', { class: f.name === viewer.file ? 'current' : '' },
       h('button', { type: 'button', class: 'file-name', onclick: () => { viewer.file = f.name; const s = $('.file-select'); if (s) s.value = f.name; paintStage(); paintDrawer(); } },
@@ -727,7 +749,7 @@ function infoPanel() {
       h('ul', { class: 'version-list' }, a.versions.map((x) => h('li', { class: x.n === v.n ? 'current' : '' },
         h('button', { type: 'button', onclick: () => { viewer.version = x.n === a.version ? 0 : x.n; viewer.file = null; renderViewer(); viewer.drawer = 'info'; paintDrawer(); } },
           h('strong', { text: `v${x.n}` }), h('span', { class: 'muted', text: ` ${x.message ? `${x.message} · ` : ''}${ago(x.createdAt)}` })),
-        x.n === a.version ? null : confirmButton('Restore', 'Click again', async () => {
+        x.n === a.version || ro ? null : confirmButton('Restore', 'Click again', async () => {
           viewer.artifact = await api('POST', `/api/artifacts/${a.id}/versions/${x.n}/restore`);
           viewer.version = 0;
           viewer.file = null;
@@ -740,7 +762,7 @@ function infoPanel() {
     h('dl', { class: 'facts' },
       h('dt', { text: 'Created' }), h('dd', { text: fmtDate(a.createdAt) }),
       h('dt', { text: 'ID' }), h('dd', {}, h('code', { text: a.id }))),
-    h('div', { class: 'danger-zone' },
+    ro ? null : h('div', { class: 'danger-zone' },
       confirmButton('Delete artifact', 'Click again to delete forever', async () => {
         await api('DELETE', `/api/artifacts/${a.id}`);
         toast('Artifact deleted');
@@ -939,7 +961,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === '/' && !$('#view-gallery').hidden) { e.preventDefault(); $('#search').focus(); }
   if (viewer && e.key === 'i') toggleDrawer('info');
   if (viewer && e.key === 'c') toggleDrawer('comments');
-  if (viewer && e.key === 's') toggleDrawer('share');
+  if (viewer && e.key === 's' && !guest()) toggleDrawer('share');
 });
 
 route();

@@ -1,4 +1,5 @@
 // REST API for artifacts, versions and shares (internal/app/api.go).
+import { guest } from './auth';
 import { type Comment, commentView, listComments } from './comments';
 import { type Ctx, shareURL } from './env';
 import { viewBase } from './content';
@@ -109,21 +110,32 @@ export async function handleList(c: Ctx): Promise<Response> {
   const q = (c.url.searchParams.get('q') ?? '').trim().toLowerCase();
   const tag = (c.url.searchParams.get('tag') ?? '').toLowerCase();
   const limit = parseInt(c.url.searchParams.get('limit') ?? '', 10) || 0;
+  const isGuest = await guest(c);
   const items: Promise<ArtifactView>[] = [];
   const tags: Record<string, number> = {};
   for (const { a, latest, active, open } of await listArtifacts(c)) {
     for (const t of a.tags) tags[t] = (tags[t] ?? 0) + 1;
     if (tag && !a.tags.includes(tag)) continue;
-    if (q && !`${a.title} ${a.tags.join(' ')} ${a.note}`.toLowerCase().includes(q)) continue;
+    if (q && !`${a.title} ${a.tags.join(' ')} ${isGuest ? '' : a.note}`.toLowerCase().includes(q)) continue;
     if (limit > 0 && items.length >= limit) continue;
     items.push(artifactView(c, a, latest, { activeShares: active, openComments: open }));
   }
-  return json(200, { artifacts: await Promise.all(items), tags });
+  const artifacts = await Promise.all(items);
+  if (isGuest) artifacts.forEach(guestView);
+  return json(200, { artifacts, tags });
 }
 
 export async function handleGet(c: Ctx, id: string): Promise<Response> {
   const v = await fullView(c, id);
+  if (v && (await guest(c))) guestView(v);
   return v ? json(200, v) : json(404, { error: 'artifact not found' });
+}
+
+/** Demo visitors see the artifact, not the owner's private note or live share links. */
+function guestView(v: ArtifactView): void {
+  v.note = '';
+  v.shares = [];
+  v.activeShares = 0;
 }
 
 // ---------- create / versions ----------

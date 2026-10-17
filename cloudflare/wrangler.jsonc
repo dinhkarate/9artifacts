@@ -43,6 +43,9 @@
     "SHARES_ON_CONTENT": "",
     // Extra CSP directives appended for artifact content (like --artifact-csp).
     "ARTIFACT_CSP": "",
+    // "1": public read-only demo. Anyone can browse the gallery and open
+    // artifacts without signing in; every change still needs the owner.
+    "DEMO": "",
     "VERSION": "cf-0.1.0"
   },
   // Hourly cleanup of expired sessions, challenges and rate-limit rows.

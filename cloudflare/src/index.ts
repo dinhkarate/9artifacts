@@ -200,7 +200,10 @@ async function serve(c: Ctx): Promise<Response> {
     r.headers.set('Allow', m.allow.join(', '));
     return r;
   }
-  if (m.r.guard === 'auth' && !(await auth.authed(c))) return auth.unauthorized();
+  if (m.r.guard === 'auth' && !(await auth.authed(c))) {
+    if (!c.demo) return auth.unauthorized();
+    if (!(await auth.guest(c))) return auth.readOnlyDemo();
+  }
   if (m.r.guard === 'session' && !(await auth.sessionOnly(c))) return auth.unauthorized();
   try {
     return await m.r.h(c, m.p);

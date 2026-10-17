@@ -1,0 +1,13 @@
+// Content origin for the public demo (https://demo-content.9artifacts.com),
+// forwarding to 9artifacts-demo like wrangler.content.jsonc does for 9artifacts.
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "9artifacts-demo-content",
+  "main": "../src/content-proxy.ts",
+  "compatibility_date": "2026-08-15",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "demo-content.9artifacts.com", "custom_domain": true }],
+  "services": [{ "binding": "APP", "service": "9artifacts-demo" }],
+  "observability": { "enabled": false }
+}

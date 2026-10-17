@@ -112,6 +112,14 @@ export async function sessionOnly(c: Ctx): Promise<boolean> {
 
 export const unauthorized = () => json(401, { error: 'authentication required' });
 
+/** guest: on a DEMO deployment, a visitor without owner credentials who only reads. */
+export async function guest(c: Ctx): Promise<boolean> {
+  const m = c.req.method;
+  return c.demo && (m === 'GET' || m === 'HEAD') && !(await tokenAuth(c)) && !(await hasSession(c));
+}
+
+export const readOnlyDemo = () => json(403, { error: 'this is a read-only demo: deploy your own 9artifacts to publish' });
+
 // ---------- setup token ----------
 
 function setupToken(c: Ctx): string {
@@ -149,8 +157,9 @@ export async function handleMe(c: Ctx): Promise<Response> {
   return json(200, {
     authenticated,
     // The setup screen shows until a passkey exists; a signed-in owner without
-    // one (just after setup) goes on to Settings to add it.
-    needsSetup: passkeys === 0 && !authenticated,
+    // one (just after setup) goes on to Settings to add it. A demo never shows
+    // it to visitors; the owner signs in at /login with the setup token.
+    needsSetup: passkeys === 0 && !authenticated && !c.demo,
     hasPasskeys: passkeys > 0,
     name: c.name,
     version: c.version,
@@ -159,6 +168,7 @@ export async function handleMe(c: Ctx): Promise<Response> {
     separateContentOrigin: c.contHost !== '',
     edition: 'cloudflare',
     passkeyOnly: true,
+    demo: c.demo,
   });
 }
 
