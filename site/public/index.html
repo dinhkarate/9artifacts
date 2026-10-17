@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9artifacts · Claude-style artifacts on your own server</title>
+<meta name="description" content="Your AI agents publish HTML, Markdown, diagrams and PDFs over MCP. You review them in a private, passkey-protected gallery and share expiring links. Self-hosted, open source, one ~10 MB binary.">
+<link rel="canonical" href="https://9artifacts.com/">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161614" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://9artifacts.com/">
+<meta property="og:title" content="9artifacts · Claude-style artifacts on your own server">
+<meta property="og:description" content="AI agents publish over MCP; you review, comment and share expiring links behind a passkey. Self-hosted and open source.">
+<meta property="og:image" content="https://9artifacts.com/img/social-preview.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+<script src="/site.js" defer></script>
+</head>
+<body>
+
+<header class="nav">
+  <a class="brand" href="/"><img src="/logo.svg" alt="" width="28" height="28"><span>9artifacts</span></a>
+  <nav aria-label="Main">
+    <a href="#how">How it works</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/dinhkarate/9artifacts#readme">Docs</a>
+    <a class="btn sm" href="https://github.com/dinhkarate/9artifacts">GitHub</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow">Open source · self-hosted · MIT</p>
+    <h1>Claude-style artifacts,<br>on your own server.</h1>
+    <p class="lede">Your AI agents publish HTML, Markdown, diagrams and PDFs. You review them in a private, passkey-protected gallery and share expiring links when you want to.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://demo.9artifacts.com">Open the live demo</a>
+      <a class="btn" href="#install">Install in one command</a>
+    </div>
+    <p class="fine">One ~10 MB Go binary · ~10 MB RAM · no database · or free on Cloudflare Workers</p>
+    <figure class="window">
+      <div class="window-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+      <video autoplay muted loop playsinline preload="metadata" poster="/img/demo-poster.webp" width="1000" height="592"
+        aria-label="An agent publishes a dashboard over MCP, publishes v2 and the open tab reloads, then an expiring share link is created">
+        <source src="/img/demo.mp4" type="video/mp4">
+      </video>
+    </figure>
+  </section>
+
+  <section id="how" class="section">
+    <h2>How it works</h2>
+    <ol class="steps">
+      <li>
+        <span class="num">1</span>
+        <h3>Connect your agent</h3>
+        <p>Claude Code, Codex, Cursor or any MCP client. claude.ai and ChatGPT connect as remote connectors over OAuth.</p>
+        <div class="code"><code>claude mcp add --transport http 9artifacts https://art.you.dev/mcp</code><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+      </li>
+      <li>
+        <span class="num">2</span>
+        <h3>Ask it to publish</h3>
+        <p>“Make a dashboard of this CSV and publish it to 9artifacts.” It reads your <code>design.md</code> first, so the result looks like yours.</p>
+        <div class="code"><code>→ https://art.you.dev/a/k3x7…</code></div>
+      </li>
+      <li>
+        <span class="num">3</span>
+        <h3>Review, comment, share</h3>
+        <p>Select text and leave a comment. Your agent reads it, publishes v2 and resolves it; your open tab reloads by itself. Share an expiring link when it’s ready.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="section">
+    <h2>Everything an artifact needs, nothing it doesn’t</h2>
+    <div class="features">
+      <article><h3>Private by default</h3><p>Everything sits behind your passkey. Public links always expire (1 hour to 30 days), can be revoked, and can have a password and a view limit.</p></article>
+      <article><h3>Made for agents</h3><p>A built-in MCP server, a CLI and an installable skill. Agents get back a private URL to hand you, and only share when you ask.</p></article>
+      <article><h3>A review loop</h3><p>Comments go back to the agent over MCP. Every version is kept, and any old one can be restored.</p></article>
+      <article><h3>Feels like Claude’s viewer</h3><p>Full-bleed sandboxed viewer, version history and live reload, on a separate content origin for isolation.</p></article>
+      <article><h3>Your style, everywhere</h3><p>Agents read your <code>design.md</code> before writing. The app itself is themeable, and your AI can restyle it.</p></article>
+      <article><h3>Tiny and free to run</h3><p>Happy on a 1 vCPU / 512 MB box or a Raspberry Pi, with automatic HTTPS. No server? The Workers edition runs on the free plan.</p></article>
+    </div>
+  </section>
+
+  <section class="section shots">
+    <figure>
+      <picture>
+        <source srcset="/img/gallery-dark.webp" media="(prefers-color-scheme: dark)">
+        <img src="/img/gallery-light.webp" alt="The 9artifacts gallery with dashboards, reports and diagrams" width="1600" height="1000" loading="lazy">
+      </picture>
+      <figcaption>The gallery: search, tags, pins.</figcaption>
+    </figure>
+    <div class="shots-row">
+      <figure><img src="/img/viewer-share-light.webp" alt="Viewer with the expiring share link panel" width="1600" height="1000" loading="lazy"><figcaption>Expiring, password-protected links.</figcaption></figure>
+      <figure><img src="/img/viewer-markdown-dark.webp" alt="A Markdown artifact rendered in dark mode" width="1600" height="1000" loading="lazy"><figcaption>Markdown, rendered.</figcaption></figure>
+      <figure><img src="/img/theme-terminal-gallery-dark.webp" alt="The gallery in the terminal theme" width="1600" height="1000" loading="lazy"><figcaption>Themes: default, terminal, paper.</figcaption></figure>
+    </div>
+  </section>
+
+  <section id="install" class="section">
+    <h2>Install</h2>
+    <div class="tabs" role="tablist" aria-label="Install options">
+      <button type="button" role="tab" aria-selected="true" aria-controls="tab-vps" id="t-vps">VPS</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="tab-docker" id="t-docker" tabindex="-1">Docker</button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="tab-cf" id="t-cf" tabindex="-1">Cloudflare Workers</button>
+    </div>
+    <div class="panel" role="tabpanel" id="tab-vps" aria-labelledby="t-vps">
+      <p>Point two DNS records at your server (one for the app, one for artifact content), then:</p>
+      <div class="code"><code>curl -fsSL https://raw.githubusercontent.com/dinhkarate/9artifacts/main/install.sh | sudo sh -s -- --domain art.example.com --content-domain art-content.example.com --email you@example.com</code><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+      <p class="muted">Installs the binary and a hardened systemd service, and fetches Let’s Encrypt certificates itself. Open the first-run link it prints, set a password and add a passkey.</p>
+    </div>
+    <div class="panel" role="tabpanel" id="tab-docker" aria-labelledby="t-docker" hidden>
+      <div class="code"><code>docker run -d --name 9artifacts -p 8080:8080 -v 9artifacts:/data -e NINEARTIFACTS_URL=http://localhost:8080 ghcr.io/dinhkarate/9artifacts</code><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+      <p class="muted"><code>docker logs 9artifacts</code> prints the first-run link. Behind nginx, Caddy, a Cloudflare Tunnel or Tailscale? See the <a href="https://github.com/dinhkarate/9artifacts/blob/main/docs/deploy.md">deploy guide</a>.</p>
+    </div>
+    <div class="panel" role="tabpanel" id="tab-cf" aria-labelledby="t-cf" hidden>
+      <p>No server at all: deploy the Workers edition (D1 + R2) on the free plan.</p>
+      <p><a href="https://deploy.workers.cloudflare.com/?url=https://github.com/dinhkarate/9artifacts/tree/main/cloudflare"><img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare" width="166" height="32"></a></p>
+      <p class="muted">Set the <code>SETUP_TOKEN</code> secret when asked, open your <code>workers.dev</code> URL and add a passkey. <a href="https://github.com/dinhkarate/9artifacts/tree/main/cloudflare#readme">Details</a>.</p>
+    </div>
+  </section>
+
+  <section class="section security">
+    <h2>Built for documents you wouldn’t paste into a pastebin</h2>
+    <ul>
+      <li><strong>Sandboxed artifacts.</strong> Every artifact runs with <code>CSP: sandbox</code> on a separate origin, with no cookies and no API access.</li>
+      <li><strong>Passkeys.</strong> WebAuthn sign-in, lockouts, <code>__Host-</code> session cookies and CSRF checks.</li>
+      <li><strong>Hashed, revocable tokens.</strong> Agents can publish but cannot mint tokens or change login settings.</li>
+      <li><strong>Links that end.</strong> 144-bit share tokens pinned to a version; expired or revoked links return 410.</li>
+    </ul>
+  </section>
+
+  <section class="section closing">
+    <h2>See it before you install it</h2>
+    <p>The demo is a real 9artifacts on Cloudflare Workers, read-only for visitors.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://demo.9artifacts.com">Open the live demo</a>
+      <a class="btn" href="https://github.com/dinhkarate/9artifacts">Star on GitHub</a>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <p><img src="/logo.svg" alt="" width="18" height="18"> 9artifacts · <a href="https://github.com/dinhkarate/9artifacts/blob/main/LICENSE">MIT license</a> · <a href="https://github.com/dinhkarate/9artifacts">GitHub</a> · <a href="https://github.com/dinhkarate/9artifacts/blob/main/SECURITY.md">Security</a></p>
+  <p class="muted">An independent open-source project, not affiliated with Anthropic or 9Router.</p>
+</footer>
+</body>
+</html>

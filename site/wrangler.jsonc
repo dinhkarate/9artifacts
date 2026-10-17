@@ -1,0 +1,16 @@
+// The project site at https://9artifacts.com (www redirects to it).
+// Deploy: `npx wrangler deploy` from this directory.
+{
+  "$schema": "../cloudflare/node_modules/wrangler/config-schema.json",
+  "name": "9artifacts-site",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-15",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    { "pattern": "9artifacts.com", "custom_domain": true },
+    { "pattern": "www.9artifacts.com", "custom_domain": true }
+  ],
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
+  "observability": { "enabled": false }
+}
