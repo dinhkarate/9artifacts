@@ -17,7 +17,7 @@
     "not_found_handling": "none"
   },
   "d1_databases": [
-    { "binding": "DB", "database_name": "9artifacts-demo", "migrations_dir": "../migrations" }
+    { "binding": "DB", "database_name": "9artifacts-demo", "database_id": "28c7cc0a-0f99-48df-bcf4-9adf13aeb10d", "migrations_dir": "../migrations" }
   ],
   "r2_buckets": [
     { "binding": "FILES", "bucket_name": "9artifacts-demo-files" }
