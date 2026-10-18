@@ -128,7 +128,7 @@
       <p class="muted">Installs the binary and a hardened systemd service, and fetches Let’s Encrypt certificates itself. Open the first-run link it prints, set a password and add a passkey.</p>
     </div>
     <div class="panel" role="tabpanel" id="tab-docker" aria-labelledby="t-docker" hidden>
-      <div class="code"><code>docker run -d --name 9artifacts -p 8080:8080 -v 9artifacts:/data -e NINEARTIFACTS_URL=http://localhost:8080 ghcr.io/dinhkarate/9artifacts</code><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+      <div class="code"><code>docker run -d --name 9artifacts -p 127.0.0.1:8080:8080 -v 9artifacts:/data -e NINEARTIFACTS_URL=http://localhost:8080 ghcr.io/dinhkarate/9artifacts</code><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
       <p class="muted"><code>docker logs 9artifacts</code> prints the first-run link. Behind nginx, Caddy, a Cloudflare Tunnel or Tailscale? See the <a href="https://github.com/dinhkarate/9artifacts/blob/main/docs/deploy.md">deploy guide</a>.</p>
     </div>
     <div class="panel" role="tabpanel" id="tab-cf" aria-labelledby="t-cf" hidden>

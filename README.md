@@ -77,7 +77,7 @@ itself. Open the first-run link it prints, set a password, and add a passkey.
 ### Docker
 
 ```bash
-docker run -d --name 9artifacts -p 8080:8080 -v 9artifacts:/data \
+docker run -d --name 9artifacts -p 127.0.0.1:8080:8080 -v 9artifacts:/data \
   -e NINEARTIFACTS_URL=http://localhost:8080 ghcr.io/dinhkarate/9artifacts
 docker logs 9artifacts   # prints the first-run link
 ```
