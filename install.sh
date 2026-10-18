@@ -69,7 +69,8 @@ install -m 0755 "$tmp/9artifacts" "$bindir/9artifacts"
 echo "→ installed $("$bindir/9artifacts" version) to $bindir/9artifacts"
 
 if [ "$SERVICE" -eq 0 ] || [ "$os" != "linux" ] || ! command -v systemctl >/dev/null 2>&1; then
-  echo "Run it with: 9artifacts serve --url http://localhost:8080"
+  echo "Run a server with: 9artifacts serve --url http://localhost:8080"
+  echo "or use it as a client of one: 9artifacts login https://art.example.com"
   exit 0
 fi
 if [ "$(id -u)" -ne 0 ]; then
@@ -123,10 +124,24 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
-systemctl enable --now 9artifacts.service
-sleep 2
-echo
-echo "9artifacts is running. Open the first-run link below to set your password:"
-journalctl -u 9artifacts.service -n 20 --no-pager -o cat | grep -m1 "first run" || echo "(already set up — run: sudo 9artifacts status --data /var/lib/9artifacts)"
+systemctl enable 9artifacts.service
+# restart, not start: a re-run must pick up the new binary and flags
+since=$(date '+%Y-%m-%d %H:%M:%S')
+systemctl restart 9artifacts.service
+# each start makes a new setup code, so only this start's line is valid
+link=""
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  link=$(journalctl -u 9artifacts.service --since "$since" --no-pager -o cat | grep "first run" | tail -n 1)
+  [ -n "$link" ] && break
+  sleep 1
+done
 echo
 echo "Create an agent token on this server with: sudo 9artifacts token --data /var/lib/9artifacts --name my-agent"
+echo
+if [ -n "$link" ]; then
+  echo "9artifacts is running. Open the first-run link below to set your password:"
+  echo "$link"
+else
+  echo "9artifacts is running. No first-run link: it is already set up, or still starting."
+  echo "Check with: sudo 9artifacts status --data /var/lib/9artifacts   (needsSetup, setupUrl)"
+fi
