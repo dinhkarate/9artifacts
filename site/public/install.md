@@ -48,7 +48,7 @@ If they don't, tell the user which A records to create and wait.
 
 ## 2A. VPS, automatic HTTPS
 
-First check for an earlier install: `ssh HOST 'test -e /etc/systemd/system/9artifacts.service && echo installed'`.
+First check for an earlier install: `ssh HOST 'test -e /etc/systemd/system/9artifacts.service && echo installed || echo "not installed"'`.
 If it prints `installed`, ask the user before going on. Also check that nothing else listens on
 80 or 443: `ssh HOST 'ss -ltn "( sport = :80 or sport = :443 )"'` must print only its header line. Re-running the installer replaces the
 binary and the service file, keeps the data in `/var/lib/9artifacts` and restarts the service.
@@ -95,7 +95,8 @@ Run these commands on the Docker host. If that is another machine, open a shell 
 
 Every Docker command in this guide uses two shell variables: `C`, the name of the container,
 its volume and its network, and `PORT`, the host port. Set them first (and again in any new
-shell; your tool may start a fresh one per command):
+shell; your tool may start a fresh one per command). The blocks stop with an error if they are
+unset, and `docker pull` makes sure you run the current release, not an older cached one:
 
 ```bash
 C=9artifacts PORT=8080     # or the user's choice, e.g. C=9artifacts-test PORT=18990
@@ -111,6 +112,7 @@ from an earlier attempt can be reused (skip `docker network create`); a local tr
 use the network, so ignore that line there.
 
 ```bash
+: "${C:?set C}" "${PORT:?set PORT}"
 command -v curl >/dev/null || echo "curl is missing"
 docker info >/dev/null && echo "docker OK"
 docker container inspect "$C" >/dev/null 2>&1 && echo "container $C exists"
@@ -130,6 +132,7 @@ Bind to loopback, drop the content URL and
 `--restart` so it doesn't come back after a reboot:
 
 ```bash
+: "${C:?set C}" "${PORT:?set PORT}"; docker pull -q ghcr.io/dinhkarate/9artifacts
 docker run -d --name "$C" -p "127.0.0.1:$PORT:8080" -v "$C:/data" \
   -e NINEARTIFACTS_URL="http://localhost:$PORT" \
   ghcr.io/dinhkarate/9artifacts
@@ -146,6 +149,7 @@ Then go to step 3.
 ### Server with a domain
 
 ```bash
+: "${C:?set C}" "${PORT:?set PORT}"; docker pull -q ghcr.io/dinhkarate/9artifacts
 docker network create "$C"
 docker run -d --name "$C" --network "$C" --restart unless-stopped -p "127.0.0.1:$PORT:8080" -v "$C:/data" \
   -e NINEARTIFACTS_URL=https://art.example.com \
@@ -196,39 +200,36 @@ value from their password manager at its prompt.
 
 The app is at `https://9artifacts.<subdomain>.workers.dev`. There is no server shell, so in
 step 5 the user creates the token in **Settings → Connect an AI agent** (after step 4) and
-saves it as `export NINEARTIFACTS_TOKEN=…` in `~/.config/9artifacts/token.env` (mode 600) on
-the machine you run on. You load it with `. ~/.config/9artifacts/token.env` before each command
-that uses it; never ask for the token in the chat.
+saves it in `~/.config/9artifacts/token` (mode 600) on the machine you run on; never ask for
+the token in the chat.
 
 ## 3. Check that it runs
 
 ```bash
 curl -fsS https://art.example.com/health          # {"ok":true,"version":"..."}
+curl -fsS "http://localhost:$PORT/health"         # local try-out, or Docker before its proxy is up
 ```
 
 On Workers use `https://9artifacts.<subdomain>.workers.dev/health`; if it fails there, the user
 checks the Worker's logs in the Cloudflare dashboard (or `npx wrangler tail`).
-For a local try-out use `http://localhost:$PORT` here and in step 5 instead of `https://art.example.com`
+For a local try-out use `http://localhost:$PORT` in step 5 too, instead of `https://art.example.com`
 (the same URL as `NINEARTIFACTS_URL`, or passkeys won't work).
 
 If it fails: `ssh HOST 'sudo journalctl -u 9artifacts -n 50 --no-pager' | sed "s/code=[A-Za-z0-9_-]*/code=HIDDEN/"` (Docker:
-`docker logs "$C" 2>&1 | sed "s/code=[A-Za-z0-9_-]*/code=HIDDEN/"`). Docker behind a proxy: finish the proxy first.
+`docker logs "$C" 2>&1 | sed "s/code=[A-Za-z0-9_-]*/code=HIDDEN/"`).
 
 ## 4. Hand over to the user
 
-Give the user this command, which prints the first-run link (don't run it as written yourself):
-`ssh -t HOST 'sudo journalctl -u 9artifacts --no-pager -o cat | grep "first run" | tail -1'`
-(Docker: `docker logs "$C" 2>&1 | grep "first run" | tail -1`; when you hand it over, write the
-container's real name in place of `"$C"`). To check that it prints a
-link, run your own copy with `| sed "s/code=[A-Za-z0-9_-]*/code=HIDDEN/"` added at the end. Always the
-**last** line: each start makes a new code until setup is done. Ask them to
+Give the user this command (don't run it as written yourself). Its `setupUrl` is the current
+first-run link; old `first run` lines in the logs stop working at the next restart:
+`ssh -t HOST 'sudo /usr/local/bin/9artifacts status --data /var/lib/9artifacts'`
+(Docker: `docker exec "$C" /9artifacts status`; when you hand it over, write the container's real
+name in place of `"$C"`). Check it yourself with `| sed "s/code=[A-Za-z0-9_-]*/code=HIDDEN/"` added at the end:
+`"needsSetup": true` means the link is waiting for them, `false` that setup is already done. Ask them to
 open it, set the owner password and add a passkey in Settings. On Workers (2D) they open the app
 URL instead, enter their `SETUP_TOKEN` on the setup screen and add a passkey.
 The server writes the link to its log, so anyone who can read the journal or `docker logs`
-could claim the owner account first: ask the user to do this soon. If the installer said there
-is no link yet, wait a few seconds and use the command above;
-`ssh HOST 'sudo /usr/local/bin/9artifacts status --data /var/lib/9artifacts' | sed "s/code=[A-Za-z0-9_-]*/code=HIDDEN/"`
-(Docker: `docker exec "$C" /9artifacts status | sed "s/code=[A-Za-z0-9_-]*/code=HIDDEN/"`) shows `needsSetup`. You can do steps 5 and 6
+could claim the owner account first: ask the user to do this soon. You can do steps 5 and 6
 meanwhile (not on Workers: there the token comes from Settings), but don't call the install finished until they confirm: until then nobody can
 sign in to view what you publish. If they set up later, report the install as done except for
 the owner setup.
@@ -237,69 +238,82 @@ the owner setup.
 
 First check that you have no MCP server called `9artifacts` already (`cd DIR && claude mcp list`,
 or your agent's equivalent). If you do, ask the user before replacing it: it may be a real
-connection. Then create a token on the server and pipe it straight into your own configuration. Each run makes
-a new token; the owner lists and revokes them in Settings. Pick the block
-for the agent you are. `HOST` is the SSH host, `NAME` a label such as `claude-code-laptop`.
-`token` prints the token alone on stdout and its notice on stderr, so `$(…)` and pipes capture
-only the token. Keep stderr: the notice holds no secret, and if the command fails it says why. A token
-made on the server works right away, even before the owner finishes step 4: shell access to
-the server already means owner access. The commands below put the token on `claude`'s command
-line for a moment, where other users of a shared machine could see it; there is no form of
-`claude mcp add` that avoids this, so if other people have accounts on this machine (ask the
-user when unsure), tell the user before you run it.
+connection. `HOST` is the SSH host, `NAME` a label such as `claude-code-laptop`, `DIR` (Claude
+Code) the project directory the user will work in.
 
-The token commands run `sudo` over `ssh` without a terminal, so they need sudo without a
-password. If sudo asks for one there, ask the user to run
-`sudo /usr/local/bin/9artifacts token --data /var/lib/9artifacts --name NAME` on the server and put the token in
-`NINEARTIFACTS_TOKEN`, then use the Workers form below with your URL. On Docker, use
-`docker exec "$C" /9artifacts token --name NAME` in place of the `ssh HOST '…'` command in
-every block, and `http://localhost:$PORT` for a local try-out.
+**1. Save a token to a private file.** The token goes from the server straight into the file,
+never through the chat or a command line. Each run makes a new token; the owner lists and
+revokes them in Settings. A token made on the server works right away, even before step 4:
+shell access to the server already means owner access.
 
-**Claude Code** — `DIR` is the project directory the user will work in. Each command starts with
-`cd DIR` because the `local` scope belongs to the directory it runs in.
+```bash
+mkdir -p -m 700 ~/.config/9artifacts
+(umask 077; ssh HOST 'sudo /usr/local/bin/9artifacts token --data /var/lib/9artifacts --name NAME' > ~/.config/9artifacts/token)
+test -s ~/.config/9artifacts/token && echo "token saved" || echo "no token: read the error above"
+```
+
+Docker on this machine:
+
+```bash
+mkdir -p -m 700 ~/.config/9artifacts
+(umask 077; docker exec "$C" /9artifacts token --name NAME > ~/.config/9artifacts/token)
+test -s ~/.config/9artifacts/token && echo "token saved" || echo "no token: read the error above"
+```
+
+For Docker on another machine, use `ssh HOST "docker exec $C /9artifacts token --name NAME"` in
+place of the `ssh HOST '…'` command (double quotes, with `C` set on your side too). The token goes to stdout and a
+notice to stderr, which holds no secret and says why if it fails. `ssh` runs `sudo` without a
+terminal, so it needs sudo without a password; if sudo asks for one, and on Workers (2D), the
+user creates the token (on the server, or in **Settings → Connect an AI agent**) and saves it
+in `~/.config/9artifacts/token` themselves, mode 600.
+
+**2. Connect your agent.** For a local try-out the URL is `http://localhost:$PORT`, on Workers
+`https://9artifacts.SUBDOMAIN.workers.dev`.
+
+**Claude Code** — each command starts with `cd DIR`, because the `local` scope belongs to the
+directory it runs in:
 
 ```bash
 cd DIR && claude mcp add --scope local --transport http 9artifacts https://art.example.com/mcp \
-  --header "Authorization: Bearer $(ssh HOST 'sudo /usr/local/bin/9artifacts token --data /var/lib/9artifacts --name NAME')" >/dev/null
-```
-
-Docker on this machine (local try-out shown; the container's data dir is the default). For
-Docker on another machine, use `$(ssh HOST "docker exec $C /9artifacts token --name NAME")`
-(double quotes, so your `C` is filled in) and that server's URL:
-
-```bash
-cd DIR && claude mcp add --scope local --transport http 9artifacts "http://localhost:$PORT/mcp" \
-  --header "Authorization: Bearer $(docker exec "$C" /9artifacts token --name NAME)" >/dev/null
-```
-
-Workers (2D), or any token the user put in `NINEARTIFACTS_TOKEN`:
-
-```bash
-. ~/.config/9artifacts/token.env
-cd DIR && claude mcp add --scope local --transport http 9artifacts https://9artifacts.SUBDOMAIN.workers.dev/mcp \
-  --header "Authorization: Bearer $NINEARTIFACTS_TOKEN" >/dev/null
+  --header "Authorization: Bearer $(cat ~/.config/9artifacts/token)" >/dev/null
 ```
 
 Keep the `local` scope. It stores the token in `~/.claude.json` (keep that file out of bug
-reports and dotfile repos); `--scope project` writes it into `.mcp.json`, which usually gets committed; `local` belongs to the current directory, so run later sessions from
-there. `>/dev/null` hides the confirmation, which some Claude Code versions print with the header in
-it; errors still show. Check that `claude mcp list` shows **✔ Connected**: an empty token (a failed `ssh` or
-`docker exec`) still gets added, but won't connect. Don't read `claude mcp get` whole: it
-prints the token. `cd DIR && claude mcp get 9artifacts | grep -i scope` shows only the scope,
-which should be `Local config`. The new tools appear in the **next** Claude Code session, not the
-current one; step 6 tests them with a headless session.
+reports and dotfile repos); `--scope project` writes it into `.mcp.json`, which usually gets
+committed. `>/dev/null` hides the confirmation, which some Claude Code versions print with the
+header in it; errors still show. Check that `cd DIR && claude mcp list` shows **✔ Connected**.
+Don't read `claude mcp get` whole: it prints the token; `cd DIR && claude mcp get 9artifacts |
+grep -i scope` shows only the scope, which should be `Local config`. The new tools appear in
+the **next** Claude Code session, not the current one; step 6 tests them with a headless session.
 
-**Codex and Cursor** read the token from `NINEARTIFACTS_TOKEN`. Ask the user where they keep
-secrets. With their OK you can store it in a private file without printing it, and they load
-it from their shell profile with `. ~/.config/9artifacts/token.env`. Apps started from the Dock or
-a menu don't read the shell profile: start Cursor or the Codex app from that shell, or restart
-it after the variable is set.
+The `$(cat …)` above is on `claude`'s command line for a moment, where other users of the
+machine could read it. That only matters if other **people** can log in here; service accounts
+don't count. List the accounts that can log in with
+`getent passwd | awk -F: '$3 >= 1000 && $7 !~ /(nologin|false)$/ {print $1}'`; some may still
+be services (a game server, a test user), which only the user can tell. If there are others
+besides the user, ask them whether to use a `headersHelper` instead, which reads the
+file at connect time. Claude Code only runs a helper in a directory where the user has
+accepted its trust prompt (opened `claude` there once), and you must not set that trust
+yourself: until they have, `claude mcp list` shows `! Needs authentication` and a
+"headersHelper not run" warning, which is about trust, not a sign-in. Unattended, with no one
+to ask, use the plain form above and say so in your report.
 
 ```bash
-(umask 077; mkdir -p ~/.config/9artifacts
- printf 'export NINEARTIFACTS_TOKEN=%s\n' "$(ssh HOST 'sudo /usr/local/bin/9artifacts token --data /var/lib/9artifacts --name NAME')" \
-   > ~/.config/9artifacts/token.env)
+cat > ~/.config/9artifacts/headers.sh <<'SH'
+#!/bin/sh
+printf '{"Authorization":"Bearer %s"}\n' "$(cat "$HOME/.config/9artifacts/token")"
+SH
+chmod 700 ~/.config/9artifacts/headers.sh
+cd DIR && claude mcp add-json --scope local 9artifacts \
+  "{\"type\":\"http\",\"url\":\"https://art.example.com/mcp\",\"headersHelper\":\"$HOME/.config/9artifacts/headers.sh\"}"
 ```
+
+This uses `claude mcp add-json` because `claude mcp add` has no option for a helper.
+
+**Codex and Cursor** read the token from `NINEARTIFACTS_TOKEN`. With the user's OK, add this line
+to their shell profile: `export NINEARTIFACTS_TOKEN="$(cat ~/.config/9artifacts/token)"`. Apps
+started from the Dock or a menu don't read the shell profile: start Cursor or the Codex app from
+that shell, or restart it after the variable is set.
 
 **Codex**:
 
@@ -325,13 +339,11 @@ HTTPS URL and can't reach a local try-out.
 ```bash
 npx skills add dinhkarate/9artifacts
 curl -fsSL https://9artifacts.com/install.sh | sh -s -- --no-service   # without root it lands in ~/.local/bin
-command -v 9artifacts || export PATH="$HOME/.local/bin:$PATH"           # make sure it runs before making a token
-ssh HOST 'sudo /usr/local/bin/9artifacts token --data /var/lib/9artifacts --name NAME' | 9artifacts login https://art.example.com
+command -v 9artifacts || export PATH="$HOME/.local/bin:$PATH"
+9artifacts login https://art.example.com < ~/.config/9artifacts/token
 ```
 
-The installer's `9artifacts serve` hint is for running a server; you only need `login`. On
-Workers there is no server shell: ask the user to run `9artifacts login https://9artifacts.SUBDOMAIN.workers.dev`
-themselves and paste the token from Settings at its prompt.
+The installer's `9artifacts serve` hint is for running a server; you only need `login`.
 
 ## 6. Prove it works
 
@@ -367,7 +379,7 @@ To remove a try-out, with `C` set to **its** name (check with `docker ps -a` fir
 holds the owner account and every artifact, and removing it can't be undone):
 `docker rm -f "$C" && docker volume rm "$C"`, and
 `cd DIR && claude mcp remove 9artifacts -s local` (or your agent's
-equivalent).
+equivalent), and `rm -f ~/.config/9artifacts/token ~/.config/9artifacts/headers.sh`.
 
 More: the agent skill at
 https://github.com/dinhkarate/9artifacts/blob/main/skills/9artifacts/SKILL.md and the REST API at
