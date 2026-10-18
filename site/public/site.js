@@ -3,7 +3,9 @@
 
 for (const btn of document.querySelectorAll('.copy')) {
   btn.addEventListener('click', async () => {
-    const text = btn.parentElement.querySelector('code').textContent;
+    const code = btn.parentElement.querySelector('code').cloneNode(true);
+    for (const p of code.querySelectorAll('.prompt')) p.remove();
+    const text = code.textContent;
     try {
       await navigator.clipboard.writeText(text);
       btn.textContent = 'Copied';

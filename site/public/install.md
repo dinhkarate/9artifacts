@@ -4,6 +4,9 @@ You are helping a user install **9artifacts**, a self-hosted gallery where AI ag
 HTML, Markdown, SVG, images and PDFs, and the owner reviews them behind a passkey.
 Source: https://github.com/dinhkarate/9artifacts (MIT).
 
+`https://9artifacts.com/install.sh` redirects to
+`install.sh` on the `main` branch of that repository; read it there if you want to check it first.
+
 Follow these steps in order. Stop and ask the user whenever something below says *ask*.
 
 ## Rules
@@ -38,7 +41,7 @@ If they don't, tell the user which A records to create and wait.
 ## 2A. VPS, automatic HTTPS
 
 ```bash
-ssh HOST 'curl -fsSL https://raw.githubusercontent.com/dinhkarate/9artifacts/main/install.sh \
+ssh HOST 'curl -fsSL https://9artifacts.com/install.sh \
   | sudo sh -s -- --domain art.example.com --content-domain art-content.example.com --email you@example.com'
 ```
 
@@ -48,7 +51,7 @@ gets certificates itself. The output ends with a **first-run link**. Go to step 
 ## 2B. VPS behind your own reverse proxy
 
 ```bash
-ssh HOST 'curl -fsSL https://raw.githubusercontent.com/dinhkarate/9artifacts/main/install.sh \
+ssh HOST 'curl -fsSL https://9artifacts.com/install.sh \
   | sudo sh -s -- --url https://art.example.com --content-url https://art-content.example.com'
 ```
 
@@ -138,7 +141,7 @@ passkey.
 
 ```bash
 npx skills add dinhkarate/9artifacts
-curl -fsSL https://raw.githubusercontent.com/dinhkarate/9artifacts/main/install.sh | sh -s -- --no-service   # without root it lands in ~/.local/bin
+curl -fsSL https://9artifacts.com/install.sh | sh -s -- --no-service   # without root it lands in ~/.local/bin
 ssh HOST 'sudo 9artifacts token --data /var/lib/9artifacts --name NAME' | 9artifacts login https://art.example.com
 ```
 

@@ -1,4 +1,5 @@
-// 9artifacts.com: static landing page. www and any other host redirect to the apex;
+// 9artifacts.com: static landing page. www and plain http redirect to the apex,
+// /install.sh to the installer on GitHub;
 // everything else is served from ./public with the security headers below.
 const APEX = '9artifacts.com';
 const CSP = "default-src 'self'; img-src 'self' data: https://deploy.workers.cloudflare.com; media-src 'self'; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'";
@@ -10,6 +11,10 @@ export default {
       url.hostname = APEX;
       url.protocol = 'https:';
       return Response.redirect(url.toString(), 301);
+    }
+    // The installer lives in the repository; the short URL just points at main.
+    if (url.pathname === '/install.sh') {
+      return Response.redirect('https://raw.githubusercontent.com/dinhkarate/9artifacts/main/install.sh', 302);
     }
     const resp = await env.ASSETS.fetch(req);
     const out = new Response(resp.body, resp);

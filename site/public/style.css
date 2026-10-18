@@ -45,6 +45,12 @@ main{max-width:1120px;margin:0 auto;padding:0 20px}
 .eyebrow{display:inline-block;margin:0 0 18px;padding:4px 12px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:600}
 .hero h1{font-size:clamp(38px,6.4vw,68px);font-weight:750}
 .lede{max-width:640px;margin:20px auto 0;font-size:19px;color:var(--text-2)}
+.quick{max-width:680px;margin:32px auto 0;text-align:left}
+.quick-tabs{margin:0 auto 10px}
+.quick-code{align-items:center;padding:8px 8px 8px 18px;border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
+.quick-code code{font-size:14px;overflow-wrap:break-word}
+.quick-code .copy{height:34px;padding:0 14px;font-size:13px}
+.prompt{color:var(--muted);user-select:none}
 .cta{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:30px}
 .fine{margin:18px 0 0;font-size:14px;color:var(--muted)}
 .window{margin:48px auto 0;max-width:1000px;border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;background:var(--surface);box-shadow:var(--shadow-lg)}

@@ -37,9 +37,17 @@
     <p class="eyebrow">Open source · self-hosted · MIT</p>
     <h1>Claude-style artifacts,<br>on your own server.</h1>
     <p class="lede">Your AI agents publish HTML, Markdown, diagrams and PDFs. You review them in a private, passkey-protected gallery and share expiring links when you want to.</p>
+    <div class="quick">
+      <div class="tabs quick-tabs" role="tablist" aria-label="Quick install">
+        <button type="button" role="tab" aria-selected="true" aria-controls="q-agent" id="tq-agent">Ask your agent</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="q-shell" id="tq-shell" tabindex="-1">Terminal</button>
+      </div>
+      <div class="code quick-code" role="tabpanel" id="q-agent" aria-labelledby="tq-agent"><code>Install 9artifacts for me by following https://9artifacts.com/<wbr>install.md</code><button type="button" class="copy" aria-label="Copy prompt">Copy</button></div>
+      <div class="code quick-code" role="tabpanel" id="q-shell" aria-labelledby="tq-shell" hidden><code><span class="prompt" aria-hidden="true">$ </span>curl -fsSL https://9artifacts.com/<wbr>install.sh | sudo sh -s -- --domain art.example.com</code><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+    </div>
     <div class="cta">
       <a class="btn primary" href="https://demo.9artifacts.com">Open the live demo</a>
-      <a class="btn" href="#install">Install in one command</a>
+      <a class="btn" href="#install">All install options</a>
     </div>
     <p class="fine">One ~10 MB Go binary · ~10 MB RAM · no database · or free on Cloudflare Workers</p>
     <figure class="window">
@@ -116,7 +124,7 @@
     </div>
     <div class="panel" role="tabpanel" id="tab-vps" aria-labelledby="t-vps" hidden>
       <p>Point two DNS records at your server (one for the app, one for artifact content), then:</p>
-      <div class="code"><code>curl -fsSL https://raw.githubusercontent.com/dinhkarate/9artifacts/main/install.sh | sudo sh -s -- --domain art.example.com --content-domain art-content.example.com --email you@example.com</code><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
+      <div class="code"><code>curl -fsSL https://9artifacts.com/install.sh | sudo sh -s -- --domain art.example.com --content-domain art-content.example.com --email you@example.com</code><button type="button" class="copy" aria-label="Copy command">Copy</button></div>
       <p class="muted">Installs the binary and a hardened systemd service, and fetches Let’s Encrypt certificates itself. Open the first-run link it prints, set a password and add a passkey.</p>
     </div>
     <div class="panel" role="tabpanel" id="tab-docker" aria-labelledby="t-docker" hidden>
