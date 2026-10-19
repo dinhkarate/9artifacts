@@ -1,0 +1,75 @@
+name: smoke
+# Checks every upgrade: the released binaries on each OS and the Docker image
+# after a release, plus the live sites (also hourly).
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [release]
+    types: [completed]
+  schedule:
+    - cron: "7 * * * *"
+permissions:
+  contents: read
+env:
+  TAG: ${{ github.event.workflow_run.head_branch }} # empty means latest
+jobs:
+  binary:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, asset: 9artifacts_linux_amd64.tar.gz }
+          - { os: macos-latest, asset: 9artifacts_darwin_arm64.tar.gz }
+          - { os: windows-latest, asset: 9artifacts_windows_amd64.zip }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - name: download the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download $TAG --pattern ${{ matrix.asset }} -D dl
+          cd dl && case ${{ matrix.asset }} in *.zip) unzip -q *.zip ;; *) tar xzf *.tar.gz ;; esac
+          ./9artifacts version
+      - name: serve, token, CLI publish, smoke
+        run: |
+          d="$RUNNER_TEMP/d" # keep it short: the admin socket path has a ~100 char limit
+          ./dl/9artifacts serve --addr 127.0.0.1:8080 --url http://localhost:8080 --data "$d" > serve.log 2>&1 &
+          for i in $(seq 30); do curl -fsS http://127.0.0.1:8080/health && break; sleep 1; done
+          NINEARTIFACTS_TOKEN=$(./dl/9artifacts token --data "$d" --name smoke) # not inside export, so a failure stops the step
+          export NINEARTIFACTS_URL=http://localhost:8080 NINEARTIFACTS_TOKEN
+          printf '<!doctype html><title>smoke</title><h1>ok</h1>' > smoke.html
+          ./dl/9artifacts publish smoke.html --tags smoke --share 1h
+          scripts/smoke.sh http://localhost:8080
+      - name: server log
+        if: always()
+        run: cat serve.log || true
+  docker:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: run the image, smoke
+        run: |
+          docker run -d --name 9a -p 127.0.0.1:8080:8080 -e NINEARTIFACTS_URL=http://localhost:8080 ghcr.io/${{ github.repository }}:${TAG:-latest}
+          for i in $(seq 30); do curl -fsS http://127.0.0.1:8080/health && break; sleep 1; done
+          t=$(docker exec 9a /9artifacts token --name smoke)
+          NINEARTIFACTS_TOKEN=$t scripts/smoke.sh http://localhost:8080
+      - name: container log
+        if: always()
+        run: docker logs 9a 2>&1 | tail -50
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: demo
+        run: scripts/smoke.sh https://demo.9artifacts.com
+      - name: site and installer
+        run: |
+          curl -fsS -o /dev/null https://9artifacts.com
+          curl -fsS https://9artifacts.com/install.md | grep -q 9artifacts
+          curl -fsSL https://9artifacts.com/install.sh | head -1 | grep -q '^#!/bin/sh'
