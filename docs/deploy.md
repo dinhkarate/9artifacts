@@ -8,6 +8,7 @@ Pick the setup that matches your server.
 - [3. Docker / Compose](#3-docker--compose)
 - [4. Home server or laptop with Cloudflare Tunnel](#4-home-server-with-cloudflare-tunnel)
 - [5. Home server or laptop with Tailscale](#5-home-server-with-tailscale)
+- [6. Windows and macOS](#6-windows-and-macos)
 - [Free hosting](#free-hosting)
 - [Configuration reference](#configuration-reference)
 - [Backups and upgrades](#backups-and-upgrades)
@@ -190,6 +191,46 @@ Things to know:
   artifacts from your session.
 - Machine names appear in public certificate-transparency logs. Renaming the machine or the
   tailnet changes the URL, which invalidates registered passkeys (password login still works).
+
+## 6. Windows and macOS
+
+Both run the same binary as Linux, no Docker needed. Combine them with §4 or §5 to reach the
+gallery from other devices.
+
+**Windows** (PowerShell, `9artifacts_windows_amd64.zip`). Always pass `--data`: without it the
+data directory is `.\9artifacts-data` under the current directory, which for a scheduled task
+is `C:\Windows\System32`.
+
+```powershell
+Expand-Archive 9artifacts_windows_amd64.zip C:\9artifacts
+C:\9artifacts\9artifacts.exe serve --addr 127.0.0.1:8080 --url http://localhost:8080 --data C:\9artifacts\data
+# in a second window: an API token for your agent
+C:\9artifacts\9artifacts.exe token --data C:\9artifacts\data --name claude-code
+```
+
+To start it with Windows, register a task from an Administrator PowerShell:
+
+```powershell
+$a = New-ScheduledTaskAction -Execute C:\9artifacts\9artifacts.exe -WorkingDirectory C:\9artifacts `
+  -Argument "serve --addr 127.0.0.1:8080 --url http://localhost:8080 --data C:\9artifacts\data"
+$s = New-ScheduledTaskSettingsSet -ExecutionTimeLimit 0 -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask 9artifacts -Action $a -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $s -User SYSTEM
+Start-ScheduledTask 9artifacts
+```
+
+`token`, `passwd` and `status` still work from your own Administrator shell. Listening on
+`127.0.0.1` needs no firewall rule; another address makes Windows Firewall ask.
+
+**macOS** (`9artifacts_darwin_arm64` or `_amd64`). The binary isn't notarized, so a copy
+downloaded with a browser is blocked by Gatekeeper. Download it with `curl`, or clear the flag:
+
+```bash
+xattr -d com.apple.quarantine ./9artifacts
+./9artifacts serve --addr 127.0.0.1:8080 --url http://localhost:8080 --data ~/9artifacts-data
+```
+
+Keep the `--data` path short on macOS: the admin socket lives there and Unix socket paths are
+limited to about 100 characters.
 
 ## Free hosting
 

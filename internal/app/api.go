@@ -234,6 +234,10 @@ func (s *Server) writeVersion(id string, n int, entry, message string, files []u
 		v.Files = append(v.Files, File{Name: name, Size: size, Type: contentType(name)})
 	}
 	v.Entry = pickEntry(v.Files, entry)
+	// Windows cannot rename a directory while a handle to it is open.
+	if err := root.Close(); err != nil {
+		return nil, err
+	}
 	if err := os.Rename(tmp, s.store.VersionDir(id, n)); err != nil {
 		return nil, err
 	}
