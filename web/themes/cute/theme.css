@@ -1,0 +1,53 @@
+/*
+ * cute — cheese sticks and a mascot. Tokens first, then a few rules on top of
+ * app.css: a theme may restyle anything, not only colours. Files next to this
+ * one (fonts, images) load with relative URLs.
+ * Fredoka: SIL Open Font License, see OFL-fredoka.txt.
+ */
+@font-face{font-family:"Fredoka";src:url(fredoka.woff2) format("woff2");font-weight:300 700;font-display:swap}
+:root{
+  color-scheme: light;
+  --font-ui: "Fredoka", ui-rounded, "Segoe UI", system-ui, sans-serif;
+  --font-display: var(--font-ui);
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-size: 15.5px;
+  --radius-sm: 14px; --radius: 22px; --radius-lg: 30px;
+  --bg: #fff6dc; --surface: #fffdf6; --surface-2: #ffefc2; --border: #f3d58a; --border-strong: #e8a33d;
+  --text: #5a3a1a; --text-2: #7b5530; --muted: #b08a5c;
+  --accent: #ff6f9c; --accent-strong: #f0477e; --accent-soft: #ffe0ea; --on-accent: #ffffff; --danger: #e5484d;
+  --thumb-bg: #fff1c9; --stage-bg: #ffeeb8; --toast-bg: #ff6f9c; --toast-text: #ffffff;
+  --kind-html: #d9480f; --kind-html-bg: #ffe3c2; --kind-md: #c2255c; --kind-md-bg: #ffdeeb;
+  --kind-pdf: #a61e4d; --kind-pdf-bg: #fcc2d7; --kind-img: #8a5a00; --kind-img-bg: #ffec99;
+  --shadow-sm: 0 2px 0 #f3d58a; --shadow: 0 6px 0 #f3d58a; --shadow-lg: 0 10px 0 #ecc66b;
+}
+/* cheese holes */
+body{background:
+  radial-gradient(circle at 20% 30%, #ffe9a8 0 18px, transparent 19px),
+  radial-gradient(circle at 75% 65%, #ffe9a8 0 12px, transparent 13px),
+  radial-gradient(circle at 55% 15%, #ffe9a8 0 7px, transparent 8px),
+  var(--bg);
+  background-size:220px 220px, 260px 260px, 180px 180px, auto;background-attachment:fixed}
+h1,h2,h3{letter-spacing:0;font-weight:600}
+.gallery-head h1{font-size:30px;color:var(--accent-strong)}
+.gallery-head h1::after{content:" \2661";color:var(--accent)}
+.topbar{background:color-mix(in srgb,#ffd23f 82%,transparent);border-bottom:3px solid #e8a33d}
+.brand{color:#5a3a1a}
+.brand img{transform:rotate(-8deg)}
+.card{border:3px solid var(--border);box-shadow:var(--shadow)}
+.card:hover{border-color:var(--accent);box-shadow:0 8px 0 var(--accent-soft);transform:translateY(-4px) rotate(-.6deg)}
+.thumb{border-bottom:3px dashed var(--border)}
+.btn{font-weight:600;border-width:2px}
+.btn.primary{box-shadow:0 4px 0 var(--accent-strong)}
+.btn.primary:active{transform:translateY(3px);box-shadow:0 1px 0 var(--accent-strong)}
+.chip{border-width:2px}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.demo-banner{border:2px dashed var(--accent);background:var(--accent-soft)}
+/* the mascot */
+.gallery-screen::after{content:"";position:fixed;right:22px;bottom:22px;width:116px;height:116px;border-radius:50%;
+  background:url(mascot.png) center/cover;border:5px solid #ffd23f;box-shadow:0 0 0 5px #ff6f9c,0 12px 24px rgba(90,58,26,.25);
+  animation:cute-bob 3s ease-in-out infinite;pointer-events:none;z-index:30}
+.gallery-screen::before{content:"nyaa~ \2661";position:fixed;right:130px;bottom:118px;padding:6px 12px;border-radius:16px 16px 4px 16px;
+  background:#fff;color:#f0477e;font:600 14px var(--font-ui);box-shadow:0 3px 0 #f3d58a;pointer-events:none;z-index:30}
+@keyframes cute-bob{50%{transform:translateY(-8px) rotate(4deg)}}
+@media (max-width:640px){.gallery-screen::after{width:72px;height:72px;right:12px;bottom:12px;border-width:3px}.gallery-screen::before{display:none}}
+@media (prefers-reduced-motion:reduce){.gallery-screen::after{animation:none}}

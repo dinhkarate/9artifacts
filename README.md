@@ -151,7 +151,7 @@ MCP tools: `get_design_guide`, `publish_artifact`, `list_artifacts`, `read_artif
 - **`design.md` + `template.html`** form the house style for artifacts. Agents fetch them through
   MCP (`get_design_guide`) or `9artifacts design` before writing, so a report made by Claude
   today and one made by Codex next month look like they belong together.
-- Built-in themes: `default`, `terminal`, `paper` (`--theme terminal`).
+- Built-in themes: `default`, `terminal`, `paper`, `cute`, `cyberpunk`, `edgy` (`--theme terminal`). A theme can restyle anything, not only colours: `cute` adds a font, a mascot and sticker-like cards. Try them all on the [live demo](https://demo.9artifacts.com).
 - `9artifacts theme init --full` also exports the app shell (HTML/JS/CSS) for deeper changes. Keep `nonce="{{.Nonce}}"` on the `<script>` tag in `index.html`, or the CSP will block the app.
 
 ## Security

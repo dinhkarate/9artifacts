@@ -199,6 +199,31 @@ function paintGuest() {
     $('#view-gallery .gallery').prepend(banner);
   }
   if (banner) banner.hidden = !g;
+  paintThemes();
+}
+
+/* A demo lets anyone try the built-in themes; the choice stays in this browser. */
+function paintThemes() {
+  const themes = state.me.themes;
+  if (!themes || $('#theme-pick')) return;
+  let cur = '';
+  try { cur = localStorage.getItem('9artifacts.theme') || ''; } catch { /* private mode */ }
+  if (!themes.includes(cur)) cur = '';
+  const pick = h('select', { id: 'theme-pick', class: 'compact-select', 'aria-label': 'Theme', title: 'Try a theme',
+    onchange: () => {
+      applyTheme(pick.value);
+      try { localStorage.setItem('9artifacts.theme', pick.value); } catch { /* private mode */ }
+    } }, themes.map((t) => h('option', { value: t, text: t })));
+  pick.value = cur || 'default';
+  $('#upload-btn').before(pick);
+  if (cur) applyTheme(cur);
+}
+
+function applyTheme(name) {
+  const base = `/themes/${encodeURIComponent(name)}/`;
+  $('link[rel="stylesheet"][href$="theme.css"]').href = base + 'theme.css';
+  $('link[rel="icon"]').href = base + 'logo.svg';
+  for (const img of document.querySelectorAll('img[src$="logo.svg"]')) img.src = base + 'logo.svg';
 }
 
 /* ---------- auth screens ---------- */

@@ -1,0 +1,45 @@
+/*
+ * cyberpunk — neon on night purple, scanlines, clipped corners, glitchy titles.
+ * Orbitron and Share Tech Mono: SIL Open Font License, see OFL-*.txt.
+ */
+@font-face{font-family:"Orbitron";src:url(orbitron.woff2) format("woff2");font-weight:400 900;font-display:swap}
+@font-face{font-family:"Share Tech Mono";src:url(share-tech-mono.woff2) format("woff2");font-display:swap}
+:root{
+  color-scheme: dark;
+  --font-ui: "Share Tech Mono", ui-monospace, Menlo, Consolas, monospace;
+  --font-display: "Orbitron", var(--font-ui);
+  --font-mono: var(--font-ui);
+  --font-size: 15px;
+  --radius-sm: 0; --radius: 0; --radius-lg: 0;
+  --bg: #0b0221; --surface: #140736; --surface-2: #1e0b4a; --border: #3a1a78; --border-strong: #05d9e8;
+  --text: #e6f7ff; --text-2: #b7a6ff; --muted: #7a6ab0;
+  --accent: #ff2a6d; --accent-strong: #ff5c8f; --accent-soft: #3d0a2a; --on-accent: #0b0221; --danger: #f9f002;
+  --thumb-bg: #0e0430; --stage-bg: #07011a; --toast-bg: #05d9e8; --toast-text: #0b0221;
+  --kind-html: #05d9e8; --kind-html-bg: #072e44; --kind-md: #ff2a6d; --kind-md-bg: #3d0a2a;
+  --kind-pdf: #f9f002; --kind-pdf-bg: #3a3a05; --kind-img: #a96bff; --kind-img-bg: #2a1050;
+  --shadow-sm: 0 0 0 1px #3a1a78; --shadow: 0 0 18px rgba(5,217,232,.25); --shadow-lg: 0 0 40px rgba(255,42,109,.3);
+}
+/* a horizon grid below, scanlines above (gallery only, artifacts stay clean) */
+body{background:
+  linear-gradient(transparent 0 calc(100% - 1px), rgba(5,217,232,.12) 0) 0 0/100% 48px,
+  linear-gradient(90deg, transparent 0 calc(100% - 1px), rgba(255,42,109,.10) 0) 0 0/48px 100%,
+  radial-gradient(ellipse at 50% 120%, #3d0a5c 0, transparent 60%),
+  var(--bg);background-attachment:fixed}
+.gallery-screen::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px)}
+h1,h2,h3{text-transform:uppercase;letter-spacing:.08em}
+.gallery-head h1{font-size:28px;color:#f9f002;text-shadow:2px 0 #ff2a6d,-2px 0 #05d9e8;animation:cp-glitch 4s steps(1) infinite}
+@keyframes cp-glitch{0%,92%,100%{transform:none}93%{transform:translate(2px,-1px) skewX(8deg)}95%{transform:translate(-3px,1px)}97%{transform:skewX(-6deg)}}
+.topbar{background:rgba(11,2,33,.85);border-bottom:1px solid #05d9e8;box-shadow:0 0 16px rgba(5,217,232,.35)}
+.brand{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.12em;color:#05d9e8;text-shadow:0 0 8px #05d9e8}
+.card{border:1px solid var(--border);clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px))}
+.card:hover{border-color:#ff2a6d;box-shadow:0 0 0 1px #ff2a6d,0 0 24px rgba(255,42,109,.45);transform:translateY(-2px)}
+.card-body h3{font-family:var(--font-display);font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+.btn{text-transform:uppercase;letter-spacing:.08em}
+.btn.primary{box-shadow:0 0 14px rgba(255,42,109,.6)}
+.chip.active{background:#05d9e8;border-color:#05d9e8;color:#0b0221}
+.search input{border:1px solid var(--border);background:rgba(20,7,54,.8)}
+.search input:focus{border-color:#05d9e8;box-shadow:0 0 12px rgba(5,217,232,.5)}
+.demo-banner{border-left:3px solid #f9f002;background:rgba(249,240,2,.06)}
+.demo-banner strong{color:#f9f002}
+@media (prefers-reduced-motion:reduce){.gallery-head h1{animation:none}}

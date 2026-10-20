@@ -262,13 +262,14 @@ Every flag has an environment variable.
 | `--content-domain` | `NINEARTIFACTS_CONTENT_DOMAIN` | — | certificate for the content domain too |
 | `--email` | `NINEARTIFACTS_EMAIL` | — | Let's Encrypt contact |
 | `--name` | `NINEARTIFACTS_NAME` | `9artifacts` | name shown in the UI |
-| `--theme` | `NINEARTIFACTS_THEME` | `default` | `default`, `terminal`, `paper` |
+| `--theme` | `NINEARTIFACTS_THEME` | `default` | `default`, `terminal`, `paper`, `cute`, `cyberpunk`, `edgy` |
 | `--theme-dir` | `NINEARTIFACTS_THEME_DIR` | — | directory overriding theme or shell files |
 | `--trust-proxy[=MODE]` | `NINEARTIFACTS_TRUST_PROXY=1\|cloudflare\|tailscale` | off | behind a proxy, take the client IP for rate limiting from `X-Forwarded-For` (bare flag, `xff`), `CF-Connecting-IP` (`cloudflare`) or Tailscale Serve/Funnel (`tailscale`); only trusted on loopback or private-network connections |
 | `--max-upload-mb` | `NINEARTIFACTS_MAX_UPLOAD_MB` | `100` | request size limit |
 | `--shares-on-content` | `NINEARTIFACTS_SHARES_ON_CONTENT=1` | off | serve public share pages from `--content-url`, so everything public is on one host and the app host can stay private; old app-host share links redirect |
 | `--cf-access-team`, `--cf-access-aud` | `NINEARTIFACTS_CF_ACCESS_TEAM`, `NINEARTIFACTS_CF_ACCESS_AUD` | — | require a valid Cloudflare Access JWT on browser requests to the app host |
 | `--webhook` | `NINEARTIFACTS_WEBHOOK` | — | comma-separated URLs notified on publishes, new versions, new share links and new share visitors; Slack and Discord incoming-webhook URLs work as-is, prefix `ntfy+` for ntfy (e.g. `ntfy+https://ntfy.sh/my-topic`) |
+| `--demo` | `NINEARTIFACTS_DEMO=1` | off | public read-only demo: visitors browse without signing in (writes get `403`, private notes and share links are hidden) and can switch between the built-in themes; the owner signs in at `/login` |
 | `--artifact-csp` | `NINEARTIFACTS_ARTIFACT_CSP` | — | extra CSP for artifacts, e.g. `connect-src 'none'` to block network access |
 
 ## Backups and upgrades

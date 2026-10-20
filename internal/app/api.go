@@ -409,6 +409,7 @@ func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
 	q := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("q")))
 	tag := strings.ToLower(r.URL.Query().Get("tag"))
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	guest := s.guest(r)
 	items := []artifactView{}
 	tags := map[string]int{}
 	s.store.Read(func(st *State) {
@@ -419,13 +420,21 @@ func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
 			if tag != "" && !slices.Contains(a.Tags, tag) {
 				continue
 			}
-			if q != "" && !strings.Contains(strings.ToLower(a.Title+" "+strings.Join(a.Tags, " ")+" "+a.Note), q) {
+			note := a.Note
+			if guest {
+				note = ""
+			}
+			if q != "" && !strings.Contains(strings.ToLower(a.Title+" "+strings.Join(a.Tags, " ")+" "+note), q) {
 				continue
 			}
 			if limit > 0 && len(items) >= limit {
 				continue
 			}
-			items = append(items, s.view(a, false))
+			v := s.view(a, false)
+			if guest {
+				guestView(&v)
+			}
+			items = append(items, v)
 		}
 	})
 	writeJSON(w, 200, map[string]any{"artifacts": items, "tags": tags})
@@ -443,7 +452,17 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 404, "artifact not found")
 		return
 	}
+	if s.guest(r) {
+		guestView(out)
+	}
 	writeJSON(w, 200, out)
+}
+
+// guestView hides the owner's private note and live share links from demo visitors.
+func guestView(v *artifactView) {
+	v.Note = ""
+	v.Shares = []shareView{}
+	v.Active = 0
 }
 
 func (s *Server) handleCreate(w http.ResponseWriter, r *http.Request) {

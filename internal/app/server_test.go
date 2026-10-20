@@ -814,3 +814,56 @@ func TestStateFileFromBeforeRename(t *testing.T) {
 		t.Fatal("state file from an earlier name not picked up")
 	}
 }
+
+func TestDemoGuestReadsOnly(t *testing.T) {
+	e := newEnv(t, Config{Demo: true})
+	a := decode[artifactView](t, e.upload("/api/artifacts", map[string]string{"note": "secret plan"}, map[string]string{"index.html": "x"}))
+	if rec := e.api("POST", "/api/artifacts/"+a.ID+"/shares", map[string]any{"ttl": "1h"}); rec.Code != 201 {
+		t.Fatalf("owner share: %d", rec.Code)
+	}
+	me := decode[map[string]any](t, e.do("GET", "/api/me", nil, nil))
+	if me["demo"] != true || me["needsSetup"] != false || me["themes"] == nil {
+		t.Fatalf("me: %v", me)
+	}
+	list := decode[struct{ Artifacts []artifactView }](t, e.do("GET", "/api/artifacts", nil, nil))
+	if len(list.Artifacts) != 1 || list.Artifacts[0].Note != "" || list.Artifacts[0].Active != 0 {
+		t.Fatalf("guest list: %+v", list.Artifacts)
+	}
+	if rec := e.do("GET", "/api/artifacts?q=secret", nil, nil); strings.Contains(rec.Body.String(), a.ID) {
+		t.Fatal("guest search matched the private note")
+	}
+	got := decode[artifactView](t, e.do("GET", "/api/artifacts/"+a.ID, nil, nil))
+	if got.Note != "" || len(got.Shares) != 0 || got.ViewBase == "" {
+		t.Fatalf("guest get: %+v", got)
+	}
+	if own := decode[artifactView](t, e.api("GET", "/api/artifacts/"+a.ID, nil)); own.Note != "secret plan" || len(own.Shares) != 1 {
+		t.Fatalf("owner get: %+v", own)
+	}
+	for _, c := range []struct{ method, path string }{
+		{"DELETE", "/api/artifacts/" + a.ID}, {"POST", "/api/artifacts/" + a.ID + "/shares"},
+		{"POST", "/api/artifacts/" + a.ID + "/comments"}, {"PATCH", "/api/artifacts/" + a.ID},
+	} {
+		if rec := e.do(c.method, c.path, strings.NewReader(`{}`), map[string]string{"Content-Type": "application/json"}); rec.Code != 403 {
+			t.Errorf("guest %s %s: %d", c.method, c.path, rec.Code)
+		}
+	}
+	if rec := e.do("GET", "/api/tokens", nil, nil); rec.Code != 401 {
+		t.Fatalf("guest token list: %d", rec.Code)
+	}
+	if rec := e.do("GET", "/themes/terminal/theme.css", nil, nil); rec.Code != 200 || !strings.Contains(rec.Header().Get("Content-Type"), "text/css") {
+		t.Fatalf("theme file: %d", rec.Code)
+	}
+	if rec := e.do("GET", "/themes/..%2fapp.js/x", nil, nil); rec.Code != 404 {
+		t.Fatalf("theme path escape: %d", rec.Code)
+	}
+}
+
+func TestNoDemoNoGuest(t *testing.T) {
+	e := newEnv(t, Config{})
+	if me := decode[map[string]any](t, e.do("GET", "/api/me", nil, nil)); me["demo"] != false || me["themes"] != nil {
+		t.Fatalf("me: %v", me)
+	}
+	if rec := e.do("GET", "/themes/terminal/theme.css", nil, nil); rec.Code != 404 {
+		t.Fatalf("theme files outside a demo: %d", rec.Code)
+	}
+}

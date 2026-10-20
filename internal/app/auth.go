@@ -196,15 +196,28 @@ func csrfOK(r *http.Request) bool {
 	return r.Header.Get("X-9artifacts") == "1"
 }
 
-// auth accepts an API token or a browser session.
+// auth accepts an API token or a browser session; on a demo, guests may read.
 func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if s.tokenAuth(r) || (s.hasSession(r) && csrfOK(r)) {
 			next(w, r)
 			return
 		}
+		if s.cfg.Demo {
+			if r.Method == http.MethodGet || r.Method == http.MethodHead {
+				next(w, r)
+				return
+			}
+			writeError(w, 403, "this is a read-only demo: deploy your own 9artifacts to publish")
+			return
+		}
 		writeError(w, 401, "authentication required")
 	}
+}
+
+// guest: on a demo, a visitor without owner credentials who only reads.
+func (s *Server) guest(r *http.Request) bool {
+	return s.cfg.Demo && !s.tokenAuth(r) && !s.hasSession(r)
 }
 
 // session accepts only a browser session (account management).
@@ -316,11 +329,17 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	var passkeys int
 	s.store.Read(func(st *State) { needsSetup, passkeys = st.PasswordHash == "", len(st.Passkeys) })
 	authed := s.hasSession(r) || s.tokenAuth(r)
-	writeJSON(w, 200, map[string]any{
-		"authenticated": authed, "needsSetup": needsSetup, "hasPasskeys": passkeys > 0,
+	me := map[string]any{
+		// A demo never shows the setup screen to visitors; the owner uses the admin socket.
+		"authenticated": authed, "needsSetup": needsSetup && !s.cfg.Demo, "hasPasskeys": passkeys > 0,
 		"name": s.cfg.Name, "version": s.cfg.Version, "publicUrl": s.cfg.PublicURL,
 		"contentOrigin": s.contentOrigin(), "separateContentOrigin": s.contHost != "",
-	})
+		"demo": s.cfg.Demo,
+	}
+	if s.cfg.Demo {
+		me["themes"] = BuiltinThemes()
+	}
+	writeJSON(w, 200, me)
 }
 
 func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {

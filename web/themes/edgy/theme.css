@@ -1,0 +1,39 @@
+/*
+ * edgy — black and crimson, blackletter titles, sharp corners, a red glow.
+ * UnifrakturMaguntia: SIL Open Font License, see OFL-unifrakturmaguntia.txt.
+ */
+@font-face{font-family:"UnifrakturMaguntia";src:url(unifrakturmaguntia.woff2) format("woff2");font-display:swap}
+:root{
+  color-scheme: dark;
+  --font-ui: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-display: "UnifrakturMaguntia", Georgia, serif;
+  --font-mono: ui-monospace, Menlo, Consolas, monospace;
+  --font-size: 15.5px;
+  --radius-sm: 0; --radius: 0; --radius-lg: 0;
+  --bg: #070606; --surface: #100c0c; --surface-2: #1a1212; --border: #2b1717; --border-strong: #7a0c19;
+  --text: #ece4da; --text-2: #bfb3a6; --muted: #7d6f66;
+  --accent: #b3001b; --accent-strong: #e0112f; --accent-soft: #2a070c; --on-accent: #fff2f2; --danger: #ff4d4d;
+  --thumb-bg: #0c0909; --stage-bg: #050404; --toast-bg: #b3001b; --toast-text: #fff2f2;
+  --kind-html: #e0112f; --kind-html-bg: #2a070c; --kind-md: #c9b79c; --kind-md-bg: #221c14;
+  --kind-pdf: #ff7a59; --kind-pdf-bg: #2c120b; --kind-img: #9d8cff; --kind-img-bg: #17122c;
+  --shadow-sm: none; --shadow: 0 0 0 1px #7a0c19; --shadow-lg: 0 0 60px rgba(179,0,27,.35);
+}
+body{background:radial-gradient(ellipse at 50% -10%, #3a0610 0, transparent 55%),
+  radial-gradient(ellipse at 50% 120%, #1c0408 0, transparent 50%), var(--bg);background-attachment:fixed}
+h1,h2,h3{font-weight:400;letter-spacing:.01em}
+.gallery-head h1{font-size:40px;color:#e0112f;text-shadow:0 0 18px rgba(224,17,47,.55),0 2px 0 #000}
+.gallery-head h1::before,.gallery-head h1::after{content:"\2020";font-family:Georgia,serif;font-size:.6em;color:#7a0c19;margin:0 .35em;vertical-align:.25em}
+.topbar{background:rgba(7,6,6,.9);border-bottom:1px solid #7a0c19}
+.brand{font:400 26px var(--font-display);color:#ece4da}
+.brand img{filter:drop-shadow(0 0 6px rgba(224,17,47,.7))}
+.card{border:1px solid var(--border);background:linear-gradient(180deg,#120c0c,#0b0808)}
+.card:hover{border-color:#b3001b;box-shadow:0 0 0 1px #b3001b,0 0 30px rgba(179,0,27,.4);transform:none}
+.card-body h3{font:400 21px/1.15 var(--font-display)}
+.thumb{filter:grayscale(.55) contrast(1.1);transition:filter .3s}
+.card:hover .thumb{filter:none}
+.btn{font-family:Georgia,serif;letter-spacing:.04em}
+.btn.primary{background:linear-gradient(180deg,#d1001f,#7a0c19);border-color:#e0112f}
+.chip{font-family:Georgia,serif;font-style:italic}
+.chip.active{background:#b3001b;border-color:#b3001b;color:#fff2f2}
+.demo-banner{border:1px solid #7a0c19;background:#140a0b;font-style:italic}
+::selection{background:#b3001b;color:#fff}

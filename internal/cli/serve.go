@@ -69,7 +69,7 @@ func Serve(args []string, version string) error {
 	contentDomain := fs.String("content-domain", env("NINEARTIFACTS_CONTENT_DOMAIN", ""), "with --domain: also get a certificate for this content domain")
 	email := fs.String("email", env("NINEARTIFACTS_EMAIL", ""), "with --domain: contact email for Let's Encrypt")
 	name := fs.String("name", env("NINEARTIFACTS_NAME", "9artifacts"), "name shown in the UI")
-	theme := fs.String("theme", env("NINEARTIFACTS_THEME", "default"), "built-in theme: "+strings.Join(builtinThemes(), ", "))
+	theme := fs.String("theme", env("NINEARTIFACTS_THEME", "default"), "built-in theme: "+strings.Join(app.BuiltinThemes(), ", "))
 	themeDir := fs.String("theme-dir", env("NINEARTIFACTS_THEME_DIR", ""), "directory overriding theme files (see 9artifacts theme init)")
 	trust := proxyMode(env("NINEARTIFACTS_TRUST_PROXY", ""))
 	fs.Var(&trust, "trust-proxy", "behind a proxy: take the client IP from X-Forwarded-For (bare flag or xff), CF-Connecting-IP (cloudflare) or Tailscale Serve/Funnel (tailscale)")
@@ -78,6 +78,7 @@ func Serve(args []string, version string) error {
 	cfTeam := fs.String("cf-access-team", env("NINEARTIFACTS_CF_ACCESS_TEAM", ""), "Cloudflare Access team URL, e.g. https://myteam.cloudflareaccess.com (with --cf-access-aud)")
 	cfAUD := fs.String("cf-access-aud", env("NINEARTIFACTS_CF_ACCESS_AUD", ""), "Cloudflare Access application AUD tag: browser requests to the app host must carry a valid Access JWT")
 	webhook := fs.String("webhook", env("NINEARTIFACTS_WEBHOOK", ""), "comma-separated URLs to notify on publishes, shares and share visits (Slack, Discord, any JSON endpoint; prefix ntfy+ for ntfy)")
+	demo := fs.Bool("demo", env("NINEARTIFACTS_DEMO", "") == "1", "public read-only demo: visitors browse without signing in and can switch between the built-in themes")
 	artifactCSP := fs.String("artifact-csp", env("NINEARTIFACTS_ARTIFACT_CSP", ""), "extra CSP directives for artifact pages, e.g. \"connect-src 'none'\"")
 	_ = fs.Parse(args)
 
@@ -95,7 +96,7 @@ func Serve(args []string, version string) error {
 		DataDir: *data, PublicURL: *public, ContentURL: *content, Name: *name, Theme: *theme, ThemeDir: *themeDir,
 		TrustProxy: string(trust), MaxUpload: int64(*maxMB) << 20, Version: version, ArtifactCSP: *artifactCSP,
 		Webhooks: splitList(*webhook), SharesOnContent: *sharesOnContent,
-		CFAccessTeam: *cfTeam, CFAccessAUD: *cfAUD,
+		CFAccessTeam: *cfTeam, CFAccessAUD: *cfAUD, Demo: *demo,
 	}, st)
 	if err != nil {
 		return err
@@ -168,17 +169,6 @@ func atoiDef(s string, def int) int {
 		return n
 	}
 	return def
-}
-
-func builtinThemes() []string {
-	entries, _ := fs.ReadDir(web.FS, "themes")
-	var out []string
-	for _, e := range entries {
-		if e.IsDir() {
-			out = append(out, e.Name())
-		}
-	}
-	return out
 }
 
 // ---------- admin commands (talk to the running server's Unix socket) ----------
@@ -279,7 +269,7 @@ func Theme(args []string) error {
 		return errors.New("usage: 9artifacts theme init DIR [--from default] [--full]")
 	}
 	fs := flag.NewFlagSet("theme init", flag.ExitOnError)
-	from := fs.String("from", "default", "built-in theme to start from: "+strings.Join(builtinThemes(), ", "))
+	from := fs.String("from", "default", "built-in theme to start from: "+strings.Join(app.BuiltinThemes(), ", "))
 	full := fs.Bool("full", false, "also export the app shell (index.html, app.js, app.css, share.html)")
 	rest := args[1:]
 	var dir string

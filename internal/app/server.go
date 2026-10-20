@@ -46,6 +46,9 @@ type Config struct {
 	// CFAccessTeam and CFAccessAUD turn on Cloudflare Access JWT checks for
 	// browser requests to the app host.
 	CFAccessTeam, CFAccessAUD string
+	// Demo is a public read-only showcase: visitors browse without signing in
+	// and can switch between the built-in themes.
+	Demo bool
 }
 
 // Server is the 9artifacts HTTP handler.
@@ -200,6 +203,9 @@ func (s *Server) routes() {
 	m.HandleFunc("GET /assets/{name}", s.handleAsset)
 	m.HandleFunc("GET /design.md", s.handleDesign)
 	m.HandleFunc("GET /template.html", s.handleTemplate)
+	if s.cfg.Demo {
+		m.HandleFunc("GET /themes/{theme}/{name}", s.handleThemeFile)
+	}
 	m.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]any{"ok": true, "version": s.cfg.Version})
 	})
@@ -398,6 +404,18 @@ func (s *Server) themeFile(name string) ([]byte, error) {
 	return nil, fs.ErrNotExist
 }
 
+// BuiltinThemes lists the themes compiled into the binary.
+func BuiltinThemes() []string {
+	entries, _ := fs.ReadDir(web.FS, "themes")
+	var out []string
+	for _, e := range entries {
+		if e.IsDir() {
+			out = append(out, e.Name())
+		}
+	}
+	return out
+}
+
 // shellFile resolves app shell files (index.html, app.js, ...), which a
 // theme directory may also override.
 func (s *Server) shellFile(name string) ([]byte, error) {
@@ -451,6 +469,24 @@ func (s *Server) handleAsset(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", contentType(name))
 	w.Header().Set("Cache-Control", "no-cache")
+	http.ServeContent(w, r, name, time.Time{}, bytes.NewReader(b))
+}
+
+// handleThemeFile serves any built-in theme's files, so demo visitors can
+// try every theme without a restart.
+func (s *Server) handleThemeFile(w http.ResponseWriter, r *http.Request) {
+	theme, name := r.PathValue("theme"), r.PathValue("name")
+	if !assetName.MatchString(theme) || !assetName.MatchString(name) {
+		http.NotFound(w, r)
+		return
+	}
+	b, err := fs.ReadFile(web.FS, "themes/"+theme+"/"+name)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", contentType(name))
+	w.Header().Set("Cache-Control", "public, max-age=3600")
 	http.ServeContent(w, r, name, time.Time{}, bytes.NewReader(b))
 }
 

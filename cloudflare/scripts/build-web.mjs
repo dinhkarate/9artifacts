@@ -5,7 +5,7 @@
 //   dist/public/_headers      security headers for those assets
 //   src/generated/web.ts      templates and theme files the Worker renders
 //
-// NINEARTIFACTS_THEME picks a built-in theme (default, terminal, paper) and
+// NINEARTIFACTS_THEME picks a built-in theme (see ../web/themes) and
 // NINEARTIFACTS_THEME_DIR a directory overriding theme and shell files, like the Go
 // server's --theme and --theme-dir.
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
