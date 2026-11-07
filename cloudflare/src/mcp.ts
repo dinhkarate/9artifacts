@@ -6,7 +6,7 @@ import { addVersion, createArtifact, createShare, deleteArtifact, listArtifacts,
 import { tokenAuth } from './auth';
 import { formatComments, listComments, resolveComment } from './comments';
 import type { Ctx } from './env';
-import { DESIGN_MD, TEMPLATE_HTML } from './generated/web';
+import { DESIGN_MD, DIAGRAM_CSS, TEMPLATE_HTML } from './generated/web';
 import { resourceMetadataURL } from './oauth';
 import { fileKey, getArtifact, getVersion } from './store';
 import { MAX_JSON_BODY, type Meta, VersionWriter, decodeJSONFiles } from './upload';
@@ -38,7 +38,7 @@ const fileList = {
 };
 
 export const MCP_TOOLS = [
-  { name: 'get_design_guide', description: "Get the owner's design guide (design.md) and starter HTML template. Call this before writing a new artifact.", inputSchema: schema({}) },
+  { name: 'get_design_guide', description: "Get the owner's design guide (design.md), diagram kit (diagram.css) and starter HTML template. Call this before writing a new artifact. Inline diagram.css; do not link it.", inputSchema: schema({}) },
   {
     name: 'publish_artifact',
     description: 'Publish a new artifact, or a new version of an existing one when id is given (the URL stays the same). Returns the private URL for the user.',
@@ -178,7 +178,7 @@ const utcMinute = (iso: string) => iso.slice(0, 16).replace('T', ' ');
 async function call(c: Ctx, name: string, a: Record<string, unknown>): Promise<string> {
   switch (name) {
     case 'get_design_guide':
-      return DESIGN_MD + '\n\n# Starter template (template.html)\n\n```html\n' + TEMPLATE_HTML + '\n```';
+      return DESIGN_MD + '\n\n# Diagram kit (diagram.css)\n\n```css\n' + DIAGRAM_CSS + '\n```\n\n# Starter template (template.html)\n\n```html\n' + TEMPLATE_HTML + '\n```';
 
     case 'publish_artifact': {
       const files = decodeJSONFiles(field(a, 'files'));

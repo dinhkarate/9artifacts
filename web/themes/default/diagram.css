@@ -1,0 +1,124 @@
+/* Diagram kit for topology and flow artifacts.
+   Inline this into the page. Do not link it: artifacts are sandboxed and
+   may be served from another origin.
+   A connector is a cell between nodes, or a .drop in the gap above the
+   next row. Never position a line so it crosses a node. */
+
+.d {
+  --node-w: 150px;
+  --ink: var(--accent, #1f6f5c);
+  --ink-soft: color-mix(in srgb, var(--ink) 14%, transparent);
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e4e2dc);
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(29, 28, 26, .04), 0 24px 50px -38px rgba(29, 28, 26, .5);
+  padding: 28px 22px 16px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.flow { display: flex; align-items: center; }
+.flow.end { justify-content: flex-end; }
+
+.node, .link { position: relative; cursor: help; }
+.node {
+  flex: none; width: var(--node-w); max-width: 100%;
+  background: var(--bg, #f6f5f1);
+  border: 1px solid var(--border, #e4e2dc);
+  border-radius: 14px; padding: 14px 8px 12px; text-align: center;
+  transition: transform .18s ease, border-color .18s ease;
+}
+.node:hover, .node:focus-visible, .link:hover, .link:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+.node:hover, .node:focus-visible { transform: translateY(-2px); }
+.node .n { font-weight: 650; font-size: 13px; letter-spacing: -.01em; margin-top: 6px; }
+.node .a, .node .p, .link .lbl, .legend {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--muted, #85827a);
+}
+.node .a { font-size: 11px; margin-top: 2px; }
+.node .p { font-size: 10px; margin-top: 2px; }
+.node svg { width: 26px; height: 26px; stroke: var(--ink); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.node.mark { background: color-mix(in srgb, var(--ink) 12%, var(--surface, #fff)); border-color: color-mix(in srgb, var(--ink) 38%, transparent); }
+
+.link { flex: 1 1 48px; min-width: 44px; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 0 6px; }
+.link .lbl { font-size: 10px; letter-spacing: .04em; text-align: center; line-height: 1.35; }
+.line { position: relative; width: 100%; height: 2px; border-radius: 2px; background: color-mix(in srgb, var(--ink) 45%, transparent); }
+.link.tunnel .line, .drop .line {
+  background: repeating-linear-gradient(90deg, var(--ink) 0 6px, transparent 6px 11px);
+}
+.pkt {
+  position: absolute; top: -3.5px; left: 0; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--ink); box-shadow: 0 0 0 4px var(--ink-soft);
+  animation: d-slide 2.8s linear infinite;
+}
+.link.tunnel .pkt { animation-duration: 3.4s; }
+
+/* Vertical hop in the gap between two rows. It ends where the next node starts. */
+.drop { display: flex; justify-content: flex-end; height: 52px; margin-right: calc(var(--node-w) / 2 - 1px); }
+.drop .line { width: 2px; height: 100%; background: repeating-linear-gradient(180deg, var(--ink) 0 6px, transparent 6px 11px); }
+.drop .pkt { left: -3.5px; top: 0; animation-name: d-fall; }
+
+.tip {
+  position: absolute; bottom: calc(100% + 11px); left: 50%; z-index: 5;
+  width: 250px; max-width: 70vw;
+  transform: translateX(-50%) translateY(4px);
+  background: var(--text, #1d1c1a); color: var(--bg, #f6f5f1);
+  border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.5; text-align: left;
+  opacity: 0; pointer-events: none; transition: opacity .15s ease, transform .15s ease;
+  box-shadow: 0 14px 30px -12px rgba(0, 0, 0, .45);
+}
+.tip b { display: block; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; opacity: .65; margin-bottom: 4px; }
+.tip code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; display: block; margin-top: 6px; }
+.tip::after { content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: var(--text, #1d1c1a); }
+.node:hover .tip, .node:focus-visible .tip, .link:hover .tip, .link:focus-visible .tip { opacity: 1; transform: translateX(-50%) translateY(0); }
+.flow > .node:first-child .tip { left: 0; transform: translateY(4px); }
+.flow > .node:first-child:hover .tip, .flow > .node:first-child:focus-visible .tip { transform: translateY(0); }
+.flow > .node:first-child .tip::after { left: 26px; transform: none; }
+.flow > .node:last-child .tip { left: auto; right: 0; transform: translateY(4px); }
+.flow > .node:last-child:hover .tip, .flow > .node:last-child:focus-visible .tip { transform: translateY(0); }
+.flow > .node:last-child .tip::after { left: auto; right: 26px; transform: none; }
+
+.legend {
+  display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+  border-top: 1px solid var(--border, #e4e2dc); margin-top: 18px; padding-top: 12px;
+  font-size: 11px; letter-spacing: .03em;
+}
+.legend i { display: inline-block; width: 18px; height: 2px; margin-right: 6px; vertical-align: middle; background: color-mix(in srgb, var(--ink) 50%, transparent); }
+.legend i.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 3px var(--ink-soft); }
+
+@keyframes d-slide {
+  0% { left: 0; opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { left: calc(100% - 9px); opacity: 0; }
+}
+@keyframes d-fall {
+  0% { top: 0; opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { top: calc(100% - 9px); opacity: 0; }
+}
+
+@media (max-width: 860px) {
+  .d { padding: 22px 14px 14px; }
+  .flow, .flow.end { flex-direction: column; justify-content: center; }
+  .node { width: min(100%, 300px); }
+  .link { width: 100%; height: 56px; flex: none; min-width: 0; justify-content: center; padding: 0; }
+  .link .line { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; height: auto; transform: translateX(-1px); }
+  .link.tunnel .line { background: repeating-linear-gradient(180deg, var(--ink) 0 6px, transparent 6px 11px); }
+  .link .lbl { position: relative; z-index: 1; background: var(--surface, #fff); border: 1px solid var(--border, #e4e2dc); border-radius: 6px; padding: 2px 7px; }
+  .pkt { left: 50%; margin-left: -4.5px; animation-name: d-fall; }
+  .drop { justify-content: center; margin-right: 0; }
+  .node .tip, .link .tip { left: 50%; right: auto; transform: translateX(-50%) translateY(4px); }
+  .node:hover .tip, .node:focus-visible .tip, .link:hover .tip, .link:focus-visible .tip { transform: translateX(-50%) translateY(0); }
+  .tip::after { left: 50%; right: auto; transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pkt { animation: none; display: none; }
+  .node { transition: none; }
+}
+@media print {
+  .d { box-shadow: none; }
+  .pkt { display: none; }
+}

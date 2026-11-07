@@ -71,6 +71,7 @@ describe('MCP', () => {
 
   it('publishes, updates, reads, lists, shares, restores and deletes', async () => {
     const guide = await tool('get_design_guide', {});
+    expect(guide.text).toContain('# Diagram kit (diagram.css)');
     expect(guide.text).toContain('# Starter template (template.html)');
 
     const pub = await tool('publish_artifact', {

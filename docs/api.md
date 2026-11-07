@@ -144,5 +144,5 @@ failures are logged with the webhook host only.
 | Path | |
 |---|---|
 | `GET /health` | `{ok, version}` |
-| `GET /design.md`, `GET /template.html` | theme design guide for agents |
+| `GET /design.md`, `GET /diagram.css`, `GET /template.html` | theme design guide, diagram kit and starter HTML for agents |
 | `GET /api/me` | session state |

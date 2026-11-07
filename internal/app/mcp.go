@@ -152,7 +152,7 @@ var (
 		}, "name", "content"),
 	}
 	mcpTools = []map[string]any{
-		{"name": "get_design_guide", "description": "Get the owner's design guide (design.md) and starter HTML template. Call this before writing a new artifact.",
+		{"name": "get_design_guide", "description": "Get the owner's design guide (design.md), diagram kit (diagram.css) and starter HTML template. Call this before writing a new artifact. Inline diagram.css; do not link it.",
 			"inputSchema": schema(map[string]any{})},
 		{"name": "publish_artifact", "description": "Publish a new artifact, or a new version of an existing one when id is given (the URL stays the same). Returns the private URL for the user.",
 			"inputSchema": schema(map[string]any{
@@ -192,8 +192,9 @@ func (s *Server) mcpCall(name string, raw json.RawMessage) (string, error) {
 	switch name {
 	case "get_design_guide":
 		design, _ := s.themeFile("design.md")
+		diagram, _ := s.themeFile("diagram.css")
 		tpl, _ := s.themeFile("template.html")
-		return string(design) + "\n\n# Starter template (template.html)\n\n```html\n" + string(tpl) + "\n```", nil
+		return string(design) + "\n\n# Diagram kit (diagram.css)\n\n```css\n" + string(diagram) + "\n```\n\n# Starter template (template.html)\n\n```html\n" + string(tpl) + "\n```", nil
 
 	case "publish_artifact":
 		var a struct {

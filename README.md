@@ -38,7 +38,8 @@ If you already rent a VPS, 9artifacts gives those artifacts a home you own:
 - **Feels like Claude's artifact viewer.** Full-bleed sandboxed viewer, version history, and
   **live reload**: when the agent publishes v2, your open tab updates by itself.
 - **Your style, everywhere.** Agents read your `design.md` before writing, so everything they
-  publish matches your look. The app UI is themeable too, and your AI can restyle it for you.
+  publish matches your look. A topology uses `diagram.css`, so the lines stay off the boxes.
+  The app UI is themeable too, and your AI can restyle it for you.
 - **Tiny, and free to run.** A single static binary with automatic HTTPS. It is happy on a
   1 vCPU / 512 MB box or a Raspberry Pi. No server at all? Deploy the **Cloudflare Workers
   edition** on the free plan, or run `9artifacts-ts` at home with Tailscale built in.

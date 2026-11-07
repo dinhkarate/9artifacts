@@ -202,6 +202,7 @@ func (s *Server) routes() {
 	}
 	m.HandleFunc("GET /assets/{name}", s.handleAsset)
 	m.HandleFunc("GET /design.md", s.handleDesign)
+	m.HandleFunc("GET /diagram.css", s.handleDiagram)
 	m.HandleFunc("GET /template.html", s.handleTemplate)
 	if s.cfg.Demo {
 		m.HandleFunc("GET /themes/{theme}/{name}", s.handleThemeFile)
@@ -497,6 +498,16 @@ func (s *Server) handleDesign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+	_, _ = w.Write(b)
+}
+
+func (s *Server) handleDiagram(w http.ResponseWriter, r *http.Request) {
+	b, err := s.themeFile("diagram.css")
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/css; charset=utf-8")
 	_, _ = w.Write(b)
 }
 

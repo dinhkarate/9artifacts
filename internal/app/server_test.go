@@ -352,6 +352,23 @@ func TestMCP(t *testing.T) {
 	}
 }
 
+func TestDiagramKit(t *testing.T) {
+	e := newEnv(t, Config{})
+	css := e.do("GET", "/diagram.css", nil, nil)
+	if css.Code != 200 || !strings.Contains(css.Header().Get("Content-Type"), "text/css") || !strings.Contains(css.Body.String(), ".drop") {
+		t.Fatalf("diagram.css: %d %q %s", css.Code, css.Header().Get("Content-Type"), css.Body.String()[:80])
+	}
+	guide := e.do("GET", "/design.md", nil, nil)
+	if !strings.Contains(guide.Body.String(), "## Diagrams") || !strings.Contains(guide.Body.String(), "/diagram.css") {
+		t.Fatal("design.md missing the diagram section")
+	}
+	rec := e.do("POST", "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_design_guide","arguments":{}}}`), map[string]string{"Authorization": "Bearer " + e.token, "Content-Type": "application/json"})
+	body := rec.Body.String()
+	if !strings.Contains(body, "# Diagram kit (diagram.css)") || !strings.Contains(body, ".flow") {
+		t.Fatalf("design guide omitted the kit: %s", body[:200])
+	}
+}
+
 func TestCleanName(t *testing.T) {
 	for _, ok := range []string{"index.html", "assets/a b.png", "x/y/z.css", "report (1).pdf"} {
 		if _, err := cleanName(ok); err != nil {
