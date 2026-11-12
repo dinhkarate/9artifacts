@@ -128,6 +128,14 @@ func TestMCPOAuthFlow(t *testing.T) {
 	if r := e.do("OPTIONS", "/oauth/token", nil, host); r.Code != 204 || r.Header().Get("Access-Control-Allow-Origin") != "*" {
 		t.Fatalf("preflight: %d", r.Code)
 	}
+	// 8. Registration is rate-limited per address.
+	last := 0
+	for range 25 {
+		last = e.do("POST", "/oauth/register", strings.NewReader(`{"redirect_uris":["`+redirect+`"]}`), with(map[string]string{"Content-Type": "application/json"})).Code
+	}
+	if last != 429 {
+		t.Fatalf("register flood: %d", last)
+	}
 }
 
 type httptestResult struct {

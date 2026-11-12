@@ -83,6 +83,11 @@ func validRedirect(raw string) bool {
 }
 
 func (s *Server) handleOAuthRegister(w http.ResponseWriter, r *http.Request) {
+	// Anyone may register, and each one is a write to disk.
+	if !s.allowBegin(s.clientIP(r)) {
+		oauthError(w, 429, "temporarily_unavailable", "too many registrations, try again in a minute")
+		return
+	}
 	var body struct {
 		ClientName   string   `json:"client_name"`
 		RedirectURIs []string `json:"redirect_uris"`
