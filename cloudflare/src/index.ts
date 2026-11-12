@@ -6,7 +6,7 @@ import * as auth from './auth';
 import * as comments from './comments';
 import { handleContent, handleShareContent, handleShareGrant, handleSharePage, serveVersionFile } from './content';
 import { type Ctx, contentOrigin, isHTTPS, newCtx } from './env';
-import { DESIGN_MD, DIAGRAM_CSS, INDEX_HTML, TEMPLATE_HTML } from './generated/web';
+import { DESIGN_MD, DIAGRAM_CSS, INDEX_HTML, TEMPLATES, TEMPLATE_FILES } from './generated/web';
 import { handleMCP } from './mcp';
 import * as oauth from './oauth';
 import { getVersion } from './store';
@@ -34,7 +34,12 @@ for (const p of ['/', '/a/{id}', '/settings', '/setup', '/login', '/oauth/author
 route('GET /assets/{name}', (c, p) => handleAsset(c, p.name));
 route('GET /design.md', () => new Response(DESIGN_MD, { headers: { 'Content-Type': 'text/markdown; charset=utf-8' } }));
 route('GET /diagram.css', () => new Response(DIAGRAM_CSS, { headers: { 'Content-Type': 'text/css; charset=utf-8' } }));
-route('GET /template.html', () => new Response(TEMPLATE_HTML, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } }));
+route('GET /template.html', ({ url }) => {
+  const kind = url.searchParams.get('kind') ?? '';
+  if (!Object.hasOwn(TEMPLATES, kind)) return new Response('kind must be page, slides or document\n', { status: 400 });
+  const name = (TEMPLATES as Record<string, string>)[kind];
+  return new Response((TEMPLATE_FILES as Record<string, string>)[name], { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+});
 route('GET /health', (c) => json(200, { ok: true, version: c.version }));
 // Auth.
 route('GET /api/me', auth.handleMe);

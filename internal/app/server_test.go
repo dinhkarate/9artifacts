@@ -372,6 +372,43 @@ func TestDiagramKit(t *testing.T) {
 	}
 }
 
+func TestStarterTemplates(t *testing.T) {
+	e := newEnv(t, Config{})
+	for kind, want := range map[string]string{"": "<main>", "page": "<main>", "slides": `class="slide"`, "document": `class="page"`} {
+		rec := e.do("GET", "/template.html?kind="+kind, nil, nil)
+		if rec.Code != 200 || !strings.Contains(rec.Body.String(), want) {
+			t.Fatalf("template kind %q: %d", kind, rec.Code)
+		}
+	}
+	if rec := e.do("GET", "/template.html?kind=nope", nil, nil); rec.Code != 400 {
+		t.Fatalf("unknown kind: %d", rec.Code)
+	}
+	rec := e.do("POST", "/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_design_guide","arguments":{"kind":"slides"}}}`), map[string]string{"Authorization": "Bearer " + e.token, "Content-Type": "application/json"})
+	if body := rec.Body.String(); !strings.Contains(body, "# Starter template (slides.html)") || !strings.Contains(body, "## Slides") {
+		t.Fatalf("slides guide: %s", body[:200])
+	}
+}
+
+func TestSearchInsideContent(t *testing.T) {
+	e := newEnv(t, Config{})
+	a := decode[artifactView](t, e.upload("/api/artifacts", map[string]string{"title": "Weekly"}, map[string]string{
+		"index.html": `<style>.zebra{}</style><h1>Quarterly <b>Revenue</b></h1><script>var walrus=1</script>`}))
+	found := func(q string) bool {
+		return strings.Contains(e.api("GET", "/api/artifacts?q="+q, nil).Body.String(), a.ID)
+	}
+	if !found("revenue") || !found("weekly") {
+		t.Fatal("search missed the page text or the title")
+	}
+	if found("zebra") || found("walrus") || found("h1") {
+		t.Fatal("search matched markup, styles or scripts")
+	}
+	// A new version replaces the indexed text.
+	e.upload("/api/artifacts/"+a.ID+"/versions", nil, map[string]string{"index.html": "<p>Churn</p>"})
+	if found("revenue") || !found("churn") {
+		t.Fatal("search did not follow the latest version")
+	}
+}
+
 func TestCleanName(t *testing.T) {
 	for _, ok := range []string{"index.html", "assets/a b.png", "x/y/z.css", "report (1).pdf"} {
 		if _, err := cleanName(ok); err != nil {

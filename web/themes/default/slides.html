@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deck title</title>
+<style>
+  :root{--bg:#f6f5f1;--surface:#fff;--text:#1d1c1a;--muted:#85827a;--border:#e4e2dc;--accent:#1f6f5c;--danger:#c2410c;color-scheme:light dark}
+  @media (prefers-color-scheme:dark){:root{--bg:#161614;--surface:#1f1e1c;--text:#edebe6;--muted:#8e8b83;--border:#33322e;--accent:#5cc2a3;--danger:#f08a5d}}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:#0f0f0e;font:16px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  /* Every slide is a fixed 1280x720 stage, scaled to fit the window. Size text in px. */
+  .deck{position:fixed;inset:0;display:grid;place-items:center}
+  .slide{position:absolute;width:1280px;height:720px;padding:72px 96px;background:var(--bg);color:var(--text);display:flex;flex-direction:column;justify-content:center;overflow:hidden;opacity:0;pointer-events:none;transition:opacity .3s}
+  .slide.on{opacity:1;pointer-events:auto}
+  .slide.top{justify-content:flex-start}
+  .kicker{font:700 16px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 18px}
+  h1{font-size:76px;line-height:1.04;letter-spacing:-.03em;margin:0 0 24px}
+  h2{font-size:46px;line-height:1.1;letter-spacing:-.02em;margin:0 0 34px}
+  p,li,td,th{font-size:28px}
+  ul,ol{margin:0;padding-left:1.1em}
+  li{margin:12px 0}
+  .muted{color:var(--muted)}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+  .box{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px}
+  .box p{font-size:22px;margin:6px 0 0}
+  .big{font-size:64px!important;font-weight:800;letter-spacing:-.03em;color:var(--accent);margin:0!important}
+  blockquote{margin:0;font-size:44px;line-height:1.25;letter-spacing:-.01em;border-left:6px solid var(--accent);padding-left:32px}
+  pre{margin:0;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px 28px;font:22px/1.5 ui-monospace,Menlo,monospace;overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:12px 16px;border-bottom:1px solid var(--border);text-align:left;font-size:24px}
+  img{max-width:100%;max-height:100%;border-radius:14px}
+  /* class="step": shown one press at a time. */
+  .step{opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s}
+  .step.shown{opacity:1;transform:none}
+  .bar{position:fixed;left:0;bottom:0;height:3px;background:var(--accent);transition:width .25s;z-index:2}
+  .count,.hint{position:fixed;bottom:14px;font:13px ui-monospace,Menlo,monospace;color:#9a978f;z-index:2}
+  .count{right:18px}.hint{left:18px;transition:opacity .4s}
+  @media print{
+    @page{size:1280px 720px;margin:0}
+    html,body{height:auto;overflow:visible;background:none}
+    .deck{position:static;display:block}
+    .slide{position:relative;opacity:1;transform:none!important;break-after:page;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .step{opacity:1;transform:none}
+    .bar,.count,.hint{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){.slide,.step,.bar{transition:none}}
+</style>
+</head>
+<body>
+<div class="deck">
+  <section class="slide">
+    <p class="kicker">Topic · 2026-01-01</p>
+    <h1>Deck title,<br>one clear claim.</h1>
+    <p class="muted">Who it is for and what they will decide or learn.</p>
+  </section>
+
+  <section class="slide">
+    <h2>Three numbers</h2>
+    <div class="grid">
+      <div class="box"><p class="big">1,234</p><p>what it counts</p></div>
+      <div class="box"><p class="big">41%</p><p>what it measures</p></div>
+      <div class="box"><p class="big">3.2 d</p><p>what it times</p></div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <h2>Points, one press each</h2>
+    <ul>
+      <li class="step"><b>First point</b>: one line, no wrapping paragraph</li>
+      <li class="step"><b>Second point</b>: keep to five bullets or fewer</li>
+      <li class="step"><b>Third point</b>: the detail goes in what you say</li>
+    </ul>
+  </section>
+
+  <section class="slide">
+    <div class="cols">
+      <div><h2>Text beside a picture</h2><p class="muted">Use for a chart, a screenshot or a diagram.</p></div>
+      <pre>9artifacts publish deck/
+→ https://…/a/abc123</pre>
+    </div>
+  </section>
+
+  <section class="slide">
+    <blockquote>One sentence the audience should remember.</blockquote>
+  </section>
+
+  <section class="slide">
+    <p class="kicker">Next step</p>
+    <h1>What happens now.</h1>
+    <p class="muted">Owner, date, link.</p>
+  </section>
+</div>
+<div class="bar" id="bar"></div>
+<div class="hint" id="hint">← → or click · F fullscreen · P print to PDF</div>
+<div class="count" id="count"></div>
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  const bar = document.getElementById('bar'), count = document.getElementById('count'), hint = document.getElementById('hint');
+  let i = 0;
+  function fit() {
+    const k = Math.min(innerWidth / 1280, innerHeight / 720);
+    slides.forEach((s) => { s.style.transform = 'scale(' + k + ')'; });
+  }
+  function show(j, revealAll) {
+    i = Math.min(Math.max(j, 0), slides.length - 1);
+    slides.forEach((s, k) => s.classList.toggle('on', k === i));
+    slides[i].querySelectorAll('.step').forEach((s) => s.classList.toggle('shown', !!revealAll));
+    count.textContent = (i + 1) + ' / ' + slides.length;
+    bar.style.width = ((i + 1) / slides.length * 100) + '%';
+  }
+  function next() {
+    const step = slides[i].querySelector('.step:not(.shown)');
+    if (step) step.classList.add('shown'); else if (i < slides.length - 1) show(i + 1);
+    hint.style.opacity = 0;
+  }
+  function prev() { if (i > 0) show(i - 1, true); }
+  addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); next(); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); prev(); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1, true);
+    else if (e.key === 'f' || e.key === 'F') { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {}); }
+    else if (e.key === 'p' || e.key === 'P') print();
+  });
+  addEventListener('click', (e) => { if (e.target.closest('a,button')) return; e.clientX > innerWidth / 3 ? next() : prev(); });
+  let x0 = null;
+  addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+  addEventListener('touchend', (e) => {
+    const d = e.changedTouches[0].clientX - x0;
+    if (Math.abs(d) > 40) { d < 0 ? next() : prev(); e.preventDefault(); }
+  });
+  addEventListener('resize', fit);
+  fit(); show(0);
+</script>
+</body>
+</html>

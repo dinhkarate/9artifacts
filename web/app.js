@@ -1032,7 +1032,7 @@ const TOUR = [
     text: 'AI agents publish their work here; you review it, comment and share it. This 60-second tour drives the real app for you.' },
   { at: () => $('.cards .card, .cards .row'), title: 'Every card is a live artifact',
     text: 'Dashboards, reports, slide decks, diagrams: HTML, Markdown, PDF or images an agent published over MCP or the CLI. The thumbnail is the real page.' },
-  { at: () => $('.search'), title: 'Find anything', text: 'Search titles and tags. Press / from anywhere.',
+  { at: () => $('.search'), title: 'Find anything', text: 'Search titles, tags and the text inside. Press / from anywhere.',
     play: async (t) => { await t.type($('#search'), 'release'); await sleep(1500); await t.type($('#search'), ''); } },
   { at: () => $('#tag-chips'), title: 'Tags keep it tidy', text: 'Agents tag what they publish, so the gallery sorts itself.',
     play: async (t) => {

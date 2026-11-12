@@ -424,7 +424,7 @@ func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
 			if guest {
 				note = ""
 			}
-			if q != "" && !strings.Contains(strings.ToLower(a.Title+" "+strings.Join(a.Tags, " ")+" "+note), q) {
+			if q != "" && !strings.Contains(strings.ToLower(a.Title+" "+strings.Join(a.Tags, " ")+" "+note), q) && !s.contentMatches(a, q) {
 				continue
 			}
 			if limit > 0 && len(items) >= limit {
@@ -687,6 +687,7 @@ func (s *Server) DeleteArtifact(id string) error {
 	if err != nil {
 		return err
 	}
+	s.forgetSearchText(id)
 	return os.RemoveAll(s.store.ArtifactDir(id))
 }
 

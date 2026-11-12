@@ -31,6 +31,10 @@ Write one self-contained `index.html` (inline CSS/JS) unless the content is
 plain prose, in which case write a `.md` file. Set a real `<title>` — it
 becomes the artifact title.
 
+For a presentation or lesson, start from the slides template
+(`9artifacts design --kind slides`); for a letter, lesson plan or other
+printable A4 document, `--kind document`.
+
 A topology, flow or network diagram is a diagram, not a write-up. The design
 guide's Diagrams section and `GET /diagram.css` (also printed by
 `9artifacts design`) are the kit: inline that CSS, keep names on the boxes

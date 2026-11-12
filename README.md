@@ -172,7 +172,7 @@ MCP tools: `get_design_guide`, `publish_artifact`, `list_artifacts`, `read_artif
 ## Make it yours
 
 ```bash
-9artifacts theme init ./my-theme            # theme.css, design.md, template.html, logo.svg, markdown.css
+9artifacts theme init ./my-theme            # theme.css, design.md, template.html, slides.html, document.html, ...
 9artifacts serve --theme-dir ./my-theme ...
 ```
 
@@ -181,6 +181,10 @@ MCP tools: `get_design_guide`, `publish_artifact`, `list_artifacts`, `read_artif
 - **`design.md` + `template.html`** form the house style for artifacts. Agents fetch them through
   MCP (`get_design_guide`) or `9artifacts design` before writing, so a report made by Claude
   today and one made by Codex next month look like they belong together.
+- **`slides.html` and `document.html`** are the starters for decks (16:9, keyboard and swipe,
+  fullscreen, prints one slide per page) and A4 documents; agents ask for them with
+  `get_design_guide` `kind: "slides"` or `9artifacts design --kind document`.
+  **`diagram.css`** is the kit for live topology diagrams: status lights, marching links, packets.
 - Built-in themes: `default`, `terminal`, `paper`, `cute`, `cyberpunk`, `edgy` (`--theme cute`); see [Themes](#themes). `theme.css` is plain CSS, so on top of the variables it can restyle anything in the app; fonts and images next to it load with relative URLs.
 - `9artifacts theme init --full` also exports the app shell (HTML/JS/CSS) for deeper changes. Keep `nonce="{{.Nonce}}"` on the `<script>` tag in `index.html`, or the CSP will block the app.
 
@@ -244,7 +248,8 @@ signing in (no private notes, no share links) and can try every built-in theme. 
 - [x] Cloudflare Workers edition and a Tailscale build
 - [x] Six built-in themes and a read-only public demo mode (`--demo`)
 - [ ] Zip upload and folder upload from the browser
-- [ ] Full-text search inside artifacts
+- [x] Search inside artifact text (Go server)
+- [x] Slide and A4 document templates, animated diagram kit
 - [ ] Optional client-side encryption for share links
 - [ ] Read-only collaborators
 

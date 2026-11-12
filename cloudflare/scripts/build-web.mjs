@@ -48,7 +48,7 @@ for (const dir of [join(web, 'themes', 'default'), join(web, 'themes', theme), t
     if (/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(n) && statSync(join(dir, n)).isFile()) names.add(n);
   }
 }
-for (const n of ['app.js', 'app.css', 'index.html', 'share.html', 'design.md', 'diagram.css', 'template.html', 'embed.go']) names.delete(n);
+for (const n of ['app.js', 'app.css', 'index.html', 'share.html', 'design.md', 'diagram.css', 'template.html', 'slides.html', 'document.html', 'embed.go']) names.delete(n);
 for (const n of names) writeFileSync(join(out, 'assets', n), themeFile(n));
 writeFileSync(join(out, 'assets', 'app.js'), shellFile('app.js'));
 writeFileSync(join(out, 'assets', 'app.css'), shellFile('app.css'));
@@ -71,7 +71,8 @@ export const INDEX_HTML = ${str(shellFile('index.html'))};
 export const SHARE_HTML = ${str(shellFile('share.html'))};
 export const DESIGN_MD = ${str(themeFile('design.md'))};
 export const DIAGRAM_CSS = ${str(themeFile('diagram.css'))};
-export const TEMPLATE_HTML = ${str(themeFile('template.html'))};
+export const TEMPLATES = { '': 'template.html', page: 'template.html', slides: 'slides.html', document: 'document.html' };
+export const TEMPLATE_FILES = { 'template.html': ${str(themeFile('template.html'))}, 'slides.html': ${str(themeFile('slides.html'))}, 'document.html': ${str(themeFile('document.html'))} };
 export const MARKDOWN_CSS = ${str(themeFile('markdown.css'))};
 export const THEME = ${JSON.stringify(theme)};
 `);

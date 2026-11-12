@@ -152,8 +152,8 @@ var (
 		}, "name", "content"),
 	}
 	mcpTools = []map[string]any{
-		{"name": "get_design_guide", "description": "Get the owner's design guide (design.md), diagram kit (diagram.css) and starter HTML template. Call this before writing a new artifact. Inline diagram.css; do not link it.",
-			"inputSchema": schema(map[string]any{})},
+		{"name": "get_design_guide", "description": "Get the owner's design guide (design.md), diagram kit (diagram.css) and starter HTML template. Call this before writing a new artifact. Set kind to slides for a presentation or document for a printable A4 document. Inline diagram.css; do not link it.",
+			"inputSchema": schema(map[string]any{"kind": map[string]any{"type": "string", "enum": []string{"page", "slides", "document"}, "description": "Which starter template to return. Default page (report or dashboard)."}})},
 		{"name": "publish_artifact", "description": "Publish a new artifact, or a new version of an existing one when id is given (the URL stays the same). Returns the private URL for the user.",
 			"inputSchema": schema(map[string]any{
 				"id":    map[string]any{"type": "string", "description": "Existing artifact id to update; omit to create a new artifact"},
@@ -163,7 +163,7 @@ var (
 				"message":           map[string]any{"type": "string", "description": "Short description of what changed in this version"},
 				"replace_all_files": map[string]any{"type": "boolean", "description": "When updating: drop files not sent in this call. Default false keeps them, so you can resend only the changed files."},
 			}, "files")},
-		{"name": "list_artifacts", "description": "List artifacts, newest first.",
+		{"name": "list_artifacts", "description": "List artifacts, newest first. query matches the title, tags and the text of the page.",
 			"inputSchema": schema(map[string]any{"query": strProp, "tag": strProp, "limit": map[string]any{"type": "integer"}})},
 		{"name": "read_artifact", "description": "Read the text content of an artifact file (default: the entry file of the latest version), e.g. to edit and republish it.",
 			"inputSchema": schema(map[string]any{"id": strProp, "file": strProp, "version": map[string]any{"type": "integer"}}, "id")},
@@ -193,8 +193,16 @@ func (s *Server) mcpCall(name string, raw json.RawMessage) (string, error) {
 	case "get_design_guide":
 		design, _ := s.themeFile("design.md")
 		diagram, _ := s.themeFile("diagram.css")
-		tpl, _ := s.themeFile("template.html")
-		return string(design) + "\n\n# Diagram kit (diagram.css)\n\n```css\n" + string(diagram) + "\n```\n\n# Starter template (template.html)\n\n```html\n" + string(tpl) + "\n```", nil
+		var a struct {
+			Kind string `json:"kind"`
+		}
+		_ = json.Unmarshal(raw, &a)
+		name, ok := templateFiles[a.Kind]
+		if !ok {
+			return "", errors.New("kind must be page, slides or document")
+		}
+		tpl, _ := s.themeFile(name)
+		return string(design) + "\n\n# Diagram kit (diagram.css)\n\n```css\n" + string(diagram) + "\n```\n\n# Starter template (" + name + ")\n\n```html\n" + string(tpl) + "\n```", nil
 
 	case "publish_artifact":
 		var a struct {
@@ -253,7 +261,7 @@ func (s *Server) mcpCall(name string, raw json.RawMessage) (string, error) {
 		s.store.Read(func(st *State) {
 			for _, art := range st.Sorted() {
 				hay := strings.ToLower(art.Title + " " + strings.Join(art.Tags, " "))
-				if a.Query != "" && !strings.Contains(hay, strings.ToLower(a.Query)) {
+				if q := strings.ToLower(a.Query); q != "" && !strings.Contains(hay, q) && !s.contentMatches(art, q) {
 					continue
 				}
 				if a.Tag != "" && !slices.Contains(art.Tags, strings.ToLower(a.Tag)) {

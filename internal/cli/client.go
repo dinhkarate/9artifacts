@@ -378,15 +378,24 @@ func Design(args []string) error {
 	if err != nil {
 		return err
 	}
-	for _, p := range []string{"/design.md", "/diagram.css", "/template.html"} {
+	fl := flag.NewFlagSet("design", flag.ContinueOnError)
+	kind := fl.String("kind", "page", "starter template: page, slides or document")
+	if err := fl.Parse(args); err != nil {
+		return err
+	}
+	tpl := "/template.html?kind=" + url.QueryEscape(*kind)
+	for _, p := range []string{"/design.md", "/diagram.css", tpl} {
 		resp, err := httpClient.Get(c.URL + p)
 		if err != nil {
 			return err
 		}
 		b, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("%s: %s", p, strings.TrimSpace(string(b)))
+		}
 		switch p {
-		case "/template.html":
+		case tpl:
 			fmt.Print("\n\n# Starter template\n\n```html\n" + string(b) + "\n```\n")
 		case "/diagram.css":
 			fmt.Print("\n\n# Diagram kit\n\n```css\n" + string(b) + "\n```\n")

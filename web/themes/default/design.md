@@ -99,6 +99,34 @@ Rules:
 - One accent colour and the house tokens. The kit already stops every
   animation under `prefers-reduced-motion` and in print.
 
+## Slides
+
+A presentation, lesson or pitch is a deck, not a long page. Start from the
+slides template: `get_design_guide` with `kind: "slides"`,
+`9artifacts design --kind slides` or `GET /template.html?kind=slides`.
+
+- Each `<section class="slide">` is a fixed 1280×720 stage that the script
+  scales to the window, so size everything in px and never let a slide
+  scroll. If it does not fit, split it.
+- One idea per slide: a heading and at most five short bullets, three
+  numbers, one chart or one diagram. The detail belongs to the speaker.
+- `class="step"` reveals an element one press at a time.
+- Keep the script as it is: arrows, space, click and swipe move; `F` goes
+  fullscreen; `P` prints one slide per page, which is how the owner saves
+  a PDF.
+
+## Documents
+
+A letter, lesson plan, minutes or anything that will be printed or signed
+starts from the document template: `kind: "document"`.
+
+- Each `<article class="page">` is one A4 sheet with print margins built
+  in. Start a new `.page` where the document must break.
+- Serif body at 12pt, headings in the accent colour on screen and black in
+  print. Tables for schedules; a `.sign` block for signatures.
+- Write in the language and form the owner's organisation uses; the
+  template's field names are placeholders.
+
 ## Updating
 
 To change an artifact, publish again with its id (`publish_artifact` with

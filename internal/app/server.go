@@ -70,6 +70,7 @@ type Server struct {
 	viewers    map[string]time.Time // share token|client IP → last counted view
 	access     *cfAccess            // nil unless Cloudflare Access checks are on
 	codes      map[string]oauthCode // sha256(authorization code) → pending grant
+	search     searchIndex
 }
 
 type challenge struct {
@@ -511,8 +512,16 @@ func (s *Server) handleDiagram(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(b)
 }
 
+// templateFiles maps the kind an agent asks for to its starter file.
+var templateFiles = map[string]string{"": "template.html", "page": "template.html", "slides": "slides.html", "document": "document.html"}
+
 func (s *Server) handleTemplate(w http.ResponseWriter, r *http.Request) {
-	b, err := s.themeFile("template.html")
+	name, ok := templateFiles[r.URL.Query().Get("kind")]
+	if !ok {
+		http.Error(w, "kind must be page, slides or document", http.StatusBadRequest)
+		return
+	}
+	b, err := s.themeFile(name)
 	if err != nil {
 		http.NotFound(w, r)
 		return

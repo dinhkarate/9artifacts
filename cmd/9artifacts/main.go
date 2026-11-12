@@ -27,7 +27,8 @@ Client (needs NINEARTIFACTS_URL and NINEARTIFACTS_TOKEN, or 9artifacts login):
   9artifacts share ID --ttl 7d        create an expiring public link
   9artifacts revoke ID TOKEN          revoke a public link
   9artifacts rm ID                    delete an artifact
-  9artifacts design                   print the owner's design guide for agents
+  9artifacts design [--kind slides|document]
+                                      print the owner's design guide for agents
   9artifacts version
 `
 
