@@ -60,13 +60,14 @@ it: the page is sandboxed and may be served from another origin.
 <div class="d">
   <div class="flow">
     <div class="node" tabindex="0">
+      <i class="led"></i>
       <div class="n">Router</div>
       <div class="a">192.168.2.1</div>
       <div class="tip"><b>Router</b>Only :443 is forwarded.</div>
     </div>
-    <div class="link" tabindex="0">
+    <div class="link live" tabindex="0">
       <span class="lbl">:443</span>
-      <span class="line"><i class="pkt"></i></span>
+      <span class="line"><i class="pkt"></i><i class="pkt" style="--d:1.4s"></i></span>
     </div>
     <div class="node mark" tabindex="0">
       <div class="n">nginx</div>
@@ -87,8 +88,16 @@ Rules:
 - Under 860px the kit stacks the row into a column; an end row is stacked
   last node first, so the `.drop` still lands on it. Do not add a second
   layout by hand.
-- One accent colour, the house tokens, a moving packet. Respect
-  `prefers-reduced-motion`. A legend of three items is enough.
+- Make it look alive, the way a rack does. Every node that is running gets
+  a status light: `<i class="led"></i>` (green), `led warn`, `led bad`.
+  A link that carries traffic is `link live` (dashes march along it) with
+  one to three packets; a broken one is `link down`. A failing node is
+  `node bad` (it pulses red), a degraded one `node warn`. Stagger lights
+  and extra packets with `style="--d:.6s"` so they never blink in step.
+- State is information, not decoration: blink only what is really up, slow
+  or down, and say which in the legend.
+- One accent colour and the house tokens. The kit already stops every
+  animation under `prefers-reduced-motion` and in print.
 
 ## Updating
 

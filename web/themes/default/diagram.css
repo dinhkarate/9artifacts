@@ -8,6 +8,7 @@
   --node-w: 150px;
   --ink: var(--accent, #1f6f5c);
   --ink-soft: color-mix(in srgb, var(--ink) 14%, transparent);
+  --up: #1f9d6b; --warn: #d08a00; --down: var(--danger, #c2410c);
   background: var(--surface, #fff);
   border: 1px solid var(--border, #e4e2dc);
   border-radius: 20px;
@@ -49,10 +50,34 @@
 }
 .pkt {
   position: absolute; top: -3.5px; left: 0; width: 9px; height: 9px; border-radius: 50%;
-  background: var(--ink); box-shadow: 0 0 0 4px var(--ink-soft);
-  animation: d-slide 2.8s linear infinite;
+  background: var(--ink); box-shadow: 0 0 0 4px var(--ink-soft), 0 0 10px var(--ink);
+  animation: d-slide 2.8s linear infinite backwards; animation-delay: var(--d, 0s);
 }
 .link.tunnel .pkt { animation-duration: 3.4s; }
+
+/* Life: a status light on a node, traffic on a link, a node or link in trouble.
+   <i class="led"></i> blinks green; .led.warn and .led.bad change the colour.
+   Stagger lights and extra packets with style="--d:.6s" so they never blink in step. */
+.led {
+  position: absolute; top: 10px; right: 10px; width: 7px; height: 7px; border-radius: 50%;
+  --c: var(--up); background: var(--c);
+  animation: d-blink 1.8s ease-in-out infinite; animation-delay: var(--d, 0s);
+}
+.led.warn { --c: var(--warn); animation-duration: 1.1s; }
+.led.bad { --c: var(--down); animation-duration: .6s; }
+.node.mark { animation: d-glow 2.6s ease-in-out infinite; }
+.node.warn { border-color: color-mix(in srgb, var(--warn) 60%, transparent); }
+.node.bad { --c: var(--down); border-color: var(--down); background: color-mix(in srgb, var(--down) 9%, var(--surface, #fff)); animation: d-alarm .9s ease-in-out infinite; }
+.node.bad svg { stroke: var(--down); }
+/* .link.live: dashes march along the line. .link.down: the line is cut and blinks. */
+.link.live .line, .drop.live .line {
+  background: repeating-linear-gradient(90deg, var(--ink) 0 6px, transparent 6px 12px) 0 0 / 12px 100% repeat-x;
+  animation: d-march .5s linear infinite;
+}
+.drop.live .line { background: repeating-linear-gradient(180deg, var(--ink) 0 6px, transparent 6px 12px) 0 0 / 100% 12px repeat-y; animation-name: d-march-y; }
+.link.down .line { background: repeating-linear-gradient(90deg, var(--down) 0 4px, transparent 4px 10px); animation: d-blink .7s ease-in-out infinite; --c: transparent; }
+.link.down .pkt { display: none; }
+.link.down .lbl { color: var(--down); }
 
 /* Vertical hop in the gap between two rows. It ends where the next node starts. */
 .drop { display: flex; justify-content: flex-end; height: 52px; margin-right: calc(var(--node-w) / 2 - 1px); }
@@ -87,6 +112,20 @@
 .legend i { display: inline-block; width: 18px; height: 2px; margin-right: 6px; vertical-align: middle; background: color-mix(in srgb, var(--ink) 50%, transparent); }
 .legend i.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 3px var(--ink-soft); }
 
+@keyframes d-blink {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 color-mix(in srgb, var(--c) 60%, transparent); }
+  50% { opacity: .35; box-shadow: 0 0 0 6px transparent; }
+}
+@keyframes d-glow {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ink) 30%, transparent); }
+  50% { box-shadow: 0 0 0 7px transparent, 0 0 22px -4px color-mix(in srgb, var(--ink) 55%, transparent); }
+}
+@keyframes d-alarm {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c) 45%, transparent); }
+  50% { box-shadow: 0 0 0 8px transparent; }
+}
+@keyframes d-march { to { background-position: 12px 0; } }
+@keyframes d-march-y { to { background-position: 0 12px; } }
 @keyframes d-slide {
   0% { left: 0; opacity: 0; }
   12% { opacity: 1; }
@@ -111,6 +150,9 @@
   .link { width: 100%; height: 56px; flex: none; min-width: 0; justify-content: center; padding: 0; }
   .link .line { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; height: auto; transform: translateX(-1px); }
   .link.tunnel .line { background: repeating-linear-gradient(180deg, var(--ink) 0 6px, transparent 6px 11px); }
+  .link.live .line { background: repeating-linear-gradient(180deg, var(--ink) 0 6px, transparent 6px 12px) 0 0 / 100% 12px repeat-y; animation-name: d-march-y; }
+  .flow.end .link.live .line { animation-direction: reverse; }
+  .link.down .line { background: repeating-linear-gradient(180deg, var(--down) 0 4px, transparent 4px 10px); }
   .link .lbl { position: relative; z-index: 1; background: var(--surface, #fff); border: 1px solid var(--border, #e4e2dc); border-radius: 6px; padding: 2px 7px; }
   .pkt { left: 50%; margin-left: -4.5px; animation-name: d-fall; }
   .drop { justify-content: center; margin-right: 0; }
@@ -121,8 +163,10 @@
 @media (prefers-reduced-motion: reduce) {
   .pkt { animation: none; display: none; }
   .node { transition: none; }
+  .led, .node.mark, .node.bad, .link .line, .drop .line { animation: none; }
 }
 @media print {
   .d { box-shadow: none; }
   .pkt { display: none; }
+  .led, .node.mark, .node.bad, .link .line, .drop .line { animation: none; }
 }
