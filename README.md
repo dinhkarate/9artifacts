@@ -7,13 +7,13 @@
 **Claude-style artifacts on your own VPS.**
 Your AI agents publish HTML, Markdown, diagrams and PDFs; you view them in a private, passkey-protected gallery and share expiring links when you want to.
 
-One ~10 MB Go binary · ~10 MB RAM · no database · no Node · no Docker required
+One ~10 MB Go binary · ~15 MB RAM · no database · no Node · no Docker required
 
 [![ci](https://github.com/dinhkarate/9artifacts/actions/workflows/ci.yml/badge.svg)](https://github.com/dinhkarate/9artifacts/actions/workflows/ci.yml)
 [![release](https://img.shields.io/github/v/release/dinhkarate/9artifacts?sort=semver)](https://github.com/dinhkarate/9artifacts/releases)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-English · [Tiếng Việt](README.vi.md)
+**[Live demo](https://demo.9artifacts.com)** · [Website](https://9artifacts.com) · English · [Tiếng Việt](README.vi.md)
 
 <img src="docs/images/demo.gif" alt="An agent publishes a dashboard to 9artifacts over MCP, publishes v2 and the open tab live-reloads, then an expiring share link is created" width="100%">
 
@@ -38,11 +38,12 @@ If you already rent a VPS, 9artifacts gives those artifacts a home you own:
 - **Feels like Claude's artifact viewer.** Full-bleed sandboxed viewer, version history, and
   **live reload**: when the agent publishes v2, your open tab updates by itself.
 - **Your style, everywhere.** Agents read your `design.md` before writing, so everything they
-  publish matches your look. A topology uses `diagram.css`, so the lines stay off the boxes.
-  The app UI is themeable too, and your AI can restyle it for you.
+  publish matches your look, and a topology uses `diagram.css`, so the lines stay off the boxes.
+  The app UI is themeable too: six built-in themes, and your AI can restyle it for you.
 - **Tiny, and free to run.** A single static binary with automatic HTTPS. It is happy on a
-  1 vCPU / 512 MB box or a Raspberry Pi. No server at all? Deploy the **Cloudflare Workers
-  edition** on the free plan, or run `9artifacts-ts` at home with Tailscale built in.
+  1 vCPU / 512 MB box or a Raspberry Pi, with builds for Linux, macOS, Windows and FreeBSD.
+  No server at all? Deploy the **Cloudflare Workers edition** on the free plan, or run
+  `9artifacts-ts` at home with Tailscale built in.
 - **Tells you.** Webhooks to Slack, Discord or ntfy when an agent publishes or someone opens
   your link.
 
@@ -54,13 +55,33 @@ If you already rent a VPS, 9artifacts gives those artifacts a home you own:
 |---|---|
 | ![viewer](docs/images/viewer-share-light.png) | ![markdown](docs/images/viewer-markdown-dark.png) |
 
-| Connect an agent in one click | Themes: `terminal` and `paper` |
+| Connect an agent in one click | Dark mode |
 |---|---|
-| ![settings](docs/images/settings-dark.png) | ![terminal theme](docs/images/theme-terminal-gallery-dark.png) |
+| ![settings](docs/images/settings-dark.png) | ![dark mode](docs/images/gallery-dark.png) |
 
 <p align="center"><img src="docs/images/mobile-gallery.png" width="240" alt="mobile gallery"> <img src="docs/images/mobile-viewer.png" width="240" alt="mobile viewer"></p>
 
+### Themes
+
+A theme restyles anything, not only colours: fonts, cards, backgrounds, even a mascot. Six are
+built in (`--theme cute`), and you can try them all on the [live demo](https://demo.9artifacts.com)
+with the picker in the top bar.
+
+<img src="docs/images/themes.gif" alt="The gallery cycling through the six built-in themes: default, paper, terminal, cute, cyberpunk and edgy" width="100%">
+
+Make your own with `9artifacts theme init ./my-theme`, then ask your AI to restyle it; see [Make it yours](#make-it-yours).
+
 ## Quick start
+
+### Let your agent do it
+
+Paste this into Claude Code, Codex, Cursor or any agent that has a shell:
+
+> Install 9artifacts for me by following https://9artifacts.com/install.md. Put it on my server
+> my-vps with the domains art.example.com and art-content.example.com, then connect yourself to it.
+
+It checks your DNS, installs the server, hands you the first-run link for your passkey, then
+connects itself and publishes a test page.
 
 ### On a VPS (automatic HTTPS)
 
@@ -68,7 +89,7 @@ Point two DNS records at your server: one for the app, one for artifact content 
 [Security](#security) for why). Then run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/dinhkarate/9artifacts/main/install.sh \
+curl -fsSL https://9artifacts.com/install.sh \
   | sudo sh -s -- --domain art.example.com --content-domain art-content.example.com --email you@example.com
 ```
 
@@ -89,6 +110,14 @@ docker logs 9artifacts   # prints the first-run link
 go install github.com/dinhkarate/9artifacts/cmd/9artifacts@latest
 9artifacts serve --url http://localhost:8080
 ```
+
+### Windows, macOS, no server
+
+- **Windows and macOS:** download the archive from [Releases](https://github.com/dinhkarate/9artifacts/releases)
+  and follow [docs/deploy.md](docs/deploy.md#6-windows-and-macos) (a Task Scheduler service on
+  Windows; the Gatekeeper step on macOS).
+- **No server:** the [Cloudflare Workers edition](cloudflare/README.md) runs on the free plan,
+  with D1 and R2.
 
 Running behind nginx, Caddy, a Cloudflare Tunnel or Tailscale? See [docs/deploy.md](docs/deploy.md).
 There is also a guide to running it for **free**: on your own machine with Tailscale or a
@@ -152,7 +181,7 @@ MCP tools: `get_design_guide`, `publish_artifact`, `list_artifacts`, `read_artif
 - **`design.md` + `template.html`** form the house style for artifacts. Agents fetch them through
   MCP (`get_design_guide`) or `9artifacts design` before writing, so a report made by Claude
   today and one made by Codex next month look like they belong together.
-- Built-in themes: `default`, `terminal`, `paper`, `cute`, `cyberpunk`, `edgy` (`--theme terminal`). A theme can restyle anything, not only colours: `cute` adds a font, a mascot and sticker-like cards. Try them all on the [live demo](https://demo.9artifacts.com).
+- Built-in themes: `default`, `terminal`, `paper`, `cute`, `cyberpunk`, `edgy` (`--theme cute`); see [Themes](#themes). `theme.css` is plain CSS, so on top of the variables it can restyle anything in the app; fonts and images next to it load with relative URLs.
 - `9artifacts theme init --full` also exports the app shell (HTML/JS/CSS) for deeper changes. Keep `nonce="{{.Nonce}}"` on the `<script>` tag in `index.html`, or the CSP will block the app.
 
 ## Security
@@ -198,6 +227,10 @@ Free or a Google Cloud `e2-micro`. See [docs/deploy.md](docs/deploy.md#free-host
 
 **Multiple users?** Not yet. 9artifacts is single-owner by design; share with others through expiring links.
 
+**Can I show my gallery to everyone?** Start it with `--demo`: visitors browse read-only without
+signing in (no private notes, no share links) and can try every built-in theme. That is how the
+[live demo](https://demo.9artifacts.com) runs.
+
 **Where is my data?** Everything lives in one directory: a `9artifacts.json` index plus your files under
 `artifacts/<id>/v<n>/`. Back it up with `tar` or `restic`.
 
@@ -209,6 +242,7 @@ Free or a Google Cloud `e2-micro`. See [docs/deploy.md](docs/deploy.md#free-host
 - [x] Remote MCP over OAuth (claude.ai, ChatGPT connectors)
 - [x] Password-protected and view-limited share links
 - [x] Cloudflare Workers edition and a Tailscale build
+- [x] Six built-in themes and a read-only public demo mode (`--demo`)
 - [ ] Zip upload and folder upload from the browser
 - [ ] Full-text search inside artifacts
 - [ ] Optional client-side encryption for share links
