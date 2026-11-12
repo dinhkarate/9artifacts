@@ -73,6 +73,7 @@ describe('MCP', () => {
     const guide = await tool('get_design_guide', {});
     expect(guide.text).toContain('# Diagram kit (diagram.css)');
     expect(guide.text).toContain('# Starter template (template.html)');
+    expect((await tool('get_design_guide', { kind: 'slides' })).text).toContain('# Starter template (slides.html)');
 
     const pub = await tool('publish_artifact', {
       title: 'Agent dashboard', tags: ['Ops'],

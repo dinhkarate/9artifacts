@@ -184,6 +184,9 @@ describe('security headers and logging', () => {
     expect(kit.headers.get('Content-Type')).toBe('text/css; charset=utf-8');
     expect(await kit.text()).toContain('.drop');
     expect((await c.fetch('/template.html')).headers.get('Content-Type')).toBe('text/plain; charset=utf-8');
+    expect(await (await c.fetch('/template.html?kind=slides')).text()).toContain('class="slide"');
+    expect(await (await c.fetch('/template.html?kind=document')).text()).toContain('class="page"');
+    expect((await c.fetch('/template.html?kind=constructor')).status).toBe(400);
   });
 
   it('never logs share, view or grant tokens', async () => {
