@@ -19,13 +19,13 @@
   --kind-pdf: #f9f002; --kind-pdf-bg: #3a3a05; --kind-img: #a96bff; --kind-img-bg: #2a1050;
   --shadow-sm: 0 0 0 1px #3a1a78; --shadow: 0 0 18px rgba(5,217,232,.25); --shadow-lg: 0 0 40px rgba(255,42,109,.3);
 }
-/* a horizon grid below, scanlines above (gallery only, artifacts stay clean) */
+/* a horizon grid and scanlines on the background only, so thumbnails and artifacts stay clean */
 body{background:
   linear-gradient(transparent 0 calc(100% - 1px), rgba(5,217,232,.12) 0) 0 0/100% 48px,
   linear-gradient(90deg, transparent 0 calc(100% - 1px), rgba(255,42,109,.10) 0) 0 0/48px 100%,
   radial-gradient(ellipse at 50% 120%, #3d0a5c 0, transparent 60%),
   var(--bg);background-attachment:fixed}
-.gallery-screen::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;
+.gallery-screen::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;
   background:repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px)}
 h1,h2,h3{text-transform:uppercase;letter-spacing:.08em}
 .gallery-head h1{font-size:28px;color:#f9f002;text-shadow:2px 0 #ff2a6d,-2px 0 #05d9e8;animation:cp-glitch 4s steps(1) infinite}
