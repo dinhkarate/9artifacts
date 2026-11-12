@@ -84,7 +84,8 @@ Rules:
 - A second path (a LAN bypass, a fallback) is another `.flow`, not an
   overlay. `.flow.end` right-aligns that row; `.drop` meets the centre of
   its last node and stops at the top of the box.
-- Under 860px the kit stacks the row into a column. Do not add a second
+- Under 860px the kit stacks the row into a column; an end row is stacked
+  last node first, so the `.drop` still lands on it. Do not add a second
   layout by hand.
 - One accent colour, the house tokens, a moving packet. Respect
   `prefers-reduced-motion`. A legend of three items is enough.
