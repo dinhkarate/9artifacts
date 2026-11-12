@@ -64,6 +64,9 @@ jobs:
         run: docker logs 9a 2>&1 | tail -50
   live:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v5
       - name: demo
@@ -73,3 +76,24 @@ jobs:
           curl -fsS -o /dev/null https://9artifacts.com
           curl -fsS https://9artifacts.com/install.md | grep -q 9artifacts
           curl -fsSL https://9artifacts.com/install.sh | head -1 | grep -q '^#!/bin/sh'
+      # A red run alone is easy to miss: GitHub mails the owner about an issue.
+      - name: open an issue when the live check fails
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          n=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search 'in:title "Live check failing"' --json number --jq '.[0].number')
+          if [ -n "$n" ]; then
+            gh issue comment "$n" -R "$GITHUB_REPOSITORY" --body "Still failing: $RUN"
+          else
+            gh issue create -R "$GITHUB_REPOSITORY" --title "Live check failing" --assignee "$GITHUB_REPOSITORY_OWNER" \
+              --body "The hourly smoke test of demo.9artifacts.com or 9artifacts.com failed: $RUN"
+          fi
+      - name: close the issue when it recovers
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search 'in:title "Live check failing"' --json number --jq '.[0].number')
+          if [ -n "$n" ]; then gh issue close "$n" -R "$GITHUB_REPOSITORY" --comment "Recovered."; fi
