@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>9artifacts · Claude-style artifacts on your own server</title>
-<meta name="description" content="Your AI agents publish HTML, Markdown, diagrams and PDFs over MCP. You review them in a private, passkey-protected gallery and share expiring links. Self-hosted, open source, one ~10 MB binary.">
+<meta name="description" content="Your AI agents publish HTML, Markdown, diagrams and PDFs over MCP. Review them in a passkey-protected gallery and share expiring links. Self-hosted, MIT.">
 <link rel="canonical" href="https://9artifacts.com/">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
@@ -15,6 +15,38 @@
 <meta property="og:description" content="AI agents publish over MCP; you review, comment and share expiring links behind a passkey. Self-hosted and open source.">
 <meta property="og:image" content="https://9artifacts.com/img/social-preview.png">
 <meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://9artifacts.com/#organization",
+      "name": "9artifacts",
+      "url": "https://9artifacts.com/",
+      "logo": "https://9artifacts.com/logo.svg",
+      "sameAs": ["https://github.com/dinhkarate/9artifacts"]
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://9artifacts.com/#software",
+      "name": "9artifacts",
+      "url": "https://9artifacts.com/",
+      "description": "Self-hosted artifact gallery: AI agents publish HTML, Markdown, diagrams and PDFs over MCP, you review them behind a passkey and share expiring links.",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Linux, macOS",
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "license": "https://opensource.org/licenses/MIT",
+      "publisher": { "@id": "https://9artifacts.com/#organization" }
+    }
+  ]
+}
+</script>
 <link rel="icon" href="/logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
 <script src="/site.js" defer></script>
