@@ -943,7 +943,7 @@ async function openSettings() {
         h('div', { class: 'form-row wrap' }, user, cur, next, changePw)),
       h('section', { class: 'panel' },
         h('h2', {}, icon('note'), 'Look & feel'),
-        h('p', { class: 'muted' }, 'Agents read ', h('a', { href: '/design.md', target: '_blank', text: '/design.md' }), ' before writing artifacts, so everything they publish matches your style. Export the theme with ', h('code', { text: '9artifacts theme init ./my-theme' }), ', ask your AI to restyle it, then run with ', h('code', { text: '--theme-dir ./my-theme' }), '.'),
+        h('p', { class: 'muted' }, 'Agents read ', h('a', { href: '/design.md', target: '_blank', text: '/design.md' }), ' before writing, and ', h('a', { href: '/diagram.css', target: '_blank', text: '/diagram.css' }), ' before drawing a topology, so lines stay off the boxes. Export the theme with ', h('code', { text: '9artifacts theme init ./my-theme' }), ', ask your AI to restyle it, then run with ', h('code', { text: '--theme-dir ./my-theme' }), '.'),
         h('p', { class: 'muted' }, me.separateContentOrigin ? 'Artifacts are served from a separate origin (' : 'Artifacts are sandboxed on ', h('code', { text: me.contentOrigin }), me.separateContentOrigin ? ') — best isolation.' : '. For the strongest isolation, add --content-url with a second domain.'))));
 }
 

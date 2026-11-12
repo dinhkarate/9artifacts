@@ -20,7 +20,8 @@ lưu chúng **trên server của bạn**:
 - **Trải nghiệm giống Claude.** Viewer full màn hình chạy trong sandbox, có lịch sử phiên bản.
   Agent sửa xong thì tab đang mở **tự cập nhật**.
 - **Phong cách của bạn.** Agent đọc `design.md` trước khi viết, nên artifact nào cũng theo đúng
-  style của bạn. Giao diện app đổi theme được, và có thể nhờ AI thiết kế lại theme.
+  style của bạn. Sơ đồ dùng `diagram.css`, đường nối không đè lên hộp. Giao diện app đổi theme
+  được, và có thể nhờ AI thiết kế lại theme.
 - **Siêu nhẹ.** Một binary Go khoảng 10 MB, RAM khoảng 10 MB, tự lấy chứng chỉ HTTPS. Chạy tốt
   trên VPS 1 CPU / 512 MB hoặc VM miễn phí.
 

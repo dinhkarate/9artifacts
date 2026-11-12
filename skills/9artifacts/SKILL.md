@@ -31,6 +31,11 @@ Write one self-contained `index.html` (inline CSS/JS) unless the content is
 plain prose, in which case write a `.md` file. Set a real `<title>` — it
 becomes the artifact title.
 
+A topology, flow or network diagram is a diagram, not a write-up. The design
+guide's Diagrams section and `GET /diagram.css` (also printed by
+`9artifacts design`) are the kit: inline that CSS, keep names on the boxes
+and the explanation in a tooltip. Do not draw a connector through a node.
+
 ## 2. Publish
 
 ```bash

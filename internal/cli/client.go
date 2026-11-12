@@ -378,16 +378,19 @@ func Design(args []string) error {
 	if err != nil {
 		return err
 	}
-	for _, p := range []string{"/design.md", "/template.html"} {
+	for _, p := range []string{"/design.md", "/diagram.css", "/template.html"} {
 		resp, err := httpClient.Get(c.URL + p)
 		if err != nil {
 			return err
 		}
 		b, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
-		if p == "/template.html" {
+		switch p {
+		case "/template.html":
 			fmt.Print("\n\n# Starter template\n\n```html\n" + string(b) + "\n```\n")
-		} else {
+		case "/diagram.css":
+			fmt.Print("\n\n# Diagram kit\n\n```css\n" + string(b) + "\n```\n")
+		default:
 			fmt.Print(string(b))
 		}
 	}

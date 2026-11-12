@@ -45,7 +45,7 @@ describe('content origin separation', () => {
 
     // The same path on the app host is refused, and the content host refuses the app.
     expect((await c.fetch(APP + pathOf(a.viewBase) + 'index.html')).status).toBe(404);
-    for (const p of ['/', '/api/me', '/mcp', '/settings', '/design.md']) expect((await c.fetch(CONTENT + p)).status, p).toBe(404);
+    for (const p of ['/', '/api/me', '/mcp', '/settings', '/design.md', '/diagram.css']) expect((await c.fetch(CONTENT + p)).status, p).toBe(404);
     expect((await c.fetch(CONTENT + '/health')).status).toBe(200);
   });
 
@@ -177,7 +177,12 @@ describe('security headers and logging', () => {
     const c = new Client();
     const d = await c.fetch('/design.md');
     expect(d.headers.get('Content-Type')).toBe('text/markdown; charset=utf-8');
-    expect((await d.text()).length).toBeGreaterThan(100);
+    const guide = await d.text();
+    expect(guide.length).toBeGreaterThan(100);
+    expect(guide).toContain('## Diagrams');
+    const kit = await c.fetch('/diagram.css');
+    expect(kit.headers.get('Content-Type')).toBe('text/css; charset=utf-8');
+    expect(await kit.text()).toContain('.drop');
     expect((await c.fetch('/template.html')).headers.get('Content-Type')).toBe('text/plain; charset=utf-8');
   });
 
