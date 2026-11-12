@@ -444,7 +444,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	_ = tpl.Execute(&buf, map[string]any{"Name": s.cfg.Name, "Version": s.cfg.Version, "Nonce": nonce})
 	w.Header().Set("Content-Security-Policy", s.appCSP("'nonce-"+nonce+"'"))
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Cache-Control", "no-store, no-transform")
 	_, _ = w.Write(buf.Bytes())
 }
 

@@ -276,7 +276,9 @@ func (s *Server) contentHeaders(w http.ResponseWriter, sandbox bool) {
 		h.Set("Content-Security-Policy", ancestors)
 	}
 	h.Set("Cross-Origin-Resource-Policy", "cross-origin")
-	h.Set("Cache-Control", "private, max-age=3600")
+	// no-transform: a CDN in front (Cloudflare) must not inject analytics or
+	// rewrite e-mail addresses in what the agent published.
+	h.Set("Cache-Control", "private, max-age=3600, no-transform")
 }
 
 // serveVersionFile writes one file of a version. With pick (the owner's
@@ -348,7 +350,7 @@ func (s *Server) serveVersionFile(w http.ResponseWriter, r *http.Request, id str
 		}
 		s.contentHeaders(w, true)
 		w.Header().Set("Content-Type", contentType(name))
-		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Cache-Control", "no-store, no-transform")
 		_, _ = w.Write(append(raw, s.pickScript()...))
 		return
 	}
@@ -486,7 +488,7 @@ func (s *Server) handleSharePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Cache-Control", "no-store, no-transform")
 	w.WriteHeader(status)
 	_, _ = w.Write(buf.Bytes())
 }

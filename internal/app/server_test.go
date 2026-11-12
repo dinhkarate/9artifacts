@@ -135,6 +135,9 @@ func TestPublishViewShareRevoke(t *testing.T) {
 	if rec.Code != 200 || !strings.HasPrefix(rec.Header().Get("Content-Security-Policy"), "sandbox allow-scripts") {
 		t.Fatalf("html: %d csp=%q", rec.Code, rec.Header().Get("Content-Security-Policy"))
 	}
+	if !strings.Contains(rec.Header().Get("Cache-Control"), "no-transform") {
+		t.Fatalf("a CDN may rewrite artifacts: Cache-Control=%q", rec.Header().Get("Cache-Control"))
+	}
 	rec = e.do("GET", base+"assets/site.css", nil, nil)
 	if rec.Code != 200 || rec.Header().Get("Content-Type") != "text/css; charset=utf-8" {
 		t.Fatalf("css: %d %q", rec.Code, rec.Header().Get("Content-Type"))
