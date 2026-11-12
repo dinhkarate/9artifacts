@@ -46,6 +46,8 @@ const ICONS = {
   pin: '<path d="M12 17v5M9 10.8V4h6v6.8l3 3.2v2H6v-2z"/>',
   history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 3"/>',
   bot: '<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9 17h6"/>',
+  play: '<path d="M7 4.5v15l12-7.5z"/>',
+  arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
 };
 function icon(name) {
   const span = document.createElement('span');
@@ -193,13 +195,23 @@ function paintGuest() {
   $('#view-gallery a[href="/settings"]').hidden = g;
   let banner = $('#demo-banner');
   if (g && !banner) {
-    banner = h('p', { class: 'hint demo-banner', id: 'demo-banner' }, icon('info'), ' ',
-      h('strong', { text: 'Live demo, read-only.' }), ' AI agents publish these artifacts over MCP; you review, comment and share them. ',
-      h('a', { href: 'https://github.com/dinhkarate/9artifacts', target: '_blank', rel: 'noopener', text: 'Run your own' }), '.');
+    banner = h('section', { class: 'demo-banner', id: 'demo-banner' },
+      h('div', { class: 'demo-copy' },
+        h('p', { class: 'demo-kicker' }, h('span', { class: 'live-dot' }), h('strong', { text: 'Live demo · read-only' })),
+        h('h2', { text: 'Where your AI agents’ work lands.' }),
+        h('p', { text: 'Agents publish HTML, Markdown, PDFs and images over MCP. You review, comment and share them from your own server.' })),
+      h('div', { class: 'demo-actions' },
+        h('button', { class: 'btn primary', type: 'button', onclick: () => startTour() }, icon('play'), 'Take the 60-second tour'),
+        h('button', { class: 'btn', type: 'button', onclick: openOnboard }, 'Run your own', icon('arrow'))));
     $('#view-gallery .gallery').prepend(banner);
   }
   if (banner) banner.hidden = !g;
   paintThemes();
+  paintOnboardButton();
+  if (g && !tourOffered && !tourSeen() && location.pathname === '/') {
+    tourOffered = true;
+    setTimeout(() => { if (!tour && !$('#view-gallery').hidden) startTour(); }, 1200);
+  }
 }
 
 /* A demo lets anyone try the built-in themes; the choice stays in this browser. */
@@ -370,13 +382,15 @@ function renderGallery() {
 function thumbEl(a) {
   const kind = fileKind(a.entry);
   const box = h('div', { class: `thumb kind-${kind}` });
+  const ready = () => box.classList.add('ready');
   if (kind === 'html' || kind === 'markdown') {
     box.append(h('iframe', { src: viewSrc(a.viewBase, a.entry), loading: 'lazy', tabindex: '-1', 'aria-hidden': 'true',
-      sandbox: 'allow-scripts', referrerpolicy: 'no-referrer', scrolling: 'no', title: '' }));
+      sandbox: 'allow-scripts', referrerpolicy: 'no-referrer', scrolling: 'no', title: '', onload: ready }));
   } else if (kind === 'image') {
-    box.append(h('img', { src: fileUrl(a.viewBase, a.entry), alt: '', loading: 'lazy' }));
+    box.append(h('img', { src: fileUrl(a.viewBase, a.entry), alt: '', loading: 'lazy', onload: ready, onerror: ready }));
   } else {
     box.append(h('div', { class: 'thumb-file' }, icon('file'), h('span', { text: KIND_LABEL[kind] })));
+    ready();
   }
   return box;
 }
@@ -389,8 +403,8 @@ function flags(a) {
   ];
 }
 
-function cardEl(a) {
-  return h('a', { class: 'card', href: `/a/${a.id}`, 'data-link': '' },
+function cardEl(a, i) {
+  return h('a', { class: 'card', href: `/a/${a.id}`, 'data-link': '', style: `--i:${Math.min(i, 12)}` },
     thumbEl(a),
     h('div', { class: 'card-body' },
       h('h3', { text: a.title }),
@@ -972,6 +986,296 @@ async function logout() {
   await api('POST', '/api/auth/logout', {}).catch(() => {});
   navigate('/login', true);
 }
+
+/* ---------- demo tour ---------- */
+/* On a demo, a pointer walks the visitor through the real app. At the end,
+   or any time from the banner, they get the ways to run their own. */
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sleep = (ms) => new Promise((r) => setTimeout(r, REDUCED ? Math.min(ms, 200) : ms));
+const CANCEL = new Error('tour moved on');
+let tour = null;
+let tourOffered = false;
+
+function tourSeen(set) {
+  try {
+    if (set) localStorage.setItem('9artifacts.tour', '1');
+    return localStorage.getItem('9artifacts.tour') === '1';
+  } catch { return !!set; } /* private mode */
+}
+
+async function waitFor(fn, ms = 5000) {
+  for (let t = 0; t < ms; t += 50) {
+    const v = fn();
+    if (v) return v;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  return null;
+}
+
+async function clearFilters() {
+  if (!state.q && !state.tag && !$('#search').value) return;
+  $('#search').value = '';
+  state.q = '';
+  state.tag = '';
+  await loadGallery();
+}
+
+/* The artifact to open: one with history if there is one. */
+function tourCard() {
+  const html = state.artifacts.filter((a) => fileKind(a.entry) === 'html');
+  const a = html.find((x) => x.version > 1) || html[0] || state.artifacts[0];
+  return a && $(`.card[href="/a/${a.id}"], .row[href="/a/${a.id}"]`);
+}
+
+const TOUR = [
+  { title: 'Welcome to the 9artifacts demo',
+    text: 'AI agents publish their work here; you review it, comment and share it. This 60-second tour drives the real app for you.' },
+  { at: () => $('.cards .card, .cards .row'), title: 'Every card is a live artifact',
+    text: 'Dashboards, reports, slide decks, diagrams: HTML, Markdown, PDF or images an agent published over MCP or the CLI. The thumbnail is the real page.' },
+  { at: () => $('.search'), title: 'Find anything', text: 'Search titles and tags. Press / from anywhere.',
+    play: async (t) => { await t.type($('#search'), 'release'); await sleep(1500); await t.type($('#search'), ''); } },
+  { at: () => $('#tag-chips'), title: 'Tags keep it tidy', text: 'Agents tag what they publish, so the gallery sorts itself.',
+    play: async (t) => {
+      const c = document.querySelectorAll('.chip')[1];
+      if (!c) return;
+      await t.click(c);
+      await sleep(1500);
+      await t.click($('.chip'));
+    } },
+  { prep: async (t) => {
+      await clearFilters();
+      const c = await waitFor(tourCard);
+      if (c) { await t.click(c); await waitFor(() => $('#stage')); await sleep(500); }
+    },
+    at: () => $('#stage'), title: 'Open one',
+    text: 'It runs in a sandbox on its own domain: scripts, charts and all, with no way to reach your session.' },
+  { prep: (t) => t.click($('#btn-info')), at: () => $('#drawer'), title: 'Versions, not copies',
+    text: 'When the agent publishes again, the link stays the same and open tabs refresh by themselves. Every earlier version is one click away.' },
+  { prep: (t) => t.click($('#btn-comments')), at: () => $('#drawer'), title: 'Review it like a pull request',
+    text: 'Select text and comment, then tell your agent “fix the comments”. It reads them over MCP, publishes the next version and resolves them.' },
+  { prep: async () => { if (viewer && viewer.drawer) toggleDrawer(viewer.drawer); },
+    at: () => $('.bar-actions'), title: 'Share when it is ready',
+    text: 'The owner gets a Share button here: a public link that expires after 1 hour to 30 days, with an optional password or viewer limit. Revoke it any time.' },
+  { prep: async (t) => {
+      const back = $('#view-detail a[href="/"]');
+      if (back) await t.click(back);
+      await waitFor(() => !$('#view-gallery').hidden && $('#theme-pick'));
+    },
+    at: () => $('#theme-pick'), title: 'Make it yours',
+    text: 'Six built-in themes, or ask your agent to write one. Every colour, font and logo is a file you own.',
+    play: async (t) => {
+      const pick = $('#theme-pick');
+      if (!pick) return;
+      await t.point(pick);
+      tour.themed = true;
+      for (const name of ['cute', 'cyberpunk', 'edgy', 'terminal', tour.theme || 'default']) {
+        if (!state.me.themes.includes(name)) continue;
+        t.live();
+        pick.value = name;
+        applyTheme(name);
+        await sleep(1400);
+      }
+    } },
+];
+
+/* The pointer: every step checks it is still the current one. */
+function tourRunner(gen) {
+  const live = () => { if (!tour || tour.gen !== gen) throw CANCEL; };
+  const point = async (el) => {
+    live();
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    moveCursor(r.left + Math.min(r.width / 2, 120), r.top + Math.min(r.height / 2, 40));
+    await sleep(800);
+    live();
+  };
+  return {
+    live, point,
+    async click(el) {
+      await point(el);
+      if (!el) return;
+      tour.cursor.classList.remove('tap');
+      void tour.cursor.offsetWidth;
+      tour.cursor.classList.add('tap');
+      await sleep(160);
+      live();
+      el.click();
+      await sleep(300);
+    },
+    async type(input, text) {
+      await point(input);
+      input.value = '';
+      input.dispatchEvent(new Event('input'));
+      for (const ch of text) {
+        await sleep(120);
+        live();
+        input.value += ch;
+        input.dispatchEvent(new Event('input'));
+      }
+      await sleep(400);
+    },
+  };
+}
+
+function moveCursor(x, y) {
+  tour.cursor.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+}
+
+function startTour() {
+  if (tour) endTour();
+  closeOnboard();
+  const cursor = h('div', { class: 'tour-cursor', 'aria-hidden': 'true' });
+  cursor.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M4 2.5 19.5 13l-7 1.2 3.9 7.3-2.7 1.4-3.9-7.3L4.6 20z" fill="#111" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+  tour = {
+    i: -1, gen: 0, target: null, themed: false, cursor,
+    spot: h('div', { class: 'tour-spot' }),
+    tip: h('div', { class: 'tour-tip', role: 'dialog', 'aria-live': 'polite' }),
+  };
+  try { tour.theme = localStorage.getItem('9artifacts.theme') || ''; } catch { tour.theme = ''; }
+  tour.layer = h('div', { class: 'tour' }, tour.spot, tour.tip);
+  document.body.append(tour.layer, cursor);
+  document.body.classList.add('touring');
+  moveCursor(innerWidth / 2, innerHeight * 0.7);
+  tour.timer = setInterval(placeTour, 200);
+  addEventListener('resize', placeTour);
+  tourStep(0);
+}
+
+async function tourStep(i) {
+  if (!tour) return;
+  if (i >= TOUR.length) { endTour(); openOnboard(); return; }
+  const gen = ++tour.gen;
+  const s = TOUR[i];
+  const t = tourRunner(gen);
+  tour.i = i;
+  tour.tip.classList.remove('show');
+  try {
+    if (s.prep) await s.prep(t);
+    t.live();
+    tour.target = s.at ? await waitFor(s.at, 4000) : null;
+    t.live();
+    const r = tour.target && tour.target.getBoundingClientRect();
+    if (r && (r.top < 60 || r.bottom > innerHeight)) tour.target.scrollIntoView({ block: 'center', behavior: REDUCED ? 'auto' : 'smooth' });
+    paintTip(s, i);
+    placeTour();
+    tour.tip.classList.add('show');
+    tour.tip.querySelector('.btn.primary').focus({ preventScroll: true });
+    if (s.play) await s.play(t);
+  } catch (e) { if (e !== CANCEL) throw e; }
+}
+
+function paintTip(s, i) {
+  const last = i === TOUR.length - 1;
+  tour.tip.textContent = '';
+  tour.tip.append(
+    h('p', { class: 'tour-count', text: i ? `${i} of ${TOUR.length - 1}` : 'Guided tour' }),
+    h('h2', { text: s.title }),
+    h('p', { text: s.text }),
+    h('div', { class: 'tour-nav' },
+      h('button', { class: 'btn ghost sm', type: 'button', text: i ? 'Skip' : 'Not now', onclick: () => endTour() }),
+      h('span', { class: 'spacer' }),
+      h('button', { class: 'btn primary sm', type: 'button', text: i ? (last ? 'Finish' : 'Next') : 'Start the tour', onclick: () => tourStep(i + 1) })));
+}
+
+/* Spotlight the target and put the tip where it fits: below, above, to the
+   left, or at the screen edge away from it. */
+function placeTour() {
+  if (!tour) return;
+  const { spot, tip, target } = tour;
+  const pad = 8;
+  const m = 16;
+  let r = target && target.isConnected ? target.getBoundingClientRect() : null;
+  if (r && (!r.width || !r.height)) r = null;
+  if (r) {
+    const top = Math.max(r.top - pad, 4);
+    const left = Math.max(r.left - pad, 4);
+    Object.assign(spot.style, { top: `${top}px`, left: `${left}px`,
+      width: `${Math.min(r.right + pad, innerWidth - 4) - left}px`, height: `${Math.min(r.bottom + pad, innerHeight - 4) - top}px` });
+  } else Object.assign(spot.style, { top: `${innerHeight / 2}px`, left: `${innerWidth / 2}px`, width: '0px', height: '0px' });
+  const tw = tip.offsetWidth;
+  const th = tip.offsetHeight;
+  let x = (innerWidth - tw) / 2;
+  let y = (innerHeight - th) / 2;
+  if (r) {
+    x = Math.min(Math.max(r.left + r.width / 2 - tw / 2, m), innerWidth - tw - m);
+    if (innerHeight - r.bottom - pad > th + 2 * m) y = r.bottom + pad + m;
+    else if (r.top - pad > th + 2 * m) y = r.top - pad - m - th;
+    else if (r.left - pad > tw + 2 * m) { x = r.left - pad - m - tw; y = Math.min(Math.max(r.top + 40, m), innerHeight - th - m); }
+    else y = r.top + r.height / 2 > innerHeight / 2 ? m : innerHeight - th - m;
+  }
+  tip.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+}
+
+function endTour() {
+  if (!tour) return;
+  const t = tour;
+  tour = null;
+  clearInterval(t.timer);
+  removeEventListener('resize', placeTour);
+  t.layer.remove();
+  t.cursor.remove();
+  document.body.classList.remove('touring');
+  if (t.themed) {
+    const name = state.me.themes.includes(t.theme) ? t.theme : 'default';
+    applyTheme(name);
+    if ($('#theme-pick')) $('#theme-pick').value = name;
+  }
+  if (!$('#view-gallery').hidden) clearFilters();
+  tourSeen(true);
+  paintOnboardButton();
+}
+
+/* ---------- run your own ---------- */
+const INSTALL = [
+  ['Ask your agent (easiest): paste into Claude Code, Codex or Cursor', 'Install 9artifacts for me by following https://9artifacts.com/install.md'],
+  ['Or on a VPS, with automatic HTTPS', 'curl -fsSL https://9artifacts.com/install.sh \\\n  | sudo sh -s -- --domain art.example.com --content-domain art-content.example.com --email you@example.com'],
+  ['Or try it locally with Docker', 'docker run -d --name 9artifacts -p 127.0.0.1:8080:8080 -v 9artifacts:/data \\\n  -e NINEARTIFACTS_URL=http://localhost:8080 ghcr.io/dinhkarate/9artifacts\ndocker logs 9artifacts   # prints the first-run link'],
+];
+
+function openOnboard() {
+  if ($('#onboard')) return;
+  const box = h('div', { class: 'onboard', id: 'onboard', onclick: (e) => { if (e.target === box) closeOnboard(); } },
+    h('div', { class: 'onboard-card', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'onboard-title' },
+      h('button', { class: 'icon-btn onboard-close', type: 'button', 'aria-label': 'Close', icon: 'close', onclick: closeOnboard }),
+      h('p', { class: 'demo-kicker', text: 'Free and open source · MIT' }),
+      h('h2', { id: 'onboard-title', text: 'Run your own 9artifacts' }),
+      h('p', { class: 'muted', text: 'One small Go binary that uses about 15 MB of RAM. Your artifacts stay on your server, behind your passkey.' }),
+      h('ol', { class: 'onboard-steps' }, INSTALL.map(([label, text]) => h('li', {}, snippetEl(label, text)))),
+      h('div', { class: 'onboard-links' },
+        h('a', { class: 'btn primary', href: 'https://github.com/dinhkarate/9artifacts', target: '_blank', rel: 'noopener' }, 'Get it on GitHub', icon('arrow')),
+        h('a', { class: 'btn', href: 'https://github.com/dinhkarate/9artifacts/blob/main/docs/deploy.md', target: '_blank', rel: 'noopener', text: 'Deploy guide' }),
+        h('span', { class: 'spacer' }),
+        h('button', { class: 'btn ghost', type: 'button', onclick: () => { closeOnboard(); startTour(); } }, icon('play'), 'Replay the tour'))));
+  document.body.append(box);
+  $('.onboard-close').focus();
+}
+
+function closeOnboard() {
+  const box = $('#onboard');
+  if (box) box.remove();
+}
+
+/* After the tour, a guest keeps a way to start their own while viewing an
+   artifact; the gallery has it in the banner. */
+function paintOnboardButton() {
+  let b = $('#onboard-fab');
+  if (!b && guest() && tourSeen()) {
+    b = h('button', { class: 'btn primary onboard-fab', id: 'onboard-fab', type: 'button', onclick: openOnboard }, 'Run your own', icon('arrow'));
+    document.body.append(b);
+  }
+  if (b) b.hidden = !guest() || location.pathname === '/';
+}
+
+addEventListener('keydown', (e) => {
+  if (tour) {
+    if (e.key === 'Escape') endTour();
+    else if (e.key === 'ArrowRight') tourStep(tour.i + 1);
+    else return;
+  } else if (e.key === 'Escape' && $('#onboard')) closeOnboard();
+  else return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+}, true);
 
 /* ---------- keyboard ---------- */
 document.addEventListener('keydown', (e) => {

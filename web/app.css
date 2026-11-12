@@ -97,6 +97,12 @@ label{display:block;font-size:13px;font-weight:600;color:var(--text-2);margin:14
 .thumb{position:relative;aspect-ratio:16/10;overflow:hidden;background:var(--thumb-bg);border-bottom:1px solid var(--border)}
 .thumb iframe{position:absolute;top:0;left:0;width:1280px;height:800px;border:0;transform-origin:0 0;pointer-events:none;background:#fff}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb iframe,.thumb img{opacity:0;transition:opacity .35s}
+.thumb.ready iframe,.thumb.ready img{opacity:1}
+.thumb:not(.ready)::before{content:"";position:absolute;inset:0;background-color:var(--thumb-bg);background-image:linear-gradient(100deg,transparent 30%,color-mix(in srgb,var(--surface) 65%,transparent) 50%,transparent 70%);background-size:200% 100%;animation:shimmer 1.3s linear infinite}
+@keyframes shimmer{from{background-position:100% 0}to{background-position:-100% 0}}
+.cards.grid .card{animation:rise .5s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:calc(var(--i,0) * 45ms)}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
 .thumb-file{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);font:700 13px var(--font-mono)}
 .thumb-file .icon{width:34px;height:34px}
 .card-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px}
@@ -147,7 +153,6 @@ label{display:block;font-size:13px;font-weight:600;color:var(--text-2);margin:14
 .save-status{font-size:13px}
 .hint{font-size:13.5px;color:var(--text-2);background:var(--surface-2);border-radius:var(--radius-sm);padding:10px 12px;margin:14px 0 0}
 .hint .icon{width:14px;height:14px;vertical-align:-2px}
-.demo-banner{margin:0 0 16px}
 .drawer-body .btn.block{margin-top:16px;height:40px}
 .file-list,.version-list,.share-list,.plain-list{list-style:none;margin:0;padding:0}
 .file-list li{display:flex;align-items:center;gap:6px;border-radius:var(--radius-sm)}
@@ -223,3 +228,54 @@ label{display:block;font-size:13px;font-weight:600;color:var(--text-2);margin:14
 .comment-body{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}
 .comment-resolution{margin:6px 0 0;color:var(--accent)}
 .icon-btn.sm{width:22px;height:22px}
+
+/* demo: banner, guided tour, run-your-own */
+.demo-banner{display:flex;align-items:center;gap:20px 28px;flex-wrap:wrap;margin:0 0 26px;padding:22px 24px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow-sm);color:var(--text-2)}
+.demo-copy{flex:1;min-width:min(100%,320px)}
+.demo-copy h2{font-size:24px;letter-spacing:-.02em;color:var(--text);margin:6px 0 4px}
+.demo-copy p{margin:0}
+.demo-kicker{display:inline-flex;align-items:center;gap:8px;margin:0;font:700 11.5px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.demo-kicker strong{font-weight:700}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:live 2s ease-out infinite}
+@keyframes live{from{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}to{box-shadow:0 0 0 9px transparent}}
+.demo-actions{display:flex;gap:10px;flex-wrap:wrap}
+.demo-actions .btn{height:40px}
+.tour{position:fixed;inset:0;z-index:200}
+.tour-spot{position:fixed;border-radius:var(--radius);box-shadow:0 0 0 200vmax rgba(12,12,10,.58),0 0 0 2px var(--accent);pointer-events:none;transition:top .45s,left .45s,width .45s,height .45s;transition-timing-function:cubic-bezier(.3,.7,.2,1)}
+.tour-tip{position:fixed;top:0;left:0;width:min(360px,calc(100vw - 32px));padding:18px 18px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);opacity:0;transition:opacity .25s,transform .45s cubic-bezier(.3,.7,.2,1)}
+.tour-tip.show{opacity:1}
+.tour-tip h2{font-size:18px;margin:2px 0 6px}
+.tour-tip p{margin:0;color:var(--text-2);font-size:14px;line-height:1.55}
+.tour-tip .tour-count{margin-bottom:4px;font:700 11px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.tour-nav{display:flex;align-items:center;gap:8px;margin-top:14px}
+.tour-cursor{position:fixed;top:0;left:0;z-index:210;width:26px;height:26px;margin:-3px 0 0 -4px;pointer-events:none;filter:drop-shadow(0 3px 6px rgba(0,0,0,.35));transition:transform .75s cubic-bezier(.3,.7,.2,1)}
+.tour-cursor svg{display:block}
+.tour-cursor::after{content:"";position:absolute;left:-12px;top:-12px;width:30px;height:30px;border-radius:50%;border:2px solid var(--accent);opacity:0}
+.tour-cursor.tap::after{animation:tap .5s ease-out}
+@keyframes tap{from{opacity:.9;transform:scale(.3)}to{opacity:0;transform:scale(1.5)}}
+.onboard{position:fixed;inset:0;z-index:220;display:grid;place-items:center;padding:16px;background:rgba(12,12,10,.5);backdrop-filter:blur(4px);animation:fade .2s}
+@keyframes fade{from{opacity:0}}
+.onboard-card{position:relative;width:min(600px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:28px 26px 22px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);animation:pop .25s ease-out}
+.onboard-card h2{font-size:24px;letter-spacing:-.02em;margin:8px 0 6px}
+.onboard-card>.muted{margin:0}
+.onboard-close{position:absolute;top:12px;right:12px}
+.onboard-steps{list-style:none;counter-reset:step;margin:18px 0 0;padding:0;display:grid;gap:12px}
+.onboard-steps li{counter-increment:step;position:relative;padding-left:36px}
+.onboard-steps li::before{content:counter(step);position:absolute;left:0;top:8px;width:24px;height:24px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font:700 12px/24px var(--font-ui);text-align:center}
+.onboard-steps .snippet pre{background:var(--surface-2);border-color:transparent;word-break:normal;overflow-wrap:anywhere}
+.onboard-links{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:20px}
+.onboard-fab{position:fixed;right:20px;bottom:20px;z-index:30;height:42px;padding:0 18px;border-radius:999px;box-shadow:var(--shadow-lg);animation:pop .3s ease-out}
+.touring .onboard-fab{display:none}
+@media (max-width:640px){
+  .demo-banner{padding:18px 16px}
+  .demo-copy h2{font-size:20px}
+  .demo-actions,.demo-actions .btn{width:100%}
+  .onboard-card{padding:24px 18px 18px}
+  .onboard-steps li{padding-left:0}
+  .onboard-steps li::before{display:none}
+  .onboard-fab{right:12px;bottom:12px}
+}
+@media (prefers-reduced-motion:reduce){
+  .cards .card,.thumb::before,.live-dot,.toast,.onboard,.onboard-card,.onboard-fab{animation:none!important}
+  .tour-spot,.tour-tip,.tour-cursor{transition:none!important}
+}

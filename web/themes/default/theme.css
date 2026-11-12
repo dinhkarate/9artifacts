@@ -9,9 +9,9 @@
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   --font-size: 15px;
 
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 18px;
+  --radius-sm: 9px;
+  --radius: 14px;
+  --radius-lg: 20px;
 
   --bg: #f6f5f1;
   --surface: #ffffff;
@@ -37,9 +37,9 @@
   --kind-pdf: #b4441f;  --kind-pdf-bg: #f7e6df;
   --kind-img: #8a5a00;  --kind-img-bg: #f5ecd8;
 
-  --shadow-sm: 0 1px 2px rgba(29,28,26,.08);
-  --shadow: 0 6px 20px -8px rgba(29,28,26,.18);
-  --shadow-lg: 0 18px 50px -12px rgba(29,28,26,.28);
+  --shadow-sm: 0 1px 2px rgba(29,28,26,.06), 0 2px 8px -4px rgba(29,28,26,.08);
+  --shadow: 0 10px 28px -12px rgba(29,28,26,.22);
+  --shadow-lg: 0 24px 60px -18px rgba(29,28,26,.32);
 }
 
 @media (prefers-color-scheme: dark){
@@ -70,3 +70,18 @@
     --shadow-lg: 0 18px 50px -12px rgba(0,0,0,.7);
   }
 }
+
+/* A soft wash of colour behind the page, cards that lift, a calmer accent. */
+body{background:
+  radial-gradient(1100px 520px at 6% -10%, color-mix(in srgb,var(--accent) 12%,transparent), transparent 70%),
+  radial-gradient(900px 480px at 100% -5%, color-mix(in srgb,var(--kind-md) 9%,transparent), transparent 70%),
+  var(--bg);background-attachment:fixed}
+.brand img{filter:drop-shadow(0 3px 8px color-mix(in srgb,var(--accent) 35%,transparent))}
+.gallery-head h1{font-size:30px;font-weight:750;letter-spacing:-.03em}
+.chip.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary{box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 6px 16px -8px color-mix(in srgb,var(--accent) 70%,transparent)}
+.card{box-shadow:var(--shadow-sm)}
+.card:hover{border-color:color-mix(in srgb,var(--accent) 35%,var(--border));box-shadow:var(--shadow-lg);transform:translateY(-4px)}
+.thumb{margin:7px 7px 0;border:1px solid var(--border);border-radius:calc(var(--radius) - 5px)}
+.card-body{padding:12px 15px 15px}
+.demo-banner{background:linear-gradient(120deg,color-mix(in srgb,var(--accent) 9%,var(--surface)),var(--surface) 55%);border-color:color-mix(in srgb,var(--accent) 20%,var(--border))}
