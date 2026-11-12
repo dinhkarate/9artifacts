@@ -140,7 +140,7 @@ describe('security headers and logging', () => {
     expect(r.headers.get('X-Frame-Options')).toBe('DENY');
     expect(r.headers.get('Referrer-Policy')).toBe('no-referrer');
     expect(r.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
-    expect(r.headers.get('Cache-Control')).toBe('no-store');
+    expect(r.headers.get('Cache-Control')).toBe('no-store, no-transform');
     expect(r.headers.get('Strict-Transport-Security')).toBeNull();
     // Each response gets a new nonce.
     const again = (await c.fetch('/settings')).headers.get('Content-Security-Policy');

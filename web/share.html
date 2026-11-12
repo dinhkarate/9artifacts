@@ -40,7 +40,7 @@
       {{else if eq .Kind "pdf"}}<iframe src="{{.Src}}" title="{{.Title}}" referrerpolicy="no-referrer"></iframe>
       {{else if eq .Kind "text"}}<iframe src="{{.Src}}" title="{{.Title}}" referrerpolicy="no-referrer"></iframe>
       {{else if eq .Kind "file"}}<div class="stage-empty"><h2>{{.Title}}</h2><p class="muted">No preview for this file — use Files to download.</p></div>
-      {{else}}<iframe src="{{.Src}}" title="{{.Title}}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads" referrerpolicy="no-referrer"></iframe>{{end}}
+      {{else}}<iframe src="{{.Src}}" title="{{.Title}}" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals allow-downloads" allow="fullscreen" referrerpolicy="no-referrer"></iframe>{{end}}
     </main>
   </div>
 </div>

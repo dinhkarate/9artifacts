@@ -83,7 +83,7 @@ describe('selection script (port of TestSelectionScriptOnlyInOwnerViewer)', () =
     expect(await has(`/s/${sh.token}/f/index.html?vc=1`)).toBe(false);
     const r = await c.fetch(base + 'index.html?vc=1');
     expect(r.headers.get('Content-Security-Policy')).toMatch(/^sandbox /);
-    expect(r.headers.get('Cache-Control')).toBe('no-store');
+    expect(r.headers.get('Cache-Control')).toBe('no-store, no-transform');
     expect(await r.text()).toContain(`parent.postMessage({artifacts:"selection",text:s},"${APP}")`);
   });
 

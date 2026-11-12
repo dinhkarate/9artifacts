@@ -149,7 +149,7 @@ function handleIndex(c: Ctx): Response {
   const nonce = b64url(randomBytes(16));
   const html = renderTemplate(INDEX_HTML, { Name: c.name, Version: c.version, Nonce: nonce });
   const resp = new Response(html, {
-    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Security-Policy': appCSP(c, `'nonce-${nonce}'`) },
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, no-transform', 'Content-Security-Policy': appCSP(c, `'nonce-${nonce}'`) },
   });
   return passkeyOnly.transform(resp);
 }

@@ -620,7 +620,7 @@ function paintStage() {
   viewer.downloadLink.href = `/api/artifacts/${a.id}/download/${name.split('/').map(encodeURIComponent).join('/')}?v=${v.n}`;
   if (kind === 'html' || kind === 'markdown') {
     const src = viewSrc(v.viewBase, name);
-    stage.append(h('iframe', { src: src + (src.includes('?') ? '&' : '?') + 'vc=1', sandbox: SANDBOX, referrerpolicy: 'no-referrer', title: a.title }));
+    stage.append(h('iframe', { src: src + (src.includes('?') ? '&' : '?') + 'vc=1', sandbox: SANDBOX, allow: 'fullscreen', referrerpolicy: 'no-referrer', title: a.title }));
   }
   else if (kind === 'pdf' || kind === 'text') stage.append(h('iframe', { src: fileUrl(v.viewBase, name), referrerpolicy: 'no-referrer', title: a.title, class: kind === 'text' ? 'text-frame' : '' }));
   else if (kind === 'image') stage.append(h('div', { class: 'stage-image' }, h('img', { src: fileUrl(v.viewBase, name), alt: a.title })));

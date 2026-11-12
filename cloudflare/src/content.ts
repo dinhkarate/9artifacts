@@ -201,7 +201,7 @@ function contentHeaders(c: Ctx, h: Headers, sandbox: boolean): void {
     h.set('Content-Security-Policy', ancestors);
   }
   h.set('Cross-Origin-Resource-Policy', 'cross-origin');
-  h.set('Cache-Control', 'private, max-age=3600');
+  h.set('Cache-Control', 'private, max-age=3600, no-transform');
 }
 
 /**
@@ -237,7 +237,7 @@ export async function serveVersionFile(
     if (!obj) return notFound();
     contentHeaders(c, h, true);
     h.set('Content-Type', contentType(name));
-    h.set('Cache-Control', 'no-store');
+    h.set('Cache-Control', 'no-store, no-transform');
     const page = concat([new Uint8Array(await obj.arrayBuffer()), enc.encode(pickScript(c))]);
     return new Response(c.req.method === 'HEAD' ? null : page, { headers: h });
   }
@@ -374,6 +374,6 @@ export async function handleSharePage(c: Ctx, token: string): Promise<Response> 
     data.Expires = r.share!.expiresAt.slice(0, 16).replace('T', ' ') + ' UTC';
   }
   const html = renderTemplate(SHARE_HTML, data);
-  return new Response(html, { status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+  return new Response(html, { status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store, no-transform' } });
 }
 
