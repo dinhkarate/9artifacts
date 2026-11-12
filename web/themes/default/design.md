@@ -95,7 +95,8 @@ Rules:
   `node bad` (it pulses red), a degraded one `node warn`. Stagger lights
   and extra packets with `style="--d:.6s"` so they never blink in step.
 - State is information, not decoration: blink only what is really up, slow
-  or down, and say which in the legend.
+  or down, and say which in the legend (`<i class="led warn"></i>slow`
+  works there too).
 - One accent colour and the house tokens. The kit already stops every
   animation under `prefers-reduced-motion` and in print.
 

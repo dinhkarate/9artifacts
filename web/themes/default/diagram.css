@@ -110,6 +110,7 @@
   font-size: 11px; letter-spacing: .03em;
 }
 .legend i { display: inline-block; width: 18px; height: 2px; margin-right: 6px; vertical-align: middle; background: color-mix(in srgb, var(--ink) 50%, transparent); }
+.legend i.led { position: static; width: 7px; height: 7px; background: var(--c); }
 .legend i.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 3px var(--ink-soft); }
 
 @keyframes d-blink {
