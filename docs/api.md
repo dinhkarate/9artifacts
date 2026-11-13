@@ -85,6 +85,7 @@ state (`up`, `degraded`, `down`, `live`); a slide deck is split by `[Slide N]`.
 |---|---|
 | an artifact | `GET /api/artifacts/{id}/text`, or `GET /a/{id}` with `Accept: text/markdown` (token required, except on a demo) |
 | a share link | `GET /s/{token}?format=md`, or `Accept: text/markdown`. Counts as a view; a password-protected link answers `401` |
+| over MCP | `read_artifact` with `as_text: true` |
 | the server itself | `GET /llms.txt`: what this server is and the URLs above, filled in |
 
 Only the first 512 kB of the entry file is read. PDFs and images have no text form.

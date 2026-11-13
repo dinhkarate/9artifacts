@@ -91,6 +91,9 @@ describe('MCP', () => {
     expect(a.files.map((f: any) => f.name).sort()).toEqual(['index.html', 'style.css']);
     expect(await (await c.fetch(pathOf(a.viewBase) + 'style.css')).text()).toBe('h1{}');
 
+    const asText = await tool('read_artifact', { id, as_text: true });
+    expect(asText.text).toContain('- Files: ');
+    expect(asText.text).not.toContain('<h1>');
     const read = await tool('read_artifact', { id });
     expect(read.text).toBe('Artifact "Agent dashboard" v2, file index.html (files: index.html, style.css)\n\n<h1>v2</h1>');
     const readOld = await tool('read_artifact', { id, version: 1, file: 'style.css' });

@@ -165,8 +165,9 @@ var (
 			}, "files")},
 		{"name": "list_artifacts", "description": "List artifacts, newest first. query matches the title, tags and the text of the page.",
 			"inputSchema": schema(map[string]any{"query": strProp, "tag": strProp, "limit": map[string]any{"type": "integer"}})},
-		{"name": "read_artifact", "description": "Read the text content of an artifact file (default: the entry file of the latest version), e.g. to edit and republish it.",
-			"inputSchema": schema(map[string]any{"id": strProp, "file": strProp, "version": map[string]any{"type": "integer"}}, "id")},
+		{"name": "read_artifact", "description": "Read an artifact file (default: the entry file of the latest version). The source comes back as is, e.g. to edit and republish it; set as_text to read what the page says instead: Markdown without markup, with diagrams listed as nodes and links.",
+			"inputSchema": schema(map[string]any{"id": strProp, "file": strProp, "version": map[string]any{"type": "integer"},
+				"as_text": map[string]any{"type": "boolean", "description": "Return the text form of the entry file instead of its source"}}, "id")},
 		{"name": "share_artifact", "description": "Create a PUBLIC expiring link anyone can open. Only call this when the user explicitly asks to share publicly.",
 			"inputSchema": schema(map[string]any{"id": strProp, "ttl": map[string]any{"type": "string", "enum": []string{"1h", "24h", "7d", "30d"}},
 				"note":      map[string]any{"type": "string", "description": "Public note shown on the share page"},
@@ -284,6 +285,7 @@ func (s *Server) mcpCall(name string, raw json.RawMessage) (string, error) {
 			ID      string `json:"id"`
 			File    string `json:"file"`
 			Version int    `json:"version"`
+			AsText  bool   `json:"as_text"`
 		}
 		_ = json.Unmarshal(raw, &a)
 		var v *Version
@@ -299,6 +301,9 @@ func (s *Server) mcpCall(name string, raw json.RawMessage) (string, error) {
 		})
 		if v == nil {
 			return "", errors.New("artifact or version not found")
+		}
+		if a.AsText {
+			return s.artifactText(a.ID, title, v, nil), nil
 		}
 		file := a.File
 		if file == "" {

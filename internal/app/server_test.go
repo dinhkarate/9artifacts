@@ -346,6 +346,10 @@ func TestMCP(t *testing.T) {
 	if !strings.Contains(got, "<h1>v2</h1>") || !strings.Contains(got, "a.css") {
 		t.Fatalf("read after keep-update: %s", got)
 	}
+	asText := call(`{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"read_artifact","arguments":{"id":"` + id + `","as_text":true}}}`)
+	if got := asText["result"].(map[string]any)["content"].([]any)[0].(map[string]any)["text"].(string); !strings.Contains(got, "# v2") || strings.Contains(got, "<h1>") {
+		t.Fatalf("read as text: %s", got)
+	}
 	bad := call(`{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"share_artifact","arguments":{"id":"` + id + `","ttl":"99d"}}}`)
 	if bad["result"].(map[string]any)["isError"] != true {
 		t.Fatalf("bad ttl not an error: %v", bad)

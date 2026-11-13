@@ -245,7 +245,7 @@ function tipText(n: Node): string {
 const utcMinute = (iso: string) => iso.slice(0, 16).replace('T', ' ') + ' UTC';
 
 /** The text form of one version: a short header, then the entry file as text. */
-async function artifactText(c: Ctx, id: string, title: string, v: Version, meta: string[]): Promise<string> {
+export async function artifactText(c: Ctx, id: string, title: string, v: Version, meta: string[]): Promise<string> {
   let head = `- Version: ${v.n} (${utcMinute(v.createdAt)})`;
   if (v.message) head += ', ' + v.message;
   let b = `# ${title}\n\n${head}\n- Files: ${v.files.map((f) => `${f.name} (${humanBytes(f.size)})`).join(', ')}\n`;

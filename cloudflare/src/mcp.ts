@@ -9,6 +9,7 @@ import type { Ctx } from './env';
 import { DESIGN_MD, DIAGRAM_CSS, TEMPLATES, TEMPLATE_FILES } from './generated/web';
 import { resourceMetadataURL } from './oauth';
 import { fileKey, getArtifact, getVersion } from './store';
+import { artifactText } from './text';
 import { MAX_JSON_BODY, type Meta, VersionWriter, decodeJSONFiles } from './upload';
 import { HttpError, cleanName, dec, field, goQuote, json, newID, readBody } from './util';
 
@@ -58,8 +59,12 @@ export const MCP_TOOLS = [
   { name: 'list_artifacts', description: 'List artifacts, newest first.', inputSchema: schema({ query: strProp, tag: strProp, limit: { type: 'integer' } }) },
   {
     name: 'read_artifact',
-    description: 'Read the text content of an artifact file (default: the entry file of the latest version), e.g. to edit and republish it.',
-    inputSchema: schema({ id: strProp, file: strProp, version: { type: 'integer' } }, 'id'),
+    description:
+      'Read an artifact file (default: the entry file of the latest version). The source comes back as is, e.g. to edit and republish it; set as_text to read what the page says instead: Markdown without markup, with diagrams listed as nodes and links.',
+    inputSchema: schema(
+      { id: strProp, file: strProp, version: { type: 'integer' }, as_text: { type: 'boolean', description: 'Return the text form of the entry file instead of its source' } },
+      'id',
+    ),
   },
   {
     name: 'share_artifact',
@@ -233,6 +238,7 @@ async function call(c: Ctx, name: string, a: Record<string, unknown>): Promise<s
       const id = s(a, 'id');
       const [art, v] = await Promise.all([getArtifact(c, id), getVersion(c, id, n(a, 'version'))]);
       if (!art || !v) throw new HttpError(404, 'artifact or version not found');
+      if (field(a, 'as_text') === true) return artifactText(c, id, art.title, v, []);
       const file = s(a, 'file') || v.entry;
       const clean = cleanName(file);
       const names = v.files.map((f) => f.name);
