@@ -88,6 +88,13 @@ version with the same id, then `resolve_comment` each one with a one-line note o
 (`POST /api/artifacts/ID/comments/CID/resolve {"note": "..."}`). A publish result that says
 "open review comments" is a reminder to do this.
 
+## Reading an artifact
+
+To read what a page says (yours or one somebody shared), fetch its text form instead of the
+HTML: `curl -H "Authorization: Bearer $NINEARTIFACTS_TOKEN" "$NINEARTIFACTS_URL/api/artifacts/ID/text"`,
+or add `?format=md` to a share link. Diagrams come back as a list of nodes and links with their
+states. `$NINEARTIFACTS_URL/llms.txt` describes the server.
+
 ## Rules
 
 - Default to the private URL. Never create a public link on your own.

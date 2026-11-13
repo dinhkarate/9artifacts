@@ -443,15 +443,20 @@ func (s *Server) handleSharePage(w http.ResponseWriter, r *http.Request) {
 		return
 	case r.Method == http.MethodPost:
 		status = http.StatusMethodNotAllowed
-	case !isPreviewBot(r.UserAgent()):
+	case wantsText(r) || !isPreviewBot(r.UserAgent()):
 		// Chat apps fetch the page to build a link preview; that must not use
 		// up a view. Only the page shell (title, note, file names) is exempt:
-		// files are always counted, so a spoofed User-Agent gains nothing.
+		// files and the text form are always counted, so a spoofed
+		// User-Agent gains nothing.
 		if !s.recordVisit(r, token, id, title, v, sh) {
 			status = 410
 		}
 	}
 	data["Status"] = status
+	if wantsText(r) {
+		s.shareText(w, status, id, title, v, sh)
+		return
+	}
 	if status == 200 {
 		src := base + v.Entry
 		if fileKind(v.Entry) == "markdown" {

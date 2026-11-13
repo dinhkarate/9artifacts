@@ -13,6 +13,7 @@
 
 - [Agent skill](https://github.com/dinhkarate/9artifacts/blob/main/skills/9artifacts/SKILL.md): how an agent publishes, updates, shares and handles review comments
 - [REST API](https://github.com/dinhkarate/9artifacts/blob/main/docs/api.md)
+- Every server describes itself at `https://<your-host>/llms.txt` and serves any artifact or share link as text for agents (`Accept: text/markdown` or `?format=md`); diagrams come back as nodes and links
 - MCP endpoint: `https://<your-host>/mcp` (bearer token, or OAuth for remote connectors). Tools: get_design_guide, publish_artifact, list_artifacts, read_artifact, share_artifact, revoke_share, restore_version, list_comments, resolve_comment, delete_artifact
 
 ## Optional

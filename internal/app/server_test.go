@@ -409,6 +409,64 @@ func TestSearchInsideContent(t *testing.T) {
 	}
 }
 
+func TestHTMLText(t *testing.T) {
+	got := htmlText(textFixture)
+	if got != textFixtureWant {
+		t.Fatalf("htmlText:\n%s\n--- want:\n%s", got, textFixtureWant)
+	}
+}
+
+// The same fixture is in cloudflare/test/text.test.ts.
+const textFixture = `<!doctype html><html><head><title>T</title><style>.x{}</style></head><body><main>
+<h1>Gateway &amp; friends</h1><p>Hello <b>world</b>,<br>second line. <a href="https://example.com/x">docs</a></p>
+<ul><li>one<li>two <code>x=1</code></ul>
+<table><tr><th>Item<th>Value</tr><tr><td>A</td><td>42</td></tr></table>
+<pre>  keep
+    indent</pre>
+<div class="d"><div class="flow">
+<div class="node" tabindex="0"><i class="led"></i><svg viewBox="0 0 1 1"><path d="M0 0"/></svg><div class="n">Client</div><div class="a">10.0.0.1</div><div class="tip"><b>Caller</b>Sends requests.<code>POST /v1</code></div></div>
+<div class="link live"><span class="lbl">HTTPS</span><span class="line"><i class="pkt"></i></span><div class="tip">TLS ends here.</div></div>
+<div class="node mark"><i class="led warn"></i><div class="n">Gateway</div></div>
+</div><div class="drop live"><span class="line"></span></div>
+<div class="flow end"><div class="node bad"><div class="n">Primary</div></div><div class="link down"><span class="lbl">cut</span><span class="line"></span></div><div class="node"><div class="n">Router</div></div></div>
+<div class="legend"><span><i class="led"></i>up</span></div></div>
+<section class="slide"><h2>Next</h2><script>var hidden = "<p>no</p>"</script></section>
+</main></body></html>`
+
+const textFixtureWant = "# Gateway & friends\n\nHello world,\nsecond line. docs (https://example.com/x)\n\n- one\n- two `x=1`\n\nItem | Value\nA | 42\n\n```\n  keep\n    indent\n```\n\n" +
+	"Diagram nodes:\n- Client (10.0.0.1) [up]: Caller: Sends requests. `POST /v1`\n- Gateway [degraded, focus]\n- Primary [down]\n- Router\n\n" +
+	"Diagram links:\n- Client → Gateway [live] \"HTTPS\": TLS ends here.\n- Primary → Router [down] \"cut\"\n- Gateway → Router [live]\n\n[Slide 1]\n\n## Next"
+
+func TestTextForm(t *testing.T) {
+	e := newEnv(t, Config{})
+	a := decode[artifactView](t, e.upload("/api/artifacts", map[string]string{"title": "Weekly"}, map[string]string{"index.html": "<h1>Revenue</h1><p>Up 4%</p>"}))
+	md := map[string]string{"Accept": "text/markdown", "Authorization": "Bearer " + e.token}
+	for _, p := range []string{"/api/artifacts/" + a.ID + "/text", "/a/" + a.ID} {
+		rec := e.do("GET", p, nil, md)
+		if rec.Code != 200 || !strings.Contains(rec.Body.String(), "# Weekly\n") || !strings.Contains(rec.Body.String(), "# Revenue\n\nUp 4%") || !strings.HasPrefix(rec.Header().Get("Content-Type"), "text/markdown") {
+			t.Fatalf("%s: %d %s", p, rec.Code, rec.Body.String())
+		}
+	}
+	if rec := e.do("GET", "/a/"+a.ID, nil, map[string]string{"Accept": "text/markdown"}); rec.Code != 401 {
+		t.Fatalf("text without a token: %d", rec.Code)
+	}
+	if rec := e.do("GET", "/a/"+a.ID, nil, nil); !strings.Contains(rec.Header().Get("Content-Type"), "text/html") {
+		t.Fatal("browsers must still get the app")
+	}
+	// A share link: text on request, one view even for a preview-bot agent, nothing behind a password.
+	sh := decode[shareView](t, e.api("POST", "/api/artifacts/"+a.ID+"/shares", map[string]any{"ttl": "1h", "maxViews": 1}))
+	if rec := e.do("GET", "/s/"+sh.Token+"?format=md", nil, map[string]string{"User-Agent": "Slackbot 1.0"}); rec.Code != 200 || !strings.Contains(rec.Body.String(), "Up 4%") || !strings.Contains(rec.Body.String(), "Shared link, expires") {
+		t.Fatalf("share text: %d %s", rec.Code, rec.Body.String())
+	}
+	pw := decode[shareView](t, e.api("POST", "/api/artifacts/"+a.ID+"/shares", map[string]any{"ttl": "1h", "password": "hunter22"}))
+	if rec := e.do("GET", "/s/"+pw.Token+"?format=md", nil, nil); rec.Code != 401 || strings.Contains(rec.Body.String(), "Weekly") {
+		t.Fatalf("password share text: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := e.do("GET", "/llms.txt", nil, nil); rec.Code != 200 || !strings.Contains(rec.Body.String(), "/api/artifacts/{id}/text") {
+		t.Fatalf("llms.txt: %d", rec.Code)
+	}
+}
+
 func TestCleanName(t *testing.T) {
 	for _, ok := range []string{"index.html", "assets/a b.png", "x/y/z.css", "report (1).pdf"} {
 		if _, err := cleanName(ok); err != nil {

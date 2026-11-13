@@ -11,6 +11,7 @@ import { handleMCP } from './mcp';
 import * as oauth from './oauth';
 import { getVersion } from './store';
 import { renderTemplate } from './template';
+import { handleLLMs, handleText, wantsText } from './text';
 import { HttpError, b64url, json, jsonError, notFound, randomBytes, textError } from './util';
 
 type Handler = (c: Ctx, p: Record<string, string>) => Promise<Response> | Response;
@@ -30,7 +31,17 @@ function route(spec: string, h: Handler, guard: Guard = null) {
 }
 
 // App shell and theme.
-for (const p of ['/', '/a/{id}', '/settings', '/setup', '/login', '/oauth/authorize']) route('GET ' + p, (c) => handleIndex(c));
+for (const p of ['/', '/settings', '/setup', '/login', '/oauth/authorize']) route('GET ' + p, (c) => handleIndex(c));
+// An artifact's page is the app for people and its text form for agents.
+route('GET /a/{id}', async (c, p) => {
+  if (!wantsText(c)) return handleIndex(c);
+  if (!(await auth.authed(c))) {
+    if (!c.demo) return auth.unauthorized();
+    if (!(await auth.guest(c))) return auth.readOnlyDemo();
+  }
+  return handleText(c, p.id);
+});
+route('GET /llms.txt', (c) => handleLLMs(c));
 route('GET /assets/{name}', (c, p) => handleAsset(c, p.name));
 route('GET /design.md', () => new Response(DESIGN_MD, { headers: { 'Content-Type': 'text/markdown; charset=utf-8' } }));
 route('GET /diagram.css', () => new Response(DIAGRAM_CSS, { headers: { 'Content-Type': 'text/css; charset=utf-8' } }));
@@ -60,6 +71,7 @@ route('DELETE /api/tokens/{id}', (c, p) => auth.handleTokenDelete(c, p.id), 'ses
 route('GET /api/artifacts', api.handleList, 'auth');
 route('POST /api/artifacts', api.handleCreate, 'auth');
 route('GET /api/artifacts/{id}', (c, p) => api.handleGet(c, p.id), 'auth');
+route('GET /api/artifacts/{id}/text', (c, p) => handleText(c, p.id), 'auth');
 route('PATCH /api/artifacts/{id}', (c, p) => api.handlePatch(c, p.id), 'auth');
 route('DELETE /api/artifacts/{id}', (c, p) => api.handleDelete(c, p.id), 'auth');
 route('POST /api/artifacts/{id}/versions', (c, p) => api.handleNewVersion(c, p.id), 'auth');

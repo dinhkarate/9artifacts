@@ -198,9 +198,18 @@ func hostOnly(h string) string {
 func (s *Server) routes() {
 	m := http.NewServeMux()
 	// App shell and theme.
-	for _, p := range []string{"GET /{$}", "GET /a/{id}", "GET /settings", "GET /setup", "GET /login", "GET /oauth/authorize"} {
+	for _, p := range []string{"GET /{$}", "GET /settings", "GET /setup", "GET /login", "GET /oauth/authorize"} {
 		m.HandleFunc(p, s.handleIndex)
 	}
+	// An artifact's page is the app for people and its text form for agents.
+	m.HandleFunc("GET /a/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if wantsText(r) {
+			s.auth(s.handleText)(w, r)
+			return
+		}
+		s.handleIndex(w, r)
+	})
+	m.HandleFunc("GET /llms.txt", s.handleLLMs)
 	m.HandleFunc("GET /assets/{name}", s.handleAsset)
 	m.HandleFunc("GET /design.md", s.handleDesign)
 	m.HandleFunc("GET /diagram.css", s.handleDiagram)
@@ -230,6 +239,7 @@ func (s *Server) routes() {
 	m.HandleFunc("GET /api/artifacts", s.auth(s.handleList))
 	m.HandleFunc("POST /api/artifacts", s.auth(s.handleCreate))
 	m.HandleFunc("GET /api/artifacts/{id}", s.auth(s.handleGet))
+	m.HandleFunc("GET /api/artifacts/{id}/text", s.auth(s.handleText))
 	m.HandleFunc("PATCH /api/artifacts/{id}", s.auth(s.handlePatch))
 	m.HandleFunc("DELETE /api/artifacts/{id}", s.auth(s.handleDelete))
 	m.HandleFunc("POST /api/artifacts/{id}/versions", s.auth(s.handleNewVersion))

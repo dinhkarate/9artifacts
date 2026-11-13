@@ -16,6 +16,7 @@ Errors are JSON: `{"error": "..."}`.
 | `POST` | `/api/artifacts/{id}/versions` | multipart or JSON, plus `keep` | `201` artifact (new version) |
 | `POST` | `/api/artifacts/{id}/versions/{n}/restore` | — | `201` artifact: a copy of version `n` becomes the new latest |
 | `GET` | `/api/artifacts/{id}/download/{file}?v=N` | — | file as attachment |
+| `GET` | `/api/artifacts/{id}/text?v=N` | — | text form for agents (see below) |
 | `POST` | `/api/artifacts/{id}/shares` | `{ttl: "1h"\|"24h"\|"7d"\|"30d", note?, version?, maxViews?, password?}` | `201` share, pinned to `version` (default: the current latest); `maxViews` stops the link after that many distinct visitors |
 | `DELETE` | `/api/artifacts/{id}/shares/{token}` | — | revoke |
 
@@ -72,6 +73,21 @@ With a `password`, `/s/{token}` shows a password form (nothing about the artifac
 title, is shown before) and files are served only through a short-lived signed URL issued after
 unlocking (`/s/{token}/g/{grant}/{file}`); wrong guesses are rate-limited per address like logins.
 | `GET /s/{token}/f/{file}` | raw file (on the content origin); `?view=1` renders Markdown, `?download=1` downloads |
+
+## Text form for agents
+
+A page is HTML made for people. An agent that is handed a link can ask for the text instead:
+Markdown with a short header (title, version, files) and the entry file with markup, styles and
+scripts removed. A diagram drawn with the kit becomes two lists, nodes and links, each with its
+state (`up`, `degraded`, `down`, `live`); a slide deck is split by `[Slide N]`.
+
+| Ask for | How |
+|---|---|
+| an artifact | `GET /api/artifacts/{id}/text`, or `GET /a/{id}` with `Accept: text/markdown` (token required, except on a demo) |
+| a share link | `GET /s/{token}?format=md`, or `Accept: text/markdown`. Counts as a view; a password-protected link answers `401` |
+| the server itself | `GET /llms.txt`: what this server is and the URLs above, filled in |
+
+Only the first 512 kB of the entry file is read. PDFs and images have no text form.
 
 ## MCP
 

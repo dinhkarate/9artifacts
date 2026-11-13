@@ -8,6 +8,7 @@ import { checkSharePassword } from './sharepw';
 import { type Share, type Version, fileKey, getVersion, shareActive, shareLive, toShare, toVersion } from './store';
 import { failed, lockedFor } from './ratelimit';
 import { renderTemplate } from './template';
+import { shareText, wantsText } from './text';
 import {
   STATUS_TEXT, b64url, baseName, cleanName, concat, contentType, dec, enc, escapeHTML, extOf, hmac, notFound, readBody, safeEqual, textError,
 } from './util';
@@ -356,12 +357,14 @@ export async function handleSharePage(c: Ctx, token: string): Promise<Response> 
     }
   } else if (isPost) {
     status = 405;
-  } else if (!isPreviewBot(c.req.headers.get('User-Agent') ?? '')) {
+  } else if (wantsText(c) || !isPreviewBot(c.req.headers.get('User-Agent') ?? '')) {
     // Chat apps fetch the page to build a link preview; that must not use up
-    // a view. Only the page shell is exempt: files are always counted.
+    // a view. Only the page shell is exempt: files and the text form are
+    // always counted.
     if (!(await recordVisit(c, token, r))) status = 410;
   }
   data.Status = status;
+  if (wantsText(c)) return shareText(c, status, r);
   if (status === 200) {
     const v = r.v!;
     let src = base + encodePath(v.entry);

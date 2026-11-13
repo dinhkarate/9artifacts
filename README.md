@@ -169,6 +169,12 @@ MCP tools: `get_design_guide`, `publish_artifact`, `list_artifacts`, `read_artif
 `delete_artifact`. The full REST API is in
 [docs/api.md](docs/api.md).
 
+### Agents can read it too
+
+Every page has a text form for agents: `GET /a/{id}` or a share link with `Accept: text/markdown`
+(or `?format=md`) returns Markdown instead of HTML. Diagrams come back as nodes and links with
+their states, decks slide by slide. Each server also describes itself at `/llms.txt`.
+
 ## Make it yours
 
 ```bash

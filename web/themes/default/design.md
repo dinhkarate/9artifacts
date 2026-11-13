@@ -97,6 +97,10 @@ Rules:
 - State is information, not decoration: blink only what is really up, slow
   or down, and say which in the legend (`<i class="led warn"></i>slow`
   works there too).
+- Other agents read the diagram as text (`?format=md`): the name comes from
+  `.n`, the address from `.a`, the link label from `.lbl`, the explanation
+  from `.tip` and the state from the classes above. Keep those in place and
+  the diagram explains itself without being rendered.
 - One accent colour and the house tokens. The kit already stops every
   animation under `prefers-reduced-motion` and in print.
 
