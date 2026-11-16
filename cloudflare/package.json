@@ -13,10 +13,10 @@
     "deploy:demo": "npm run build && wrangler deploy -c demo/wrangler.jsonc && wrangler d1 migrations apply DB --remote -c demo/wrangler.jsonc && wrangler deploy -c demo/wrangler.content.jsonc && ../scripts/smoke.sh https://demo.9artifacts.com"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "0.22.0",
-    "typescript": "5.9.3",
-    "vitest": "4.1.11",
-    "wrangler": "4.143.1"
+    "@cloudflare/vitest-pool-workers": "0.23.0",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0",
+    "wrangler": "4.161.0"
   },
   "allowScripts": {
     "esbuild@0.28.1": true,
