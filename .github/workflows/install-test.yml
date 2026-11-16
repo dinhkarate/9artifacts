@@ -15,7 +15,7 @@ jobs:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: install with the one-liner (proxy mode)
         run: sudo sh install.sh --url http://localhost:8080 --content-url http://127.0.0.1:8080
       - name: service is healthy and hardened
