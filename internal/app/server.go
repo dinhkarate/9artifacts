@@ -49,6 +49,10 @@ type Config struct {
 	// Demo is a public read-only showcase: visitors browse without signing in
 	// and can switch between the built-in themes.
 	Demo bool
+	// RendererURL is an optional external service turning artifact pages into
+	// PNG images and PDFs (POST {url, format, width, height} to /render).
+	// Empty disables the export endpoints and hides them in the UI.
+	RendererURL string
 }
 
 // Server is the 9artifacts HTTP handler.
@@ -251,6 +255,9 @@ func (s *Server) routes() {
 	m.HandleFunc("DELETE /api/artifacts/{id}/comments/{cid}", s.auth(s.handleCommentDelete))
 	m.HandleFunc("DELETE /api/artifacts/{id}/shares/{token}", s.auth(s.handleShareRevoke))
 	m.HandleFunc("GET /api/artifacts/{id}/download/{path...}", s.auth(s.handleDownload))
+	m.HandleFunc("GET /api/artifacts/{id}/download.zip", s.auth(s.handleDownloadZip))
+	m.HandleFunc("GET /api/artifacts/{id}/export.png", s.auth(s.handleExport("png")))
+	m.HandleFunc("GET /api/artifacts/{id}/export.pdf", s.auth(s.handleExport("pdf")))
 	// MCP for agents.
 	m.HandleFunc("POST /mcp", cors(s.handleMCP))
 	m.HandleFunc("OPTIONS /mcp", cors(nil))

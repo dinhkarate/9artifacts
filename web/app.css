@@ -279,3 +279,31 @@ label{display:block;font-size:13px;font-weight:600;color:var(--text-2);margin:14
   .cards .card,.thumb::before,.live-dot,.toast,.onboard,.onboard-card,.onboard-fab{animation:none!important}
   .tour-spot,.tour-tip,.tour-cursor{transition:none!important}
 }
+
+/* download menu + export dialog */
+.menu{position:relative}
+.menu-list{display:none;position:absolute;right:0;top:calc(100% + 4px);z-index:60;min-width:190px;padding:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg)}
+.menu.open .menu-list{display:block}
+.menu-list a{display:flex;align-items:center;padding:8px 10px;border-radius:var(--radius-sm);color:var(--text);text-decoration:none;font:600 14px var(--font-ui);white-space:nowrap}
+.menu-list a:hover{background:var(--surface-2)}
+.menu-list a.disabled{opacity:.5;pointer-events:none}
+.export-card{width:min(440px,100%)}
+.export-card .muted{margin:0 0 4px}
+.export-row{display:flex;align-items:center;gap:10px;margin-top:14px}
+.export-row .export-label{font:600 13px var(--font-ui);color:var(--text-2);min-width:80px;flex:none}
+.export-row input[type=number],.export-row input[type=text]{flex:1;min-width:0;width:auto}
+.export-chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text-2);font:600 13px var(--font-ui);cursor:pointer}
+.chip:hover{background:var(--surface-2)}
+.chip.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.check{display:flex;align-items:center;gap:8px;margin-top:14px;font:600 13px var(--font-ui);color:var(--text-2)}
+.check input{width:auto}
+.more-row{margin-top:14px;border-top:1px solid var(--border);padding-top:10px}
+.more-toggle{display:inline-flex;align-items:center;gap:6px;border:0;background:none;color:var(--text-2);font:600 13px var(--font-ui);cursor:pointer;padding:4px 0}
+.more-toggle:hover{color:var(--text)}
+.more-toggle .chev{display:inline-block;transition:transform .15s}
+.more-toggle.open .chev{transform:rotate(90deg)}
+.more-body{display:grid;gap:4px;margin-top:8px}
+.more-body[hidden]{display:none}
+.more-body .check{margin-top:8px}
+.more-body .settle{margin:6px 0 2px;font-size:12.5px}

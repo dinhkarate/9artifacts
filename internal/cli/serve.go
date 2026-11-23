@@ -80,6 +80,7 @@ func Serve(args []string, version string) error {
 	webhook := fs.String("webhook", env("NINEARTIFACTS_WEBHOOK", ""), "comma-separated URLs to notify on publishes, shares and share visits (Slack, Discord, any JSON endpoint; prefix ntfy+ for ntfy)")
 	demo := fs.Bool("demo", env("NINEARTIFACTS_DEMO", "") == "1", "public read-only demo: visitors browse without signing in and can switch between the built-in themes")
 	artifactCSP := fs.String("artifact-csp", env("NINEARTIFACTS_ARTIFACT_CSP", ""), "extra CSP directives for artifact pages, e.g. \"connect-src 'none'\"")
+	renderer := fs.String("renderer-url", env("NINEARTIFACTS_RENDERER_URL", ""), "external renderer for PNG/PDF export, e.g. http://renderer:3000 (empty disables export)")
 	_ = fs.Parse(args)
 
 	if *domain != "" {
@@ -96,7 +97,7 @@ func Serve(args []string, version string) error {
 		DataDir: *data, PublicURL: *public, ContentURL: *content, Name: *name, Theme: *theme, ThemeDir: *themeDir,
 		TrustProxy: string(trust), MaxUpload: int64(*maxMB) << 20, Version: version, ArtifactCSP: *artifactCSP,
 		Webhooks: splitList(*webhook), SharesOnContent: *sharesOnContent,
-		CFAccessTeam: *cfTeam, CFAccessAUD: *cfAUD, Demo: *demo,
+		CFAccessTeam: *cfTeam, CFAccessAUD: *cfAUD, Demo: *demo, RendererURL: *renderer,
 	}, st)
 	if err != nil {
 		return err

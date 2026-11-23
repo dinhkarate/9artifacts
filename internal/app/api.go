@@ -361,6 +361,9 @@ type artifactView struct {
 	Active    int           `json:"activeShares"`
 	Comments  []Comment     `json:"comments,omitempty"`
 	Open      int           `json:"openComments"`
+	// Exports lists the extra download formats the server can produce
+	// ("png", "pdf"); empty when no renderer is configured.
+	Exports []string `json:"exports,omitempty"`
 }
 
 func (s *Server) view(a *Artifact, full bool) artifactView {
@@ -373,6 +376,9 @@ func (s *Server) view(a *Artifact, full bool) artifactView {
 	}
 	for _, f := range lv.Files {
 		out.Size += f.Size
+	}
+	if s.cfg.RendererURL != "" {
+		out.Exports = []string{"png", "pdf"}
 	}
 	for _, c := range a.Comments {
 		if c.ResolvedAt == nil {

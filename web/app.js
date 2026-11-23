@@ -586,7 +586,7 @@ function renderViewer() {
   }, v.files.map((f) => h('option', { value: f.name, text: f.name, selected: f.name === viewer.file }))) : null;
 
   viewer.openLink = h('a', { class: 'icon-btn hide-sm', target: '_blank', rel: 'noopener', title: 'Open in new tab', 'aria-label': 'Open in new tab', icon: 'external' });
-  viewer.downloadLink = h('a', { class: 'icon-btn', title: 'Download', 'aria-label': 'Download', icon: 'download' });
+  viewer.downloadMenu = downloadMenu(a, v);
 
   root.append(
     h('header', { class: 'bar' },
@@ -598,7 +598,7 @@ function renderViewer() {
         versionSelect, fileSelect,
         h('button', { class: 'icon-btn', type: 'button', title: 'Copy private link', 'aria-label': 'Copy private link', icon: 'link',
           onclick: async () => toast(await copyText(a.url) ? (guest() ? 'Link copied' : 'Private link copied (login required)') : 'Copy failed') }),
-        viewer.openLink, viewer.downloadLink,
+        viewer.openLink, viewer.downloadMenu,
         h('button', { class: 'icon-btn badge-btn', type: 'button', id: 'btn-comments', title: 'Comments (c)', 'aria-label': 'Comments', icon: 'comment', onclick: () => toggleDrawer('comments') }),
         h('button', { class: 'icon-btn', type: 'button', id: 'btn-info', title: 'Details (i)', 'aria-label': 'Details', icon: 'info', onclick: () => toggleDrawer('info') }),
         guest() ? null : h('button', { class: 'btn primary', type: 'button', id: 'btn-share', onclick: () => toggleDrawer('share') }, icon('share'), h('span', { class: 'hide-sm', text: 'Share' })))),
@@ -617,7 +617,8 @@ function paintStage() {
   const stage = $('#stage');
   stage.textContent = '';
   viewer.openLink.href = viewSrc(v.viewBase, name);
-  viewer.downloadLink.href = `/api/artifacts/${a.id}/download/${name.split('/').map(encodeURIComponent).join('/')}?v=${v.n}`;
+  viewer.fileHref = `/api/artifacts/${a.id}/download/${name.split('/').map(encodeURIComponent).join('/')}?v=${v.n}`;
+  if (viewer.fileLink) viewer.fileLink.href = viewer.fileHref;
   if (kind === 'html' || kind === 'markdown') {
     const src = viewSrc(v.viewBase, name);
     stage.append(h('iframe', { src: src + (src.includes('?') ? '&' : '?') + 'vc=1', sandbox: SANDBOX, allow: 'fullscreen', referrerpolicy: 'no-referrer', title: a.title }));
@@ -629,8 +630,168 @@ function paintStage() {
     stage.append(h('div', { class: 'stage-empty' },
       h('div', { class: 'empty-art', icon: 'file' }), h('h2', { text: name }),
       h('p', { class: 'muted', text: `${fmtBytes(f && f.size)} · no preview for this file type` }),
-      h('a', { class: 'btn primary', href: viewer.downloadLink.href }, icon('download'), 'Download')));
+      h('a', { class: 'btn primary', href: viewer.fileHref }, icon('download'), 'Download')));
   }
+}
+
+/* Download menu: the current file, the whole version as a zip, and —
+   when the server has a renderer — one-click PNG and PDF export. */
+function downloadMenu(a, v) {
+  const list = h('div', { class: 'menu-list', role: 'menu' });
+  const close = () => menu.classList.remove('open');
+  viewer.fileLink = h('a', { role: 'menuitem', text: 'Current file', href: viewer.fileHref || '#' });
+  list.append(
+    viewer.fileLink,
+    h('a', { role: 'menuitem', href: `/api/artifacts/${a.id}/download.zip?v=${v.n}`, onclick: close }, 'All files (.zip)'));
+  if ((a.exports || []).includes('png')) {
+    list.append(h('a', { role: 'menuitem', href: '#', onclick: (e) => { e.preventDefault(); close(); downloadExport('png', exportQuery(v), e.target); } }, 'Export PNG'));
+  }
+  if ((a.exports || []).includes('pdf')) {
+    list.append(h('a', { role: 'menuitem', href: '#', onclick: (e) => { e.preventDefault(); close(); openPdfDialog(v); } }, 'Export PDF…'));
+  }
+  const btn = h('button', { class: 'icon-btn', type: 'button', title: 'Download', 'aria-label': 'Download', icon: 'download',
+    onclick: (e) => { e.stopPropagation(); menu.classList.toggle('open'); } });
+  const menu = h('div', { class: 'menu' }, btn, list);
+  return menu;
+}
+
+// Close any open menu when the click lands outside it.
+document.addEventListener('click', (e) => {
+  for (const m of document.querySelectorAll('.menu.open')) if (!m.contains(e.target)) m.classList.remove('open');
+});
+
+// Version and file for an export link; a non-entry HTML file can be exported
+// instead of the entry.
+function exportQuery(v) {
+  const q = new URLSearchParams({ v: String(v.n) });
+  if (viewer.file && fileKind(viewer.file) === 'html' && viewer.file !== v.entry) q.set('file', viewer.file);
+  return q;
+}
+
+/* Fetch an export and save it, so errors arrive as JSON and the menu item
+   can show a busy state while the renderer works. */
+async function downloadExport(fmt, q, el) {
+  const a = viewer.artifact;
+  const label = el.textContent;
+  el.textContent = 'Rendering…';
+  el.classList.add('disabled');
+  try {
+    const r = await fetch(`/api/artifacts/${a.id}/export.${fmt}?${q}`, { credentials: 'same-origin' });
+    if (!r.ok) {
+      const data = await r.json().catch(() => ({}));
+      const err = new Error(data.error || `HTTP ${r.status}`);
+      err.status = r.status;
+      throw err;
+    }
+    const blob = await r.blob();
+    const m = /filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') || '');
+    const u = URL.createObjectURL(blob);
+    const link = h('a', { href: u, download: m ? m[1] : `${a.id}-v${currentVersion().n}.${fmt}` });
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 30000);
+    toast(`Saved ${m ? m[1] : fmt.toUpperCase()}`);
+  } catch (err) {
+    apiError(err);
+  } finally {
+    el.textContent = label;
+    el.classList.remove('disabled');
+  }
+}
+
+/* PDF export options: paper size and page ranges up front; orientation and
+   margins sit behind "More options". The last-used settings persist in one
+   global localStorage key, so a paper picked on one artifact sticks for the
+   next. */
+const PDF_PAPER_KEY = '9a:export:paper';
+const PDF_OPTS_KEY = '9a:export:pdf';
+
+function pdfDefaults() {
+  const d = { pageSize: 'A4', landscape: false, margins: 'default', pageRanges: '', widthMm: 148, heightMm: 210 };
+  try { d.pageSize = localStorage.getItem(PDF_PAPER_KEY) || d.pageSize; } catch { /* private mode */ }
+  try { return Object.assign(d, JSON.parse(localStorage.getItem(PDF_OPTS_KEY) || '{}')); } catch { return d; }
+}
+
+function closePdfDialog() {
+  const box = $('#export-dialog');
+  if (box) box.remove();
+}
+
+function openPdfDialog(v) {
+  closePdfDialog();
+  const a = viewer.artifact;
+  const d = pdfDefaults();
+  const PAPERS = [['A5', 'A5'], ['A4', 'A4'], ['A3', 'A3'], ['Letter', 'letter'], ['Legal', 'legal'], ['Auto', 'auto']];
+  let pageSize = d.pageSize;
+  const wIn = h('input', { type: 'number', min: 50, max: 3000, value: d.widthMm, 'aria-label': 'Width in mm' });
+  const hIn = h('input', { type: 'number', min: 50, max: 3000, value: d.heightMm, 'aria-label': 'Height in mm' });
+  const chips = h('div', { class: 'export-chips', role: 'listbox', 'aria-label': 'Paper size' });
+  const dimsRow = h('div', { class: 'export-row', hidden: pageSize !== 'custom' },
+    h('span', { class: 'export-label', text: 'Size (mm)' }), wIn, '×', hIn);
+  const paintChips = () => {
+    chips.textContent = '';
+    for (const [label, value] of [...PAPERS, ['Custom…', 'custom']]) {
+      chips.append(h('button', { type: 'button', class: `chip${pageSize === value ? ' active' : ''}`, role: 'option',
+        'aria-selected': String(pageSize === value),
+        onclick: () => { pageSize = value; dimsRow.hidden = pageSize !== 'custom'; paintChips(); } }, label));
+    }
+  };
+  paintChips();
+  const pages = h('input', { type: 'text', placeholder: 'All pages', value: d.pageRanges, 'aria-label': 'Pages' });
+  const landscape = h('input', { type: 'checkbox', checked: d.landscape || null });
+  const margins = h('select', { class: 'compact-select', 'aria-label': 'Margins' },
+    h('option', { value: 'default', text: 'Default', selected: d.margins !== 'none' || null }),
+    h('option', { value: 'none', text: 'None', selected: d.margins === 'none' || null }));
+  const moreBody = h('div', { class: 'more-body', hidden: true },
+    h('label', { class: 'check' }, landscape, ' Landscape orientation'),
+    h('div', { class: 'export-row' }, h('span', { class: 'export-label', text: 'Margins' }), margins),
+    h('p', { class: 'muted settle', text: 'Renders after a 500 ms settle, then downloads.' }));
+  const moreBtn = h('button', { class: 'more-toggle', type: 'button', 'aria-expanded': 'false',
+    onclick: () => {
+      const open = moreBody.hidden;
+      moreBody.hidden = !open;
+      moreBtn.classList.toggle('open', open);
+      moreBtn.setAttribute('aria-expanded', String(open));
+    } }, 'More options', h('span', { class: 'chev', 'aria-hidden': 'true', text: '›' }));
+  const go = h('button', { class: 'btn primary', type: 'button', text: 'Export PDF' });
+  go.addEventListener('click', () => {
+    const q = exportQuery(v);
+    q.set('pageSize', pageSize);
+    if (pageSize === 'custom') {
+      const w = Number(wIn.value), hh = Number(hIn.value);
+      if (!Number.isInteger(w) || !Number.isInteger(hh) || w < 50 || w > 3000 || hh < 50 || hh > 3000) {
+        toast('Page size must be 50–3000 mm', 'error');
+        return;
+      }
+      q.set('pageWidthMm', String(w));
+      q.set('pageHeightMm', String(hh));
+    }
+    q.set('margins', margins.value);
+    if (landscape.checked) q.set('landscape', 'true');
+    if (pages.value.trim()) q.set('pageRanges', pages.value.trim());
+    try {
+      localStorage.setItem(PDF_PAPER_KEY, pageSize);
+      localStorage.setItem(PDF_OPTS_KEY, JSON.stringify({
+        landscape: landscape.checked, margins: margins.value, pageRanges: pages.value.trim(),
+        widthMm: Number(wIn.value) || d.widthMm, heightMm: Number(hIn.value) || d.heightMm,
+      }));
+    } catch { /* private mode */ }
+    closePdfDialog();
+    downloadExport('pdf', q, go);
+  });
+  const box = h('div', { class: 'onboard', id: 'export-dialog', onclick: (e) => { if (e.target === box) closePdfDialog(); } },
+    h('div', { class: 'onboard-card export-card', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'export-title' },
+      h('button', { class: 'icon-btn onboard-close', type: 'button', 'aria-label': 'Close', icon: 'close', onclick: closePdfDialog }),
+      h('h2', { id: 'export-title', text: 'Export PDF' }),
+      h('p', { class: 'muted', text: `${a.title} — v${v.n}` }),
+      h('div', { class: 'export-row' }, h('span', { class: 'export-label', text: 'Paper' }), chips),
+      dimsRow,
+      h('div', { class: 'export-row' }, h('span', { class: 'export-label', text: 'Pages' }), pages),
+      h('div', { class: 'more-row' }, moreBtn, moreBody),
+      h('div', { class: 'onboard-links' }, h('span', { class: 'spacer' }), go)));
+  document.body.append(box);
+  go.focus();
 }
 
 function toggleDrawer(tab) { viewer.drawer = viewer.drawer === tab ? null : tab; paintDrawer(); }
@@ -1283,6 +1444,7 @@ addEventListener('keydown', (e) => {
 document.addEventListener('keydown', (e) => {
   const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement && document.activeElement.tagName);
   if (e.key === 'Escape') {
+    if ($('#export-dialog')) { closePdfDialog(); return; }
     if (viewer && viewer.drawer) { toggleDrawer(viewer.drawer); return; }
     if (typing) { document.activeElement.blur(); return; }
     if (viewer || !$('#view-settings').hidden) navigate('/');
